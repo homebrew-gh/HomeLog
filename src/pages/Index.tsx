@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSeoMeta } from '@unhead/react';
-import { Plus, ChevronDown, ChevronRight, Home, Wrench, Calendar, AlertTriangle, Clock, Package, Menu, Settings } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Home, Wrench, Calendar, AlertTriangle, Clock, Package, Menu, Settings, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { ApplianceDetailDialog } from '@/components/ApplianceDetailDialog';
 import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { RoomManagementDialog } from '@/components/RoomManagementDialog';
+import { RelayManagementDialog } from '@/components/RelayManagementDialog';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
 import { useMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
@@ -41,6 +42,9 @@ const Index = () => {
 
   // Room management dialog state
   const [roomManagementOpen, setRoomManagementOpen] = useState(false);
+
+  // Relay management dialog state
+  const [relayManagementOpen, setRelayManagementOpen] = useState(false);
 
   // Collapsed rooms state
   const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(new Set());
@@ -107,6 +111,10 @@ const Index = () => {
                   <DropdownMenuItem onClick={() => setRoomManagementOpen(true)}>
                     <Settings className="h-4 w-4 mr-2" />
                     Manage Rooms
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setRelayManagementOpen(true)}>
+                    <Wifi className="h-4 w-4 mr-2" />
+                    Manage Relays
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -416,6 +424,11 @@ const Index = () => {
       <RoomManagementDialog
         isOpen={roomManagementOpen}
         onClose={() => setRoomManagementOpen(false)}
+      />
+
+      <RelayManagementDialog
+        isOpen={relayManagementOpen}
+        onClose={() => setRelayManagementOpen(false)}
       />
     </div>
   );
