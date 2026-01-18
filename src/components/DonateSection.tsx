@@ -40,34 +40,34 @@ async function fetchLightningInvoice(lightningAddress: string, amountSats: numbe
     // Parse lightning address to get LNURL endpoint
     const [name, domain] = lightningAddress.split('@');
     const lnurlEndpoint = `https://${domain}/.well-known/lnurlp/${name}`;
-    
+
     // Fetch LNURL pay info
     const response = await fetch(lnurlEndpoint);
     const lnurlData = await response.json();
-    
+
     if (lnurlData.tag !== 'payRequest') {
       throw new Error('Invalid LNURL response');
     }
-    
+
     // Amount in millisatoshis
     const amountMsat = amountSats * 1000;
-    
+
     // Check if amount is within bounds
     if (amountMsat < lnurlData.minSendable || amountMsat > lnurlData.maxSendable) {
       throw new Error(`Amount must be between ${lnurlData.minSendable / 1000} and ${lnurlData.maxSendable / 1000} sats`);
     }
-    
+
     // Fetch invoice
     const callbackUrl = new URL(lnurlData.callback);
     callbackUrl.searchParams.set('amount', amountMsat.toString());
-    
+
     const invoiceResponse = await fetch(callbackUrl.toString());
     const invoiceData = await invoiceResponse.json();
-    
+
     if (invoiceData.pr) {
       return invoiceData.pr;
     }
-    
+
     throw new Error('No invoice returned');
   } catch (error) {
     console.error('Failed to fetch Lightning invoice:', error);
@@ -185,49 +185,39 @@ export function DonateSection() {
 
   return (
     <>
-      <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
-        <CardContent className="py-6">
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-2">
-              <Heart className="h-5 w-5 text-pink-500" />
-              <h3 className="font-semibold text-lg text-slate-800 dark:text-slate-100">
-                Support Home Log
-              </h3>
-            </div>
-            
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              If you find Home Log useful, consider making a donation via Bitcoin Lightning Network to support continued development.
-            </p>
-
-            <div className="flex items-center justify-center gap-3 max-w-xs mx-auto">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                <Input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={usdAmount}
-                  onChange={(e) => setUsdAmount(e.target.value)}
-                  className="pl-7 pr-3 text-center"
-                  placeholder="5"
-                />
-              </div>
-              <div className="text-sm text-muted-foreground whitespace-nowrap">
-                = <span className="font-mono font-medium text-amber-600 dark:text-amber-400">{formatSats(satsAmount)}</span> sats
-              </div>
-            </div>
-
-            <Button
-              onClick={handleDonate}
-              disabled={isLoading || satsAmount < 1}
-              className="bg-amber-500 hover:bg-amber-600 text-white"
-            >
-              <Zap className="h-4 w-4 mr-2" />
-              {isLoading ? 'Generating Invoice...' : 'Donate with Lightning'}
-            </Button>
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <Heart className="h-3.5 w-3.5 text-pink-400" />
+          Support this project
+        </span>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
+            <Input
+              type="number"
+              min="1"
+              step="1"
+              value={usdAmount}
+              onChange={(e) => setUsdAmount(e.target.value)}
+              className="w-16 h-7 pl-5 pr-1 text-xs text-center"
+              placeholder="5"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <span className="text-xs text-muted-foreground">
+            = <span className="font-mono text-amber-600 dark:text-amber-400">{formatSats(satsAmount)}</span> sats
+          </span>
+          <Button
+            onClick={handleDonate}
+            disabled={isLoading || satsAmount < 1}
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-950/30"
+          >
+            <Zap className="h-3 w-3 mr-1" />
+            {isLoading ? '...' : 'Donate'}
+          </Button>
+        </div>
+      </div>
 
       {/* Payment Dialog */}
       <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
