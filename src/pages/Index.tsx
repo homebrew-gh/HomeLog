@@ -232,7 +232,7 @@ const Index = () => {
                         setApplianceDialogOpen(true);
                       }}
                       variant="outline"
-                      className="border-sky-300 hover:bg-sky-50 dark:border-sky-700 dark:hover:bg-sky-900/30"
+                      className="border-sky-300 hover:bg-sky-50 dark:border-sky-700 dark:hover:bg-sky-900"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Your First Appliance
@@ -249,7 +249,7 @@ const Index = () => {
                         onOpenChange={() => toggleRoom(room)}
                         className="mb-2 last:mb-0"
                       >
-                        <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-sky-100 dark:hover:bg-slate-700/50 transition-colors">
+                        <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-sky-100 dark:hover:bg-slate-700 transition-colors">
                           {collapsedRooms.has(room) ? (
                             <ChevronRight className="h-4 w-4 text-slate-500" />
                           ) : (
@@ -269,7 +269,7 @@ const Index = () => {
                               <button
                                 key={appliance.id}
                                 onClick={() => setViewingAppliance(appliance)}
-                                className="flex items-center gap-2 w-full p-2 rounded-lg text-left hover:bg-sky-50 dark:hover:bg-slate-700/30 transition-colors group"
+                                className="flex items-center gap-2 w-full p-2 rounded-lg text-left hover:bg-sky-50 dark:hover:bg-slate-700 transition-colors group"
                               >
                                 <span className="text-slate-600 dark:text-slate-300 group-hover:text-sky-700 dark:group-hover:text-sky-300">
                                   {appliance.model}
@@ -341,7 +341,7 @@ const Index = () => {
                           setMaintenanceDialogOpen(true);
                         }}
                         variant="outline"
-                        className="border-sky-300 hover:bg-sky-50 dark:border-sky-700 dark:hover:bg-sky-900/30"
+                        className="border-sky-300 hover:bg-sky-50 dark:border-sky-700 dark:hover:bg-sky-900"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Your First Maintenance Schedule
@@ -447,10 +447,10 @@ function MaintenanceItem({
     <div className="space-y-1">
       <div className={`flex items-center gap-2 rounded-lg transition-colors ${
         overdue
-          ? 'bg-red-50 dark:bg-red-950/30'
+          ? 'bg-red-50 dark:bg-red-900'
           : dueSoon
-            ? 'bg-amber-50 dark:bg-amber-950/30'
-            : ''
+            ? 'bg-amber-50 dark:bg-amber-900'
+            : 'bg-white dark:bg-slate-800'
       }`}>
         {/* Chevron for completion history */}
         {hasCompletions && (
@@ -476,10 +476,10 @@ function MaintenanceItem({
             hasCompletions ? '' : 'ml-2'
           } ${
             overdue
-              ? 'hover:bg-red-100 dark:hover:bg-red-950/50'
+              ? 'hover:bg-red-100 dark:hover:bg-red-800'
               : dueSoon
-                ? 'hover:bg-amber-100 dark:hover:bg-amber-950/50'
-                : 'hover:bg-sky-50 dark:hover:bg-slate-700/30'
+                ? 'hover:bg-amber-100 dark:hover:bg-amber-800'
+                : 'hover:bg-sky-50 dark:hover:bg-slate-700'
           }`}
         >
           <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
@@ -532,14 +532,14 @@ function MaintenanceItem({
 
       {/* Completion History */}
       {hasCompletions && showHistory && (
-        <div className="ml-8 pl-4 border-l-2 border-green-200 dark:border-green-800 space-y-1">
+        <div className="ml-8 pl-4 border-l-2 border-green-200 dark:border-green-800 space-y-1 bg-white dark:bg-slate-800 rounded-r-lg py-2 pr-2">
           <p className="text-xs font-medium text-green-700 dark:text-green-300 py-1">
             Completion History
           </p>
           {completions.map((completion) => (
             <div
               key={completion.id}
-              className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-950/30 text-sm"
+              className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-900 text-sm"
             >
               <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
               <span className="text-green-800 dark:text-green-200">
