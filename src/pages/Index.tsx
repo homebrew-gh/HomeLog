@@ -15,6 +15,7 @@ import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { RoomManagementDialog } from '@/components/RoomManagementDialog';
 import { RelayManagementDialog } from '@/components/RelayManagementDialog';
+import { DonateSection } from '@/components/DonateSection';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
 import { useMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
@@ -372,6 +373,11 @@ const Index = () => {
                   </CardContent>
                 </Card>
               )}
+            </section>
+
+            {/* Donate Section */}
+            <section>
+              <DonateSection />
             </section>
 
             {/* Footer */}
