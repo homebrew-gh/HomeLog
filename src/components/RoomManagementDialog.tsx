@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Plus, X, Trash2 } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useCustomRooms } from '@/hooks/useCustomRooms';
+import { useAppliances } from '@/hooks/useAppliances';
 import { toast } from '@/hooks/useToast';
 import { DEFAULT_ROOMS } from '@/lib/types';
 
@@ -14,7 +16,9 @@ interface RoomManagementDialogProps {
 
 export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogProps) {
   const { customRooms, addCustomRoom, removeCustomRoom } = useCustomRooms();
+  const { data: appliances = [] } = useAppliances();
   const [newRoom, setNewRoom] = useState('');
+  const [roomWithAppliances, setRoomWithAppliances] = useState<{ name: string; count: number } | null>(null);
 
   const handleAddRoom = () => {
     const trimmed = newRoom.trim();
@@ -47,6 +51,16 @@ export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogPr
   };
 
   const handleRemoveRoom = (room: string) => {
+    // Check if any appliances are assigned to this room
+    const appliancesInRoom = appliances.filter(a => a.room === room);
+
+    if (appliancesInRoom.length > 0) {
+      // Show warning dialog
+      setRoomWithAppliances({ name: room, count: appliancesInRoom.length });
+      return;
+    }
+
+    // Safe to delete
     removeCustomRoom(room);
     toast({
       title: 'Room removed',
@@ -60,10 +74,10 @@ export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogPr
   };
 
   // Sort all rooms alphabetically for display
-  const sortedDefaultRooms = [...DEFAULT_ROOMS].sort((a, b) => 
+  const sortedDefaultRooms = [...DEFAULT_ROOMS].sort((a, b) =>
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
-  const sortedCustomRooms = [...customRooms].sort((a, b) => 
+  const sortedCustomRooms = [...customRooms].sort((a, b) =>
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
 
@@ -146,6 +160,31 @@ export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogPr
           </Button>
         </div>
       </DialogContent>
+
+      {/* Warning dialog for rooms with appliances */}
+      <AlertDialog open={!!roomWithAppliances} onOpenChange={() => setRoomWithAppliances(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Cannot Delete Room
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                The room "{roomWithAppliances?.name}" has {roomWithAppliances?.count} appliance{roomWithAppliances?.count !== 1 ? 's' : ''} assigned to it.
+              </p>
+              <p>
+                To delete this room, please first delete or reassign all appliances in this room to a different room.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setRoomWithAppliances(null)}>
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
