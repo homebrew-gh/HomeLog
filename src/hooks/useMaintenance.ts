@@ -192,7 +192,11 @@ export function useMaintenanceActions() {
       ],
     });
 
-    await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+    // Small delay to allow the deletion event to propagate to relays
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Force refetch to get updated data including the deletion event
+    await queryClient.refetchQueries({ queryKey: ['maintenance'] });
   };
 
   return { createMaintenance, updateMaintenance, deleteMaintenance };
