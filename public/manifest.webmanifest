@@ -5,24 +5,24 @@
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#f0f9ff",
+  "background_color": "#000000",
   "theme_color": "#0ea5e9",
   "categories": ["utilities", "lifestyle"],
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230ea5e9'/%3E%3Cpath d='M256 120 L380 220 L380 400 L132 400 L132 220 Z' fill='white'/%3E%3Crect x='220' y='280' width='72' height='120' fill='%230ea5e9'/%3E%3Cpath d='M256 100 L100 230 L120 250 L256 140 L392 250 L412 230 Z' fill='white'/%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23000000'/%3E%3Cpath d='M256 130 L400 245 L400 420 L112 420 L112 245 Z' fill='%230284c7'/%3E%3Crect x='215' y='300' width='82' height='120' fill='%23000000'/%3E%3Cpath d='M256 95 L80 245 L105 270 L256 145 L407 270 L432 245 Z' fill='%230ea5e9'/%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230ea5e9'/%3E%3Cpath d='M256 120 L380 220 L380 400 L132 400 L132 220 Z' fill='white'/%3E%3Crect x='220' y='280' width='72' height='120' fill='%230ea5e9'/%3E%3Cpath d='M256 100 L100 230 L120 250 L256 140 L392 250 L412 230 Z' fill='white'/%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23000000'/%3E%3Cpath d='M256 150 L380 250 L380 400 L132 400 L132 250 Z' fill='%230284c7'/%3E%3Crect x='220' y='300' width='72' height='100' fill='%23000000'/%3E%3Cpath d='M256 115 L100 245 L120 265 L256 155 L392 265 L412 245 Z' fill='%230ea5e9'/%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%230ea5e9'/%3E%3Cpath d='M96 45 L143 83 L143 150 L49 150 L49 83 Z' fill='white'/%3E%3Crect x='82' y='105' width='28' height='45' fill='%230ea5e9'/%3E%3Cpath d='M96 38 L38 86 L46 94 L96 53 L146 94 L154 86 Z' fill='white'/%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%23000000'/%3E%3Cpath d='M96 50 L150 95 L150 160 L42 160 L42 95 Z' fill='%230284c7'/%3E%3Crect x='80' y='115' width='32' height='45' fill='%23000000'/%3E%3Cpath d='M96 35 L30 92 L42 104 L96 60 L150 104 L162 92 Z' fill='%230ea5e9'/%3E%3C/svg%3E",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any"
@@ -45,7 +45,7 @@
     },
     {
       "name": "Add Maintenance",
-      "short_name": "Add Maintenance", 
+      "short_name": "Add Maintenance",
       "description": "Add a new maintenance schedule",
       "url": "/?action=add-maintenance",
       "icons": [
