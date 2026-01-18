@@ -7,13 +7,13 @@ export function useCustomRooms() {
   const addCustomRoom = (room: string) => {
     const trimmed = room.trim();
     if (!trimmed) return;
-    
+
     // Check if it's already in default or custom rooms
     const allRooms = [...DEFAULT_ROOMS, ...customRooms];
     if (allRooms.some(r => r.toLowerCase() === trimmed.toLowerCase())) {
       return; // Already exists
     }
-    
+
     setCustomRooms([...customRooms, trimmed]);
   };
 
@@ -21,7 +21,10 @@ export function useCustomRooms() {
     setCustomRooms(customRooms.filter(r => r !== room));
   };
 
-  const allRooms = [...DEFAULT_ROOMS, ...customRooms];
+  // Combine and sort all rooms alphabetically
+  const allRooms = [...DEFAULT_ROOMS, ...customRooms].sort((a, b) =>
+    a.toLowerCase().localeCompare(b.toLowerCase())
+  );
 
   return {
     customRooms,
