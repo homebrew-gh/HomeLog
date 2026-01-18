@@ -86,11 +86,22 @@ export function DonateSection() {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
-  // Fetch BTC price on mount
+  // Fetch BTC price on mount and every 5 minutes
   useEffect(() => {
+    // Fetch immediately
     fetchBtcPrice().then(price => {
       setBtcPrice(price);
     });
+
+    // Set up interval to fetch every 5 minutes
+    const interval = setInterval(() => {
+      fetchBtcPrice().then(price => {
+        setBtcPrice(price);
+      });
+    }, 5 * 60 * 1000); // 5 minutes in milliseconds
+
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
   }, []);
 
   // Update sats amount when USD or BTC price changes
