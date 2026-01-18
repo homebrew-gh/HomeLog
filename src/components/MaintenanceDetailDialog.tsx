@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from '@/components/ui/badge';
 import { useApplianceById } from '@/hooks/useAppliances';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
-import { useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
+import { useMaintenanceCompletionActions, useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
 import { toast } from '@/hooks/useToast';
 import type { MaintenanceSchedule } from '@/lib/types';
 
@@ -33,6 +33,7 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
   const { deleteMaintenance } = useMaintenanceActions();
   const { createCompletion } = useMaintenanceCompletionActions();
   const appliance = useApplianceById(maintenance.applianceId);
+  const completions = useCompletionsByMaintenance(maintenance.id);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -52,9 +53,13 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
   }, [isOpen]);
 
   const purchaseDate = appliance?.purchaseDate || '';
-  const nextDueDate = calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit);
-  const overdue = purchaseDate ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit) : false;
-  const dueSoon = purchaseDate ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit) : false;
+
+  // Get the most recent completion date (completions are already sorted newest first)
+  const lastCompletionDate = completions.length > 0 ? completions[0].completedDate : undefined;
+
+  const nextDueDate = calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate);
+  const overdue = purchaseDate ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
+  const dueSoon = purchaseDate ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
 
   const getFrequencyLabel = () => {
     const unit = maintenance.frequencyUnit;

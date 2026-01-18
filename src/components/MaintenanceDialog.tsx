@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate } from '@/hooks/useMaintenance';
+import { useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
 import { toast } from '@/hooks/useToast';
 import { FREQUENCY_UNITS, type MaintenanceSchedule } from '@/lib/types';
 
@@ -20,9 +21,9 @@ interface MaintenanceDialogProps {
 export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApplianceId }: MaintenanceDialogProps) {
   const { data: appliances = [] } = useAppliances();
   const { createMaintenance, updateMaintenance } = useMaintenanceActions();
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     applianceId: '',
     description: '',
@@ -36,12 +37,17 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
   // Get the selected appliance for displaying purchase date
   const selectedAppliance = appliances.find(a => a.id === formData.applianceId);
 
+  // Get completions for this maintenance (only relevant when editing)
+  const completions = useCompletionsByMaintenance(maintenance?.id);
+  const lastCompletionDate = completions.length > 0 ? completions[0].completedDate : undefined;
+
   // Calculate preview of next due date
   const previewDueDate = selectedAppliance?.purchaseDate && formData.frequency
     ? calculateNextDueDate(
         selectedAppliance.purchaseDate,
         parseInt(formData.frequency, 10),
-        formData.frequencyUnit
+        formData.frequencyUnit,
+        isEditing ? lastCompletionDate : undefined
       )
     : null;
 
@@ -211,9 +217,9 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
               />
               <Select
                 value={formData.frequencyUnit}
-                onValueChange={(value) => setFormData(prev => ({ 
-                  ...prev, 
-                  frequencyUnit: value as MaintenanceSchedule['frequencyUnit'] 
+                onValueChange={(value) => setFormData(prev => ({
+                  ...prev,
+                  frequencyUnit: value as MaintenanceSchedule['frequencyUnit']
                 }))}
               >
                 <SelectTrigger className="w-32">

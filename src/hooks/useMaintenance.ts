@@ -202,12 +202,11 @@ export function useMaintenanceActions() {
   return { createMaintenance, updateMaintenance, deleteMaintenance };
 }
 
-// Calculate the next due date for a maintenance schedule
-export function calculateNextDueDate(purchaseDate: string, frequency: number, frequencyUnit: MaintenanceSchedule['frequencyUnit']): Date | null {
-  if (!purchaseDate) return null;
+// Parse MM/DD/YYYY date string to Date object
+function parseDateString(dateStr: string): Date | null {
+  if (!dateStr) return null;
 
-  // Parse MM/DD/YYYY format
-  const parts = purchaseDate.split('/');
+  const parts = dateStr.split('/');
   if (parts.length !== 3) return null;
 
   const month = parseInt(parts[0], 10) - 1; // JS months are 0-indexed
@@ -216,28 +215,59 @@ export function calculateNextDueDate(purchaseDate: string, frequency: number, fr
 
   if (isNaN(month) || isNaN(day) || isNaN(year)) return null;
 
-  const startDate = new Date(year, month, day);
-  if (isNaN(startDate.getTime())) return null;
+  const date = new Date(year, month, day);
+  if (isNaN(date.getTime())) return null;
+
+  return date;
+}
+
+// Add frequency to a date
+function addFrequencyToDate(date: Date, frequency: number, frequencyUnit: MaintenanceSchedule['frequencyUnit']): Date {
+  const newDate = new Date(date);
+  switch (frequencyUnit) {
+    case 'days':
+      newDate.setDate(newDate.getDate() + frequency);
+      break;
+    case 'weeks':
+      newDate.setDate(newDate.getDate() + (frequency * 7));
+      break;
+    case 'months':
+      newDate.setMonth(newDate.getMonth() + frequency);
+      break;
+    case 'years':
+      newDate.setFullYear(newDate.getFullYear() + frequency);
+      break;
+  }
+  return newDate;
+}
+
+// Calculate the next due date for a maintenance schedule
+// If lastCompletionDate is provided, calculate from there; otherwise use purchaseDate
+export function calculateNextDueDate(
+  purchaseDate: string,
+  frequency: number,
+  frequencyUnit: MaintenanceSchedule['frequencyUnit'],
+  lastCompletionDate?: string
+): Date | null {
+  // If there's a completion date, calculate from that
+  if (lastCompletionDate) {
+    const completionDate = parseDateString(lastCompletionDate);
+    if (completionDate) {
+      // Next due date is completion date + frequency
+      return addFrequencyToDate(completionDate, frequency, frequencyUnit);
+    }
+  }
+
+  // Fall back to purchase date if no completion
+  const startDate = parseDateString(purchaseDate);
+  if (!startDate) return null;
 
   const now = new Date();
   let nextDue = new Date(startDate);
 
   // Keep adding frequency until we get a future date
   while (nextDue <= now) {
-    switch (frequencyUnit) {
-      case 'days':
-        nextDue.setDate(nextDue.getDate() + frequency);
-        break;
-      case 'weeks':
-        nextDue.setDate(nextDue.getDate() + (frequency * 7));
-        break;
-      case 'months':
-        nextDue.setMonth(nextDue.getMonth() + frequency);
-        break;
-      case 'years':
-        nextDue.setFullYear(nextDue.getFullYear() + frequency);
-        break;
-    }
+    nextDue = addFrequencyToDate(nextDue, frequency, frequencyUnit);
   }
 
   return nextDue;
@@ -254,15 +284,25 @@ export function formatDueDate(date: Date | null): string {
 }
 
 // Check if maintenance is overdue
-export function isOverdue(purchaseDate: string, frequency: number, frequencyUnit: MaintenanceSchedule['frequencyUnit']): boolean {
-  const nextDue = calculateNextDueDate(purchaseDate, frequency, frequencyUnit);
+export function isOverdue(
+  purchaseDate: string,
+  frequency: number,
+  frequencyUnit: MaintenanceSchedule['frequencyUnit'],
+  lastCompletionDate?: string
+): boolean {
+  const nextDue = calculateNextDueDate(purchaseDate, frequency, frequencyUnit, lastCompletionDate);
   if (!nextDue) return false;
   return nextDue < new Date();
 }
 
 // Check if maintenance is due soon (within 7 days)
-export function isDueSoon(purchaseDate: string, frequency: number, frequencyUnit: MaintenanceSchedule['frequencyUnit']): boolean {
-  const nextDue = calculateNextDueDate(purchaseDate, frequency, frequencyUnit);
+export function isDueSoon(
+  purchaseDate: string,
+  frequency: number,
+  frequencyUnit: MaintenanceSchedule['frequencyUnit'],
+  lastCompletionDate?: string
+): boolean {
+  const nextDue = calculateNextDueDate(purchaseDate, frequency, frequencyUnit, lastCompletionDate);
   if (!nextDue) return false;
   const now = new Date();
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);

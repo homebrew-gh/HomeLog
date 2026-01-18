@@ -433,9 +433,13 @@ function MaintenanceItem({
   const appliance = useApplianceById(maintenance.applianceId);
   const completions = useCompletionsByMaintenance(maintenance.id);
   const purchaseDate = appliance?.purchaseDate || '';
-  const nextDueDate = calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit);
-  const overdue = purchaseDate ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit) : false;
-  const dueSoon = purchaseDate ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit) : false;
+
+  // Get the most recent completion date (completions are already sorted newest first)
+  const lastCompletionDate = completions.length > 0 ? completions[0].completedDate : undefined;
+
+  const nextDueDate = calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate);
+  const overdue = purchaseDate ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
+  const dueSoon = purchaseDate ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
 
   const hasCompletions = completions.length > 0;
 
