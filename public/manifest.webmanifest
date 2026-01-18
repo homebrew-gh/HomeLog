@@ -10,19 +10,19 @@
   "categories": ["utilities", "lifestyle"],
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23075985'/%3E%3Cpath d='M256 168 L256 168 L374 268 L374 388 L138 388 L138 268 Z' fill='none' stroke='%237dd3fc' stroke-width='20' stroke-linejoin='round'/%3E%3Cpath d='M256 132 L102 272 L130 272 L256 166 L382 272 L410 272 Z' fill='%237dd3fc'/%3E%3Crect x='222' y='298' width='68' height='90' rx='4' fill='%23075985' stroke='%237dd3fc' stroke-width='14'/%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23075985'/%3E%3Cpath d='M256 192 L256 192 L352 272 L352 368 L160 368 L160 272 Z' fill='none' stroke='%237dd3fc' stroke-width='18' stroke-linejoin='round'/%3E%3Cpath d='M256 160 L128 272 L152 272 L256 186 L360 272 L384 272 Z' fill='%237dd3fc'/%3E%3Crect x='228' y='300' width='56' height='68' rx='3' fill='%23075985' stroke='%237dd3fc' stroke-width='12'/%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23075985'/%3E%3Cpath d='M256 175 L256 175 L360 258 L360 372 L152 372 L152 258 Z' fill='none' stroke='%237dd3fc' stroke-width='20' stroke-linejoin='round'/%3E%3Cpath d='M256 140 L115 265 L143 265 L256 172 L369 265 L397 265 Z' fill='%237dd3fc'/%3E%3Crect x='225' y='295' width='62' height='77' rx='4' fill='%23075985' stroke='%237dd3fc' stroke-width='12'/%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23075985'/%3E%3Cpath d='M256 192 L256 192 L352 272 L352 368 L160 368 L160 272 Z' fill='none' stroke='%237dd3fc' stroke-width='18' stroke-linejoin='round'/%3E%3Cpath d='M256 160 L128 272 L152 272 L256 186 L360 272 L384 272 Z' fill='%237dd3fc'/%3E%3Crect x='228' y='300' width='56' height='68' rx='3' fill='%23075985' stroke='%237dd3fc' stroke-width='12'/%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%23075985'/%3E%3Cpath d='M96 62 L96 62 L140 100 L140 148 L52 148 L52 100 Z' fill='none' stroke='%237dd3fc' stroke-width='8' stroke-linejoin='round'/%3E%3Cpath d='M96 48 L38 100 L52 100 L96 62 L140 100 L154 100 Z' fill='%237dd3fc'/%3E%3Crect x='82' y='112' width='28' height='36' rx='2' fill='%23075985' stroke='%237dd3fc' stroke-width='5'/%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%23075985'/%3E%3Cpath d='M96 72 L96 72 L132 104 L132 140 L60 140 L60 104 Z' fill='none' stroke='%237dd3fc' stroke-width='7' stroke-linejoin='round'/%3E%3Cpath d='M96 60 L48 104 L60 104 L96 74 L132 104 L144 104 Z' fill='%237dd3fc'/%3E%3Crect x='85' y='112' width='22' height='28' rx='2' fill='%23075985' stroke='%237dd3fc' stroke-width='5'/%3E%3C/svg%3E",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any"
