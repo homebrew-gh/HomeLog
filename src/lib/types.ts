@@ -23,6 +23,14 @@ export interface MaintenanceSchedule {
   createdAt: number;
 }
 
+export interface MaintenanceCompletion {
+  id: string;
+  maintenanceId: string;
+  completedDate: string; // MM/DD/YYYY format
+  pubkey: string;
+  createdAt: number;
+}
+
 export const DEFAULT_ROOMS = [
   'Bedroom',
   'Bathroom',
@@ -46,3 +54,4 @@ export const FREQUENCY_UNITS = [
 // Kind numbers for our custom events
 export const APPLIANCE_KIND = 32627;
 export const MAINTENANCE_KIND = 30229;
+export const MAINTENANCE_COMPLETION_KIND = 9413;

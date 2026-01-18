@@ -100,3 +100,37 @@ For example, if an appliance was purchased on 01/15/2024 and has a maintenance f
 - 07/15/2024
 - 10/15/2024
 - etc.
+
+---
+
+## Kind 9413: Maintenance Completion
+
+A regular event recording the completion of a maintenance task.
+
+### Format
+
+```json
+{
+  "kind": 9413,
+  "content": "",
+  "tags": [
+    ["a", "30229:<pubkey>:<maintenance-d-tag>", "", "maintenance"],
+    ["alt", "Maintenance completed on <MM/DD/YYYY>"],
+    ["completed_date", "<MM/DD/YYYY>"]
+  ]
+}
+```
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `a` | Yes | Reference to the maintenance schedule (kind 30229) this completion is for |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `completed_date` | Yes | Date the maintenance was completed in MM/DD/YYYY format |
+
+### Notes
+
+- Multiple completion events can exist for a single maintenance schedule, creating a history of when maintenance was performed
+- Completion events are regular events (not replaceable) so the full history is preserved
+- Completions are displayed chronologically under each maintenance item

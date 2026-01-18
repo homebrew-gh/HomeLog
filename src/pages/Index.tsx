@@ -17,6 +17,7 @@ import { RoomManagementDialog } from '@/components/RoomManagementDialog';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
 import { useMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
+import { useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
 import type { Appliance, MaintenanceSchedule } from '@/lib/types';
 
 const Index = () => {
@@ -420,7 +421,7 @@ const Index = () => {
   );
 };
 
-// Maintenance Item Component
+// Maintenance Item Component with Completion History
 function MaintenanceItem({
   maintenance,
   onClick
@@ -428,69 +429,123 @@ function MaintenanceItem({
   maintenance: MaintenanceSchedule;
   onClick: () => void;
 }) {
+  const [showHistory, setShowHistory] = useState(false);
   const appliance = useApplianceById(maintenance.applianceId);
+  const completions = useCompletionsByMaintenance(maintenance.id);
   const purchaseDate = appliance?.purchaseDate || '';
   const nextDueDate = calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit);
   const overdue = purchaseDate ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit) : false;
   const dueSoon = purchaseDate ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit) : false;
 
+  const hasCompletions = completions.length > 0;
+
   return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-4 w-full p-3 rounded-lg text-left transition-colors ${
+    <div className="space-y-1">
+      <div className={`flex items-center gap-2 rounded-lg transition-colors ${
         overdue
-          ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50'
+          ? 'bg-red-50 dark:bg-red-950/30'
           : dueSoon
-            ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50'
-            : 'hover:bg-sky-50 dark:hover:bg-slate-700/30'
-      }`}
-    >
-      <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-        overdue
-          ? 'bg-red-200 dark:bg-red-900'
-          : dueSoon
-            ? 'bg-amber-200 dark:bg-amber-900'
-            : 'bg-sky-200 dark:bg-sky-900'
+            ? 'bg-amber-50 dark:bg-amber-950/30'
+            : ''
       }`}>
-        {overdue ? (
-          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-        ) : dueSoon ? (
-          <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-        ) : (
-          <Wrench className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+        {/* Chevron for completion history */}
+        {hasCompletions && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowHistory(!showHistory);
+            }}
+            className="p-2 hover:bg-sky-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          >
+            {showHistory ? (
+              <ChevronDown className="h-4 w-4 text-slate-500" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-slate-500" />
+            )}
+          </button>
         )}
+
+        {/* Main content button */}
+        <button
+          onClick={onClick}
+          className={`flex items-center gap-4 flex-1 p-3 rounded-lg text-left transition-colors ${
+            hasCompletions ? '' : 'ml-2'
+          } ${
+            overdue
+              ? 'hover:bg-red-100 dark:hover:bg-red-950/50'
+              : dueSoon
+                ? 'hover:bg-amber-100 dark:hover:bg-amber-950/50'
+                : 'hover:bg-sky-50 dark:hover:bg-slate-700/30'
+          }`}
+        >
+          <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+            overdue
+              ? 'bg-red-200 dark:bg-red-900'
+              : dueSoon
+                ? 'bg-amber-200 dark:bg-amber-900'
+                : 'bg-sky-200 dark:bg-sky-900'
+          }`}>
+            {overdue ? (
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            ) : dueSoon ? (
+              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            ) : (
+              <Wrench className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
+              {appliance?.model || 'Unknown Appliance'}
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
+              {maintenance.description}
+            </p>
+          </div>
+
+          <div className="text-right shrink-0">
+            <p className={`text-sm font-medium ${
+              overdue
+                ? 'text-red-600 dark:text-red-400'
+                : dueSoon
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-slate-600 dark:text-slate-300'
+            }`}>
+              {overdue ? 'Overdue' : dueSoon ? 'Due Soon' : 'Due'}
+            </p>
+            <p className={`text-sm ${
+              overdue
+                ? 'text-red-500 dark:text-red-500'
+                : dueSoon
+                  ? 'text-amber-500 dark:text-amber-500'
+                  : 'text-slate-500 dark:text-slate-400'
+            }`}>
+              {formatDueDate(nextDueDate)}
+            </p>
+          </div>
+        </button>
       </div>
 
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
-          {appliance?.model || 'Unknown Appliance'}
-        </p>
-        <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
-          {maintenance.description}
-        </p>
-      </div>
-
-      <div className="text-right shrink-0">
-        <p className={`text-sm font-medium ${
-          overdue
-            ? 'text-red-600 dark:text-red-400'
-            : dueSoon
-              ? 'text-amber-600 dark:text-amber-400'
-              : 'text-slate-600 dark:text-slate-300'
-        }`}>
-          {overdue ? 'Overdue' : dueSoon ? 'Due Soon' : 'Due'}
-        </p>
-        <p className={`text-sm ${
-          overdue
-            ? 'text-red-500 dark:text-red-500'
-            : dueSoon
-              ? 'text-amber-500 dark:text-amber-500'
-              : 'text-slate-500 dark:text-slate-400'
-        }`}>
-          {formatDueDate(nextDueDate)}
-        </p>
-      </div>
-    </button>
+      {/* Completion History */}
+      {hasCompletions && showHistory && (
+        <div className="ml-8 pl-4 border-l-2 border-green-200 dark:border-green-800 space-y-1">
+          <p className="text-xs font-medium text-green-700 dark:text-green-300 py-1">
+            Completion History
+          </p>
+          {completions.map((completion) => (
+            <div
+              key={completion.id}
+              className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-950/30 text-sm"
+            >
+              <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <span className="text-green-800 dark:text-green-200">
+                Completed on {completion.completedDate}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
