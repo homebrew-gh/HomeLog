@@ -1,22 +1,22 @@
 import { useState, useMemo } from 'react';
 import { useSeoMeta } from '@unhead/react';
-import { Plus, ChevronDown, ChevronRight, Home, Wrench, Calendar, AlertTriangle, Clock, Package } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Home, Wrench, Calendar, AlertTriangle, Clock, Package, Menu, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LoginArea } from '@/components/auth/LoginArea';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ApplianceDialog } from '@/components/ApplianceDialog';
 import { ApplianceDetailDialog } from '@/components/ApplianceDetailDialog';
 import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
+import { RoomManagementDialog } from '@/components/RoomManagementDialog';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
 import { useMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
-import { genUserName } from '@/lib/genUserName';
 import type { Appliance, MaintenanceSchedule } from '@/lib/types';
 
 const Index = () => {
@@ -25,7 +25,7 @@ const Index = () => {
     description: 'Manage your home appliances and maintenance schedules with Nostr.',
   });
 
-  const { user, metadata } = useCurrentUser();
+  const { user } = useCurrentUser();
   const { data: appliances = [], isLoading: isLoadingAppliances } = useAppliances();
   const { data: maintenance = [], isLoading: isLoadingMaintenance } = useMaintenance();
 
@@ -33,10 +33,13 @@ const Index = () => {
   const [applianceDialogOpen, setApplianceDialogOpen] = useState(false);
   const [editingAppliance, setEditingAppliance] = useState<Appliance | undefined>();
   const [viewingAppliance, setViewingAppliance] = useState<Appliance | undefined>();
-  
+
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceSchedule | undefined>();
   const [viewingMaintenance, setViewingMaintenance] = useState<MaintenanceSchedule | undefined>();
+
+  // Room management dialog state
+  const [roomManagementOpen, setRoomManagementOpen] = useState(false);
 
   // Collapsed rooms state
   const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(new Set());
@@ -44,7 +47,7 @@ const Index = () => {
   // Group appliances by room
   const appliancesByRoom = useMemo(() => {
     const grouped: Record<string, Appliance[]> = {};
-    
+
     for (const appliance of appliances) {
       const room = appliance.room || 'Uncategorized';
       if (!grouped[room]) {
@@ -52,14 +55,14 @@ const Index = () => {
       }
       grouped[room].push(appliance);
     }
-    
+
     // Sort rooms alphabetically, but put "Uncategorized" at the end
     const sortedRooms = Object.keys(grouped).sort((a, b) => {
       if (a === 'Uncategorized') return 1;
       if (b === 'Uncategorized') return -1;
       return a.localeCompare(b);
     });
-    
+
     return { grouped, sortedRooms };
   }, [appliances]);
 
@@ -85,44 +88,33 @@ const Index = () => {
     setMaintenanceDialogOpen(true);
   };
 
-  const displayName = metadata?.name || (user ? genUserName(user.pubkey) : '');
-  const profilePicture = metadata?.picture;
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-sky-100 dark:from-slate-900 dark:to-slate-800">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-sky-200 dark:border-slate-700">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          {/* Left - Profile */}
+          {/* Left - Menu & Logo */}
           <div className="flex items-center gap-3">
-            {user ? (
-              <>
-                <Avatar className="h-10 w-10 ring-2 ring-sky-300 dark:ring-sky-600">
-                  <AvatarImage src={profilePicture} alt={displayName} />
-                  <AvatarFallback className="bg-sky-200 dark:bg-sky-800 text-sky-700 dark:text-sky-200">
-                    {displayName.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden sm:block">
-                  <p className="font-semibold text-slate-800 dark:text-slate-100">{displayName}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Home Owner</p>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Home className="h-6 w-6 text-sky-600 dark:text-sky-400" />
-                <span className="font-bold text-xl text-sky-700 dark:text-sky-300">Home Log</span>
-              </div>
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem onClick={() => setRoomManagementOpen(true)}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Manage Rooms
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-          </div>
-
-          {/* Center - Title (only when logged in) */}
-          {user && (
-            <div className="hidden md:flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <Home className="h-6 w-6 text-sky-600 dark:text-sky-400" />
               <span className="font-bold text-xl text-sky-700 dark:text-sky-300">Home Log</span>
             </div>
-          )}
+          </div>
 
           {/* Right - Theme Toggle & Login */}
           <div className="flex items-center gap-2">
@@ -145,7 +137,7 @@ const Index = () => {
                 Welcome to Home Log
               </h1>
               <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-                Keep track of your home appliances and maintenance schedules. 
+                Keep track of your home appliances and maintenance schedules.
                 Your data is stored securely on the Nostr network.
               </p>
             </div>
@@ -160,7 +152,7 @@ const Index = () => {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700">
                 <CardContent className="pt-6">
                   <Wrench className="h-10 w-10 text-sky-500 mx-auto mb-3" />
@@ -170,7 +162,7 @@ const Index = () => {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700">
                 <CardContent className="pt-6">
                   <Calendar className="h-10 w-10 text-sky-500 mx-auto mb-3" />
@@ -200,7 +192,7 @@ const Index = () => {
                   <Package className="h-6 w-6 text-sky-600 dark:text-sky-400" />
                   Appliances
                 </h2>
-                <Button 
+                <Button
                   onClick={() => {
                     setEditingAppliance(undefined);
                     setApplianceDialogOpen(true);
@@ -233,7 +225,7 @@ const Index = () => {
                     <p className="text-muted-foreground mb-4">
                       No appliances added yet. Start tracking your home equipment!
                     </p>
-                    <Button 
+                    <Button
                       onClick={() => {
                         setEditingAppliance(undefined);
                         setApplianceDialogOpen(true);
@@ -304,7 +296,7 @@ const Index = () => {
                   <Wrench className="h-6 w-6 text-sky-600 dark:text-sky-400" />
                   Maintenance
                 </h2>
-                <Button 
+                <Button
                   onClick={() => {
                     setEditingMaintenance(undefined);
                     setMaintenanceDialogOpen(true);
@@ -337,12 +329,12 @@ const Index = () => {
                   <CardContent className="py-12 text-center">
                     <Wrench className="h-12 w-12 text-sky-300 dark:text-sky-700 mx-auto mb-4" />
                     <p className="text-muted-foreground mb-4">
-                      {appliances.length === 0 
+                      {appliances.length === 0
                         ? "Add an appliance first, then create maintenance schedules."
                         : "No maintenance schedules yet. Stay on top of your home upkeep!"}
                     </p>
                     {appliances.length > 0 && (
-                      <Button 
+                      <Button
                         onClick={() => {
                           setEditingMaintenance(undefined);
                           setMaintenanceDialogOpen(true);
@@ -361,9 +353,9 @@ const Index = () => {
                   <CardContent className="p-4">
                     <div className="space-y-2">
                       {maintenance.map((maint) => (
-                        <MaintenanceItem 
-                          key={maint.id} 
-                          maintenance={maint} 
+                        <MaintenanceItem
+                          key={maint.id}
+                          maintenance={maint}
                           onClick={() => setViewingMaintenance(maint)}
                         />
                       ))}
@@ -419,16 +411,21 @@ const Index = () => {
           onEdit={() => handleEditMaintenance(viewingMaintenance)}
         />
       )}
+
+      <RoomManagementDialog
+        isOpen={roomManagementOpen}
+        onClose={() => setRoomManagementOpen(false)}
+      />
     </div>
   );
 };
 
 // Maintenance Item Component
-function MaintenanceItem({ 
-  maintenance, 
-  onClick 
-}: { 
-  maintenance: MaintenanceSchedule; 
+function MaintenanceItem({
+  maintenance,
+  onClick
+}: {
+  maintenance: MaintenanceSchedule;
   onClick: () => void;
 }) {
   const appliance = useApplianceById(maintenance.applianceId);
@@ -441,17 +438,17 @@ function MaintenanceItem({
     <button
       onClick={onClick}
       className={`flex items-center gap-4 w-full p-3 rounded-lg text-left transition-colors ${
-        overdue 
-          ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50' 
-          : dueSoon 
+        overdue
+          ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50'
+          : dueSoon
             ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50'
             : 'hover:bg-sky-50 dark:hover:bg-slate-700/30'
       }`}
     >
       <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-        overdue 
-          ? 'bg-red-200 dark:bg-red-900' 
-          : dueSoon 
+        overdue
+          ? 'bg-red-200 dark:bg-red-900'
+          : dueSoon
             ? 'bg-amber-200 dark:bg-amber-900'
             : 'bg-sky-200 dark:bg-sky-900'
       }`}>
@@ -463,7 +460,7 @@ function MaintenanceItem({
           <Wrench className="h-5 w-5 text-sky-600 dark:text-sky-400" />
         )}
       </div>
-      
+
       <div className="flex-1 min-w-0">
         <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
           {appliance?.model || 'Unknown Appliance'}
@@ -472,21 +469,21 @@ function MaintenanceItem({
           {maintenance.description}
         </p>
       </div>
-      
+
       <div className="text-right shrink-0">
         <p className={`text-sm font-medium ${
-          overdue 
-            ? 'text-red-600 dark:text-red-400' 
-            : dueSoon 
+          overdue
+            ? 'text-red-600 dark:text-red-400'
+            : dueSoon
               ? 'text-amber-600 dark:text-amber-400'
               : 'text-slate-600 dark:text-slate-300'
         }`}>
           {overdue ? 'Overdue' : dueSoon ? 'Due Soon' : 'Due'}
         </p>
         <p className={`text-sm ${
-          overdue 
-            ? 'text-red-500 dark:text-red-500' 
-            : dueSoon 
+          overdue
+            ? 'text-red-500 dark:text-red-500'
+            : dueSoon
               ? 'text-amber-500 dark:text-amber-500'
               : 'text-slate-500 dark:text-slate-400'
         }`}>
