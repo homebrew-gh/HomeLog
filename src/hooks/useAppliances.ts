@@ -15,7 +15,7 @@ function getTagValue(event: NostrEvent, tagName: string): string | undefined {
 function parseAppliance(event: NostrEvent): Appliance | null {
   const id = getTagValue(event, 'd');
   const model = getTagValue(event, 'model');
-  
+
   if (!id || !model) return null;
 
   return {
@@ -31,6 +31,25 @@ function parseAppliance(event: NostrEvent): Appliance | null {
   };
 }
 
+// Extract deleted appliance IDs from kind 5 events
+function getDeletedApplianceIds(deletionEvents: NostrEvent[], pubkey: string): Set<string> {
+  const deletedIds = new Set<string>();
+
+  for (const event of deletionEvents) {
+    for (const tag of event.tags) {
+      if (tag[0] === 'a') {
+        // Parse "kind:pubkey:d-tag" format
+        const parts = tag[1].split(':');
+        if (parts.length >= 3 && parts[0] === String(APPLIANCE_KIND) && parts[1] === pubkey) {
+          deletedIds.add(parts[2]);
+        }
+      }
+    }
+  }
+
+  return deletedIds;
+}
+
 export function useAppliances() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
@@ -39,17 +58,30 @@ export function useAppliances() {
     queryKey: ['appliances', user?.pubkey],
     queryFn: async (c) => {
       if (!user?.pubkey) return [];
-      
+
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+
+      // Query both appliance events and deletion events in one request
       const events = await nostr.query(
-        [{ kinds: [APPLIANCE_KIND], authors: [user.pubkey] }],
+        [
+          { kinds: [APPLIANCE_KIND], authors: [user.pubkey] },
+          { kinds: [5], authors: [user.pubkey] },
+        ],
         { signal }
       );
 
+      // Separate appliance events from deletion events
+      const applianceEvents = events.filter(e => e.kind === APPLIANCE_KIND);
+      const deletionEvents = events.filter(e => e.kind === 5);
+
+      // Get the set of deleted appliance IDs
+      const deletedIds = getDeletedApplianceIds(deletionEvents, user.pubkey);
+
       const appliances: Appliance[] = [];
-      for (const event of events) {
+      for (const event of applianceEvents) {
         const appliance = parseAppliance(event);
-        if (appliance) {
+        // Only include appliances that haven't been deleted
+        if (appliance && !deletedIds.has(appliance.id)) {
           appliances.push(appliance);
         }
       }

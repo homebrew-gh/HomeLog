@@ -17,11 +17,11 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
   const description = getTagValue(event, 'description');
   const frequency = getTagValue(event, 'frequency');
   const frequencyUnit = getTagValue(event, 'frequency_unit');
-  
+
   // Get appliance reference from 'a' tag
   const aTag = event.tags.find(([name]) => name === 'a')?.[1];
   const applianceId = aTag?.split(':')[2]; // Format: kind:pubkey:d-tag
-  
+
   if (!id || !description || !frequency || !frequencyUnit || !applianceId) return null;
 
   const validUnits = ['days', 'weeks', 'months', 'years'];
@@ -39,6 +39,44 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
   };
 }
 
+// Extract deleted maintenance IDs from kind 5 events
+function getDeletedMaintenanceIds(deletionEvents: NostrEvent[], pubkey: string): Set<string> {
+  const deletedIds = new Set<string>();
+
+  for (const event of deletionEvents) {
+    for (const tag of event.tags) {
+      if (tag[0] === 'a') {
+        // Parse "kind:pubkey:d-tag" format
+        const parts = tag[1].split(':');
+        if (parts.length >= 3 && parts[0] === String(MAINTENANCE_KIND) && parts[1] === pubkey) {
+          deletedIds.add(parts[2]);
+        }
+      }
+    }
+  }
+
+  return deletedIds;
+}
+
+// Extract deleted appliance IDs from kind 5 events (to filter out orphaned maintenance)
+function getDeletedApplianceIds(deletionEvents: NostrEvent[], pubkey: string): Set<string> {
+  const deletedIds = new Set<string>();
+
+  for (const event of deletionEvents) {
+    for (const tag of event.tags) {
+      if (tag[0] === 'a') {
+        // Parse "kind:pubkey:d-tag" format
+        const parts = tag[1].split(':');
+        if (parts.length >= 3 && parts[0] === String(APPLIANCE_KIND) && parts[1] === pubkey) {
+          deletedIds.add(parts[2]);
+        }
+      }
+    }
+  }
+
+  return deletedIds;
+}
+
 export function useMaintenance() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
@@ -47,17 +85,31 @@ export function useMaintenance() {
     queryKey: ['maintenance', user?.pubkey],
     queryFn: async (c) => {
       if (!user?.pubkey) return [];
-      
+
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+
+      // Query both maintenance events and deletion events in one request
       const events = await nostr.query(
-        [{ kinds: [MAINTENANCE_KIND], authors: [user.pubkey] }],
+        [
+          { kinds: [MAINTENANCE_KIND], authors: [user.pubkey] },
+          { kinds: [5], authors: [user.pubkey] },
+        ],
         { signal }
       );
 
+      // Separate maintenance events from deletion events
+      const maintenanceEvents = events.filter(e => e.kind === MAINTENANCE_KIND);
+      const deletionEvents = events.filter(e => e.kind === 5);
+
+      // Get the set of deleted maintenance IDs and deleted appliance IDs
+      const deletedMaintenanceIds = getDeletedMaintenanceIds(deletionEvents, user.pubkey);
+      const deletedApplianceIds = getDeletedApplianceIds(deletionEvents, user.pubkey);
+
       const schedules: MaintenanceSchedule[] = [];
-      for (const event of events) {
+      for (const event of maintenanceEvents) {
         const schedule = parseMaintenance(event);
-        if (schedule) {
+        // Only include maintenance that hasn't been deleted and whose appliance hasn't been deleted
+        if (schedule && !deletedMaintenanceIds.has(schedule.id) && !deletedApplianceIds.has(schedule.applianceId)) {
           schedules.push(schedule);
         }
       }
@@ -149,23 +201,23 @@ export function useMaintenanceActions() {
 // Calculate the next due date for a maintenance schedule
 export function calculateNextDueDate(purchaseDate: string, frequency: number, frequencyUnit: MaintenanceSchedule['frequencyUnit']): Date | null {
   if (!purchaseDate) return null;
-  
+
   // Parse MM/DD/YYYY format
   const parts = purchaseDate.split('/');
   if (parts.length !== 3) return null;
-  
+
   const month = parseInt(parts[0], 10) - 1; // JS months are 0-indexed
   const day = parseInt(parts[1], 10);
   const year = parseInt(parts[2], 10);
-  
+
   if (isNaN(month) || isNaN(day) || isNaN(year)) return null;
-  
+
   const startDate = new Date(year, month, day);
   if (isNaN(startDate.getTime())) return null;
-  
+
   const now = new Date();
   let nextDue = new Date(startDate);
-  
+
   // Keep adding frequency until we get a future date
   while (nextDue <= now) {
     switch (frequencyUnit) {
@@ -183,17 +235,17 @@ export function calculateNextDueDate(purchaseDate: string, frequency: number, fr
         break;
     }
   }
-  
+
   return nextDue;
 }
 
 // Format date for display
 export function formatDueDate(date: Date | null): string {
   if (!date) return 'N/A';
-  return date.toLocaleDateString('en-US', { 
-    month: '2-digit', 
-    day: '2-digit', 
-    year: 'numeric' 
+  return date.toLocaleDateString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric'
   });
 }
 
