@@ -144,7 +144,7 @@ const Index = () => {
             </div>
 
             <div className="grid sm:grid-cols-3 gap-6 mb-12">
-              <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700">
+              <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
                 <CardContent className="pt-6">
                   <Package className="h-10 w-10 text-sky-500 mx-auto mb-3" />
                   <h3 className="font-semibold mb-2">Track Appliances</h3>
@@ -154,7 +154,7 @@ const Index = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700">
+              <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
                 <CardContent className="pt-6">
                   <Wrench className="h-10 w-10 text-sky-500 mx-auto mb-3" />
                   <h3 className="font-semibold mb-2">Schedule Maintenance</h3>
@@ -164,7 +164,7 @@ const Index = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700">
+              <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
                 <CardContent className="pt-6">
                   <Calendar className="h-10 w-10 text-sky-500 mx-auto mb-3" />
                   <h3 className="font-semibold mb-2">Stay Organized</h3>
@@ -206,7 +206,7 @@ const Index = () => {
               </div>
 
               {isLoadingAppliances ? (
-                <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700">
+                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
                   <CardContent className="p-6 space-y-4">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="space-y-2">
@@ -220,7 +220,7 @@ const Index = () => {
                   </CardContent>
                 </Card>
               ) : appliances.length === 0 ? (
-                <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700 border-dashed">
+                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 border-dashed">
                   <CardContent className="py-12 text-center">
                     <Package className="h-12 w-12 text-sky-300 dark:text-sky-700 mx-auto mb-4" />
                     <p className="text-muted-foreground mb-4">
@@ -240,7 +240,7 @@ const Index = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700">
+                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
                   <CardContent className="p-4">
                     {appliancesByRoom.sortedRooms.map((room) => (
                       <Collapsible
@@ -311,7 +311,7 @@ const Index = () => {
               </div>
 
               {isLoadingMaintenance ? (
-                <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700">
+                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
                   <CardContent className="p-6 space-y-3">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="flex items-center gap-4">
@@ -326,7 +326,7 @@ const Index = () => {
                   </CardContent>
                 </Card>
               ) : maintenance.length === 0 ? (
-                <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700 border-dashed">
+                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 border-dashed">
                   <CardContent className="py-12 text-center">
                     <Wrench className="h-12 w-12 text-sky-300 dark:text-sky-700 mx-auto mb-4" />
                     <p className="text-muted-foreground mb-4">
@@ -350,7 +350,7 @@ const Index = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-white/70 dark:bg-slate-800/70 border-sky-200 dark:border-slate-700">
+                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
                   <CardContent className="p-4">
                     <div className="space-y-2">
                       {maintenance.map((maint) => (
