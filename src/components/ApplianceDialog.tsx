@@ -3,6 +3,7 @@ import { Plus, Upload, X, FileText, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApplianceActions } from '@/hooks/useAppliances';
@@ -10,6 +11,15 @@ import { useCustomRooms } from '@/hooks/useCustomRooms';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import type { Appliance } from '@/lib/types';
+
+// Get today's date in MM/DD/YYYY format
+function getTodayFormatted(): string {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const year = today.getFullYear();
+  return `${month}/${day}/${year}`;
+}
 
 interface ApplianceDialogProps {
   isOpen: boolean;
@@ -21,11 +31,12 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
   const { createAppliance, updateAppliance } = useApplianceActions();
   const { allRooms, addCustomRoom } = useCustomRooms();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [newRoom, setNewRoom] = useState('');
-  
+  const [useTodayDate, setUseTodayDate] = useState(false);
+
   const [formData, setFormData] = useState({
     model: '',
     manufacturer: '',
@@ -64,6 +75,7 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
       }
       setShowAddRoom(false);
       setNewRoom('');
+      setUseTodayDate(false);
     }
   }, [isOpen, appliance]);
 
@@ -156,14 +168,14 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Model */}
+          {/* Model/Description */}
           <div className="space-y-2">
-            <Label htmlFor="model">Model *</Label>
+            <Label htmlFor="model">Model/Description *</Label>
             <Input
               id="model"
               value={formData.model}
               onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
-              placeholder="Enter appliance model"
+              placeholder="Enter appliance model/type"
             />
           </div>
 
@@ -178,15 +190,41 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
             />
           </div>
 
-          {/* Purchase Date */}
+          {/* Purchase/Install Date */}
           <div className="space-y-2">
-            <Label htmlFor="purchaseDate">Purchase Date (MM/DD/YYYY)</Label>
+            <Label htmlFor="purchaseDate">Purchase/Install Date (MM/DD/YYYY)</Label>
             <Input
               id="purchaseDate"
               value={formData.purchaseDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, purchaseDate: e.target.value }))}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, purchaseDate: e.target.value }));
+                if (e.target.value) {
+                  setUseTodayDate(false);
+                }
+              }}
               placeholder="MM/DD/YYYY"
+              disabled={useTodayDate}
+              className={useTodayDate ? 'opacity-50' : ''}
             />
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="useTodayDate"
+                checked={useTodayDate}
+                onCheckedChange={(checked) => {
+                  const isChecked = checked === true;
+                  setUseTodayDate(isChecked);
+                  if (isChecked) {
+                    setFormData(prev => ({ ...prev, purchaseDate: getTodayFormatted() }));
+                  }
+                }}
+              />
+              <Label
+                htmlFor="useTodayDate"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Today ({getTodayFormatted()})
+              </Label>
+            </div>
           </div>
 
           {/* Room Selection */}
