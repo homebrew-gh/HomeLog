@@ -94,7 +94,19 @@ interface EncryptionContextType {
   resetToDefaults: () => void;
 }
 
-const EncryptionContext = createContext<EncryptionContextType | null>(null);
+/**
+ * Default context value used when outside the provider
+ * This allows hooks to work gracefully even if the provider is not yet mounted
+ */
+const defaultContextValue: EncryptionContextType = {
+  settings: DEFAULT_ENCRYPTION_SETTINGS,
+  isEncryptionEnabled: (category: EncryptableCategory) => DEFAULT_ENCRYPTION_SETTINGS[category],
+  setEncryptionEnabled: () => {},
+  setAllEncryption: () => {},
+  resetToDefaults: () => {},
+};
+
+const EncryptionContext = createContext<EncryptionContextType>(defaultContextValue);
 
 export function EncryptionProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useLocalStorage<EncryptionSettings>(
@@ -146,8 +158,6 @@ export function EncryptionProvider({ children }: { children: ReactNode }) {
 
 export function useEncryptionSettings() {
   const context = useContext(EncryptionContext);
-  if (!context) {
-    throw new Error('useEncryptionSettings must be used within an EncryptionProvider');
-  }
+  // Context will always have a value due to the default value set in createContext
   return context;
 }
