@@ -11,7 +11,9 @@ export function useCustomRooms() {
     restoreDefaultRoom,
   } = useUserPreferences();
 
-  const { customRooms, hiddenDefaultRooms = [] } = preferences;
+  // Ensure arrays are always defined with fallbacks
+  const customRooms = preferences.customRooms || [];
+  const hiddenDefaultRooms = preferences.hiddenDefaultRooms || [];
 
   // Get visible default rooms (excluding hidden ones)
   const visibleDefaultRooms = useMemo(() => {

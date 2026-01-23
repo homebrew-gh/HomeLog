@@ -278,12 +278,14 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // Room actions
   const addCustomRoom = useCallback((room: string) => {
     updatePreferences((prev) => {
-      if (prev.customRooms.includes(room)) return prev;
+      const currentCustomRooms = prev.customRooms || [];
+      const currentHiddenRooms = prev.hiddenDefaultRooms || [];
+      if (currentCustomRooms.includes(room)) return prev;
       return {
         ...prev,
-        customRooms: [...prev.customRooms, room],
+        customRooms: [...currentCustomRooms, room],
         // If adding a room that was a hidden default, remove it from hidden
-        hiddenDefaultRooms: prev.hiddenDefaultRooms.filter(r => r !== room),
+        hiddenDefaultRooms: currentHiddenRooms.filter(r => r !== room),
       };
     });
   }, [updatePreferences]);
@@ -291,16 +293,17 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const removeCustomRoom = useCallback((room: string) => {
     updatePreferences((prev) => ({
       ...prev,
-      customRooms: prev.customRooms.filter(r => r !== room),
+      customRooms: (prev.customRooms || []).filter(r => r !== room),
     }));
   }, [updatePreferences]);
 
   const hideDefaultRoom = useCallback((room: string) => {
     updatePreferences((prev) => {
-      if (prev.hiddenDefaultRooms.includes(room)) return prev;
+      const currentHiddenRooms = prev.hiddenDefaultRooms || [];
+      if (currentHiddenRooms.includes(room)) return prev;
       return {
         ...prev,
-        hiddenDefaultRooms: [...prev.hiddenDefaultRooms, room],
+        hiddenDefaultRooms: [...currentHiddenRooms, room],
       };
     });
   }, [updatePreferences]);
@@ -308,7 +311,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const restoreDefaultRoom = useCallback((room: string) => {
     updatePreferences((prev) => ({
       ...prev,
-      hiddenDefaultRooms: prev.hiddenDefaultRooms.filter(r => r !== room),
+      hiddenDefaultRooms: (prev.hiddenDefaultRooms || []).filter(r => r !== room),
     }));
   }, [updatePreferences]);
 
@@ -321,10 +324,20 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Normalize preferences to ensure all fields have default values
+  const normalizedPreferences: UserPreferences = {
+    activeTabs: localPreferences.activeTabs || [],
+    activeTab: localPreferences.activeTab || 'home',
+    appliancesViewMode: localPreferences.appliancesViewMode || 'card',
+    customRooms: localPreferences.customRooms || [],
+    hiddenDefaultRooms: localPreferences.hiddenDefaultRooms || [],
+    version: localPreferences.version || 1,
+  };
+
   return (
     <UserPreferencesContext.Provider
       value={{
-        preferences: localPreferences,
+        preferences: normalizedPreferences,
         isLoading: isLoadingRemote && !hasSyncedFromRemote.current,
         isSyncing: !!saveTimeoutRef.current,
         addTab,
