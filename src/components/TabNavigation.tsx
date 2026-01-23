@@ -10,11 +10,22 @@ import {
   Users, 
   FolderKanban,
   X,
-  GripVertical
+  GripVertical,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
+import { useAllTabsData, type TabDataInfo } from '@/hooks/useTabData';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Home,
@@ -34,12 +45,31 @@ interface TabNavigationProps {
 
 export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
   const { preferences, setActiveTab, removeTab, reorderTabs, getTabDefinition } = useTabPreferences();
+  const tabsData = useAllTabsData(preferences.activeTabs);
+  
   const [draggedTab, setDraggedTab] = useState<TabId | null>(null);
   const [dragOverTab, setDragOverTab] = useState<TabId | null>(null);
+  const [warningDialog, setWarningDialog] = useState<{ open: boolean; tabId: TabId | null; dataInfo: TabDataInfo | null }>({
+    open: false,
+    tabId: null,
+    dataInfo: null,
+  });
   const dragCounter = useRef(0);
 
   // Build the full tab list: Home first, then active tabs, then +
   const allTabs: (TabId | 'add')[] = ['home', ...preferences.activeTabs, 'add'];
+
+  const handleRemoveTab = (tabId: TabId) => {
+    const dataInfo = tabsData[tabId];
+    
+    if (dataInfo?.hasData) {
+      // Show warning dialog - can't delete tab with data
+      setWarningDialog({ open: true, tabId, dataInfo });
+    } else {
+      // No data, safe to remove
+      removeTab(tabId);
+    }
+  };
 
   const handleDragStart = (e: React.DragEvent, tabId: TabId) => {
     if (tabId === 'home') return; // Can't drag home
@@ -93,100 +123,139 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
   };
 
   return (
-    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-b border-sky-200 dark:border-slate-700">
-      <div className="container mx-auto px-4">
-        <nav className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-hide">
-          {allTabs.map((tabId) => {
-            if (tabId === 'add') {
-              return (
-                <Button
-                  key="add"
-                  variant="ghost"
-                  size="sm"
-                  onClick={onAddTabClick}
-                  className={cn(
-                    "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg",
-                    "text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-slate-800",
-                    "border border-dashed border-sky-300 dark:border-sky-700",
-                    "transition-all duration-200 hover:border-sky-400 dark:hover:border-sky-600"
-                  )}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              );
-            }
-
-            const tab = getTabDefinition(tabId);
-            if (!tab) return null;
-
-            const IconComponent = ICON_MAP[tab.icon] || Home;
-            const isActive = preferences.activeTab === tabId;
-            const isHome = tabId === 'home';
-            const isDragging = draggedTab === tabId;
-            const isDragOver = dragOverTab === tabId;
-
-            return (
-              <div
-                key={tabId}
-                className={cn(
-                  "relative flex-shrink-0 group",
-                  isDragging && "opacity-50"
-                )}
-                draggable={!isHome}
-                onDragStart={(e) => handleDragStart(e, tabId)}
-                onDragEnd={handleDragEnd}
-                onDragEnter={(e) => handleDragEnter(e, tabId)}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, tabId)}
-              >
-                {/* Drop indicator */}
-                {isDragOver && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-0.5 h-8 bg-sky-500 rounded-full" />
-                )}
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab(tabId)}
-                  className={cn(
-                    "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg transition-all duration-200",
-                    isActive
-                      ? "bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 shadow-sm"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-800",
-                    !isHome && "pr-2 cursor-grab active:cursor-grabbing"
-                  )}
-                >
-                  {/* Drag handle for non-home tabs */}
-                  {!isHome && (
-                    <GripVertical className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity -ml-1 mr-0.5" />
-                  )}
-                  <IconComponent className="h-4 w-4" />
-                  <span className="text-sm font-medium">{tab.label}</span>
-                </Button>
-
-                {/* Remove button for non-home tabs */}
-                {!isHome && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeTab(tabId);
-                    }}
+    <>
+      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-b border-sky-200 dark:border-slate-700">
+        <div className="container mx-auto px-4">
+          <nav className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-hide">
+            {allTabs.map((tabId) => {
+              if (tabId === 'add') {
+                return (
+                  <Button
+                    key="add"
+                    variant="ghost"
+                    size="sm"
+                    onClick={onAddTabClick}
                     className={cn(
-                      "absolute -top-1 -right-1 p-0.5 rounded-full",
-                      "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
-                      "opacity-0 group-hover:opacity-100 transition-opacity",
-                      "hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900 dark:hover:text-red-400"
+                      "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg",
+                      "text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-slate-800",
+                      "border border-dashed border-sky-300 dark:border-sky-700",
+                      "transition-all duration-200 hover:border-sky-400 dark:hover:border-sky-600"
                     )}
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </nav>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                );
+              }
+
+              const tab = getTabDefinition(tabId);
+              if (!tab) return null;
+
+              const IconComponent = ICON_MAP[tab.icon] || Home;
+              const isActive = preferences.activeTab === tabId;
+              const isHome = tabId === 'home';
+              const isDragging = draggedTab === tabId;
+              const isDragOver = dragOverTab === tabId;
+              const hasData = !isHome && tabsData[tabId]?.hasData;
+
+              return (
+                <div
+                  key={tabId}
+                  className={cn(
+                    "relative flex-shrink-0 group",
+                    isDragging && "opacity-50"
+                  )}
+                  draggable={!isHome}
+                  onDragStart={(e) => handleDragStart(e, tabId)}
+                  onDragEnd={handleDragEnd}
+                  onDragEnter={(e) => handleDragEnter(e, tabId)}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, tabId)}
+                >
+                  {/* Drop indicator */}
+                  {isDragOver && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-0.5 h-8 bg-sky-500 rounded-full" />
+                  )}
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActiveTab(tabId)}
+                    className={cn(
+                      "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg transition-all duration-200",
+                      isActive
+                        ? "bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 shadow-sm"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-800",
+                      !isHome && "pr-2 cursor-grab active:cursor-grabbing"
+                    )}
+                  >
+                    {/* Drag handle for non-home tabs */}
+                    {!isHome && (
+                      <GripVertical className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity -ml-1 mr-0.5" />
+                    )}
+                    <IconComponent className="h-4 w-4" />
+                    <span className="text-sm font-medium">{tab.label}</span>
+                  </Button>
+
+                  {/* Remove button for non-home tabs */}
+                  {!isHome && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveTab(tabId);
+                      }}
+                      className={cn(
+                        "absolute -top-1 -right-1 p-0.5 rounded-full",
+                        "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
+                        "opacity-0 group-hover:opacity-100 transition-opacity",
+                        hasData
+                          ? "hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900 dark:hover:text-amber-400 cursor-not-allowed"
+                          : "hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900 dark:hover:text-red-400"
+                      )}
+                      title={hasData ? "Cannot remove - section contains data" : "Remove section"}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+        </div>
       </div>
-    </div>
+
+      {/* Warning Dialog - Cannot delete tab with data */}
+      <AlertDialog 
+        open={warningDialog.open} 
+        onOpenChange={(open) => setWarningDialog({ open, tabId: null, dataInfo: null })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
+              Cannot Remove Section
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              {warningDialog.dataInfo && (
+                <>
+                  This section contains{' '}
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {warningDialog.dataInfo.count} {warningDialog.dataInfo.count === 1 
+                      ? warningDialog.dataInfo.itemName 
+                      : warningDialog.dataInfo.itemNamePlural}
+                  </span>
+                  . To remove this section, you must first delete all {warningDialog.dataInfo.itemNamePlural} within it.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction className="bg-sky-600 hover:bg-sky-700 text-white">
+              Got it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
