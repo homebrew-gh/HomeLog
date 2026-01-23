@@ -189,15 +189,15 @@
 }
 
 .animate-wiggle {
-  animation: wiggle 0.15s ease-in-out infinite;
+  animation: wiggle 0.3s ease-in-out infinite;
   transform-origin: center center;
 }
 
 /* Stagger the animation for different tabs */
 .animate-wiggle-1 { animation-delay: 0ms; }
-.animate-wiggle-2 { animation-delay: 30ms; }
-.animate-wiggle-3 { animation-delay: 60ms; }
-.animate-wiggle-4 { animation-delay: 90ms; }
-.animate-wiggle-5 { animation-delay: 120ms; }
-.animate-wiggle-6 { animation-delay: 150ms; }
-.animate-wiggle-7 { animation-delay: 180ms; }
+.animate-wiggle-2 { animation-delay: 60ms; }
+.animate-wiggle-3 { animation-delay: 120ms; }
+.animate-wiggle-4 { animation-delay: 180ms; }
+.animate-wiggle-5 { animation-delay: 240ms; }
+.animate-wiggle-6 { animation-delay: 300ms; }
+.animate-wiggle-7 { animation-delay: 360ms; }
