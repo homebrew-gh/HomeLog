@@ -259,6 +259,7 @@ export function AppliancesTab() {
           onClose={() => setViewingAppliance(undefined)}
           appliance={viewingAppliance}
           onEdit={() => handleEditAppliance(viewingAppliance)}
+          onDelete={() => setViewingAppliance(undefined)}
         />
       )}
     </section>

@@ -12,9 +12,10 @@ interface ApplianceDetailDialogProps {
   onClose: () => void;
   appliance: Appliance;
   onEdit: () => void;
+  onDelete?: () => void;
 }
 
-export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit }: ApplianceDetailDialogProps) {
+export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDelete }: ApplianceDetailDialogProps) {
   const { deleteAppliance } = useApplianceActions();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -23,18 +24,20 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit }: Ap
     setIsDeleting(true);
     try {
       await deleteAppliance(appliance.id);
+      setShowDeleteConfirm(false);
       toast({
         title: 'Appliance deleted',
         description: 'The appliance has been removed.',
       });
+      // Close dialog first, then notify parent of deletion
       onClose();
+      onDelete?.();
     } catch {
       toast({
         title: 'Error',
         description: 'Failed to delete appliance. Please try again.',
         variant: 'destructive',
       });
-    } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
     }
