@@ -10,7 +10,8 @@ import {
   Users, 
   FolderKanban,
   X,
-  GripVertical,
+  Pencil,
+  Check,
   AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
   const { preferences, setActiveTab, removeTab, reorderTabs, getTabDefinition } = useTabPreferences();
   const tabsData = useAllTabsData(preferences.activeTabs);
   
+  const [isEditMode, setIsEditMode] = useState(false);
   const [draggedTab, setDraggedTab] = useState<TabId | null>(null);
   const [dragOverTab, setDragOverTab] = useState<TabId | null>(null);
   const [warningDialog, setWarningDialog] = useState<{ open: boolean; tabId: TabId | null; dataInfo: TabDataInfo | null }>({
@@ -72,7 +74,7 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
   };
 
   const handleDragStart = (e: React.DragEvent, tabId: TabId) => {
-    if (tabId === 'home') return; // Can't drag home
+    if (tabId === 'home' || !isEditMode) return; // Can't drag home or when not in edit mode
     setDraggedTab(tabId);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', tabId);
@@ -86,7 +88,7 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
 
   const handleDragEnter = (e: React.DragEvent, tabId: TabId) => {
     e.preventDefault();
-    if (tabId === 'home' || tabId === draggedTab) return;
+    if (tabId === 'home' || tabId === draggedTab || !isEditMode) return;
     dragCounter.current++;
     setDragOverTab(tabId);
   };
@@ -106,7 +108,7 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
 
   const handleDrop = (e: React.DragEvent, targetTabId: TabId) => {
     e.preventDefault();
-    if (!draggedTab || targetTabId === 'home' || draggedTab === targetTabId) return;
+    if (!draggedTab || targetTabId === 'home' || draggedTab === targetTabId || !isEditMode) return;
 
     const currentTabs = [...preferences.activeTabs];
     const draggedIndex = currentTabs.indexOf(draggedTab);
@@ -122,12 +124,26 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
     handleDragEnd();
   };
 
+  // Get wiggle animation class based on tab index
+  const getWiggleClass = (index: number) => {
+    const wiggleClasses = [
+      'animate-wiggle animate-wiggle-1',
+      'animate-wiggle animate-wiggle-2',
+      'animate-wiggle animate-wiggle-3',
+      'animate-wiggle animate-wiggle-4',
+      'animate-wiggle animate-wiggle-5',
+      'animate-wiggle animate-wiggle-6',
+      'animate-wiggle animate-wiggle-7',
+    ];
+    return wiggleClasses[index % wiggleClasses.length];
+  };
+
   return (
     <>
       <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-b border-sky-200 dark:border-slate-700">
         <div className="container mx-auto px-4">
           <nav className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-hide">
-            {allTabs.map((tabId) => {
+            {allTabs.map((tabId, index) => {
               if (tabId === 'add') {
                 return (
                   <Button
@@ -156,15 +172,17 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
               const isDragging = draggedTab === tabId;
               const isDragOver = dragOverTab === tabId;
               const hasData = !isHome && tabsData[tabId]?.hasData;
+              const canEdit = !isHome && isEditMode;
 
               return (
                 <div
                   key={tabId}
                   className={cn(
-                    "relative flex-shrink-0 group",
-                    isDragging && "opacity-50"
+                    "relative flex-shrink-0",
+                    isDragging && "opacity-50",
+                    canEdit && getWiggleClass(index)
                   )}
-                  draggable={!isHome}
+                  draggable={canEdit}
                   onDragStart={(e) => handleDragStart(e, tabId)}
                   onDragEnd={handleDragEnd}
                   onDragEnter={(e) => handleDragEnter(e, tabId)}
@@ -180,46 +198,68 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setActiveTab(tabId)}
+                    onClick={() => !isEditMode && setActiveTab(tabId)}
                     className={cn(
                       "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg transition-all duration-200",
                       isActive
                         ? "bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 shadow-sm"
                         : "text-slate-600 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-800",
-                      !isHome && "pr-2 cursor-grab active:cursor-grabbing"
+                      canEdit && "cursor-grab active:cursor-grabbing"
                     )}
                   >
-                    {/* Drag handle for non-home tabs */}
-                    {!isHome && (
-                      <GripVertical className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity -ml-1 mr-0.5" />
-                    )}
                     <IconComponent className="h-4 w-4" />
                     <span className="text-sm font-medium">{tab.label}</span>
                   </Button>
 
-                  {/* Remove button for non-home tabs */}
-                  {!isHome && (
+                  {/* Remove button - only visible in edit mode for non-home tabs */}
+                  {canEdit && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleRemoveTab(tabId);
                       }}
                       className={cn(
-                        "absolute -top-1 -right-1 p-0.5 rounded-full",
-                        "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
-                        "opacity-0 group-hover:opacity-100 transition-opacity",
-                        hasData
-                          ? "hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900 dark:hover:text-amber-400 cursor-not-allowed"
-                          : "hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900 dark:hover:text-red-400"
+                        "absolute -top-1.5 -left-1.5 p-0.5 rounded-full",
+                        "bg-red-500 text-white shadow-sm",
+                        "hover:bg-red-600 transition-colors",
+                        hasData && "bg-amber-500 hover:bg-amber-600"
                       )}
                       title={hasData ? "Cannot remove - section contains data" : "Remove section"}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" strokeWidth={2.5} />
                     </button>
                   )}
                 </div>
               );
             })}
+
+            {/* Spacer to push edit button to the right */}
+            <div className="flex-grow" />
+
+            {/* Edit/Done button */}
+            {preferences.activeTabs.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditMode(!isEditMode)}
+                className={cn(
+                  "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg ml-2",
+                  "transition-all duration-200",
+                  isEditMode
+                    ? "bg-sky-600 text-white hover:bg-sky-700"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-800 hover:text-sky-600 dark:hover:text-sky-400"
+                )}
+              >
+                {isEditMode ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span className="text-sm font-medium">Done</span>
+                  </>
+                ) : (
+                  <Pencil className="h-4 w-4" />
+                )}
+              </Button>
+            )}
           </nav>
         </div>
       </div>

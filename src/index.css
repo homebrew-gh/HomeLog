@@ -177,3 +177,27 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* iPhone-style wiggle animation for edit mode */
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+
+.animate-wiggle {
+  animation: wiggle 0.15s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* Stagger the animation for different tabs */
+.animate-wiggle-1 { animation-delay: 0ms; }
+.animate-wiggle-2 { animation-delay: 30ms; }
+.animate-wiggle-3 { animation-delay: 60ms; }
+.animate-wiggle-4 { animation-delay: 90ms; }
+.animate-wiggle-5 { animation-delay: 120ms; }
+.animate-wiggle-6 { animation-delay: 150ms; }
+.animate-wiggle-7 { animation-delay: 180ms; }
