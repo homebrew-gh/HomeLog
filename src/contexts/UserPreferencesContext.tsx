@@ -44,6 +44,8 @@ export interface UserPreferences {
   appliancesViewMode: 'list' | 'card';
   // Custom rooms
   customRooms: string[];
+  // Hidden default rooms (allows users to "delete" default rooms)
+  hiddenDefaultRooms: string[];
   // Version for future migrations
   version: number;
 }
@@ -53,6 +55,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   activeTab: 'home',
   appliancesViewMode: 'card',
   customRooms: [],
+  hiddenDefaultRooms: [],
   version: 1,
 };
 
@@ -70,9 +73,11 @@ interface UserPreferencesContextType {
   getAvailableTabs: () => TabDefinition[];
   // View mode actions
   setAppliancesViewMode: (mode: 'list' | 'card') => void;
-  // Custom rooms actions
+  // Room actions
   addCustomRoom: (room: string) => void;
   removeCustomRoom: (room: string) => void;
+  hideDefaultRoom: (room: string) => void;
+  restoreDefaultRoom: (room: string) => void;
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | null>(null);
@@ -270,13 +275,15 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
-  // Custom rooms actions
+  // Room actions
   const addCustomRoom = useCallback((room: string) => {
     updatePreferences((prev) => {
       if (prev.customRooms.includes(room)) return prev;
       return {
         ...prev,
         customRooms: [...prev.customRooms, room],
+        // If adding a room that was a hidden default, remove it from hidden
+        hiddenDefaultRooms: prev.hiddenDefaultRooms.filter(r => r !== room),
       };
     });
   }, [updatePreferences]);
@@ -285,6 +292,23 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     updatePreferences((prev) => ({
       ...prev,
       customRooms: prev.customRooms.filter(r => r !== room),
+    }));
+  }, [updatePreferences]);
+
+  const hideDefaultRoom = useCallback((room: string) => {
+    updatePreferences((prev) => {
+      if (prev.hiddenDefaultRooms.includes(room)) return prev;
+      return {
+        ...prev,
+        hiddenDefaultRooms: [...prev.hiddenDefaultRooms, room],
+      };
+    });
+  }, [updatePreferences]);
+
+  const restoreDefaultRoom = useCallback((room: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      hiddenDefaultRooms: prev.hiddenDefaultRooms.filter(r => r !== room),
     }));
   }, [updatePreferences]);
 
@@ -313,6 +337,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         setAppliancesViewMode,
         addCustomRoom,
         removeCustomRoom,
+        hideDefaultRoom,
+        restoreDefaultRoom,
       }}
     >
       {children}

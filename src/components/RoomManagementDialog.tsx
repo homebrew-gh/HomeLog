@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -7,7 +7,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useCustomRooms } from '@/hooks/useCustomRooms';
 import { useAppliances } from '@/hooks/useAppliances';
 import { toast } from '@/hooks/useToast';
-import { DEFAULT_ROOMS } from '@/lib/types';
 
 interface RoomManagementDialogProps {
   isOpen: boolean;
@@ -15,7 +14,16 @@ interface RoomManagementDialogProps {
 }
 
 export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogProps) {
-  const { customRooms, addCustomRoom, removeCustomRoom } = useCustomRooms();
+  const { 
+    customRooms, 
+    visibleDefaultRooms,
+    hiddenDefaultRooms,
+    allRooms,
+    addCustomRoom, 
+    removeRoom,
+    restoreDefaultRoom,
+    isDefaultRoom,
+  } = useCustomRooms();
   const { data: appliances = [] } = useAppliances();
   const [newRoom, setNewRoom] = useState('');
   const [roomWithAppliances, setRoomWithAppliances] = useState<{ name: string; count: number } | null>(null);
@@ -31,8 +39,7 @@ export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogPr
       return;
     }
 
-    // Check if already exists
-    const allRooms = [...DEFAULT_ROOMS, ...customRooms];
+    // Check if already exists in visible rooms
     if (allRooms.some(r => r.toLowerCase() === trimmed.toLowerCase())) {
       toast({
         title: 'Room already exists',
@@ -40,6 +47,20 @@ export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogPr
         variant: 'destructive',
       });
       return;
+    }
+
+    // Check if it's a hidden default room - if so, restore it instead
+    if (hiddenDefaultRooms.some(r => r.toLowerCase() === trimmed.toLowerCase())) {
+      const matchingRoom = hiddenDefaultRooms.find(r => r.toLowerCase() === trimmed.toLowerCase());
+      if (matchingRoom) {
+        restoreDefaultRoom(matchingRoom);
+        setNewRoom('');
+        toast({
+          title: 'Room restored',
+          description: `"${matchingRoom}" has been restored to your rooms.`,
+        });
+        return;
+      }
     }
 
     addCustomRoom(trimmed);
@@ -60,11 +81,19 @@ export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogPr
       return;
     }
 
-    // Safe to delete
-    removeCustomRoom(room);
+    // Safe to delete/hide
+    removeRoom(room);
     toast({
       title: 'Room removed',
       description: `"${room}" has been removed from your rooms.`,
+    });
+  };
+
+  const handleRestoreRoom = (room: string) => {
+    restoreDefaultRoom(room);
+    toast({
+      title: 'Room restored',
+      description: `"${room}" has been restored to your rooms.`,
     });
   };
 
@@ -73,11 +102,14 @@ export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogPr
     onClose();
   };
 
-  // Sort all rooms alphabetically for display
-  const sortedDefaultRooms = [...DEFAULT_ROOMS].sort((a, b) =>
+  // Sort rooms alphabetically for display
+  const sortedVisibleDefaultRooms = [...visibleDefaultRooms].sort((a, b) =>
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
   const sortedCustomRooms = [...customRooms].sort((a, b) =>
+    a.toLowerCase().localeCompare(b.toLowerCase())
+  );
+  const sortedHiddenRooms = [...hiddenDefaultRooms].sort((a, b) =>
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
 
@@ -136,21 +168,58 @@ export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogPr
             </div>
           )}
 
-          {/* Default Rooms */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Default Rooms</label>
-            <div className="space-y-1">
-              {sortedDefaultRooms.map((room) => (
-                <div
-                  key={room}
-                  className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                >
-                  <span className="text-sm text-muted-foreground">{room}</span>
-                  <span className="text-xs text-muted-foreground/60">Default</span>
-                </div>
-              ))}
+          {/* Default Rooms (visible) */}
+          {sortedVisibleDefaultRooms.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Default Rooms</label>
+              <div className="space-y-1">
+                {sortedVisibleDefaultRooms.map((room) => (
+                  <div
+                    key={room}
+                    className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                  >
+                    <span className="text-sm">{room}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleRemoveRoom(room)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Hidden/Deleted Default Rooms */}
+          {sortedHiddenRooms.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Deleted Rooms</label>
+              <p className="text-xs text-muted-foreground">
+                These default rooms have been removed. Click to restore them.
+              </p>
+              <div className="space-y-1">
+                {sortedHiddenRooms.map((room) => (
+                  <div
+                    key={room}
+                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-dashed border-muted"
+                  >
+                    <span className="text-sm text-muted-foreground line-through">{room}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/30"
+                      onClick={() => handleRestoreRoom(room)}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Close button */}
