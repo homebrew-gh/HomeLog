@@ -12,7 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { NostrLoginProvider } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
 import { NWCProvider } from '@/contexts/NWCContext';
-import { TabPreferencesProvider } from '@/contexts/TabPreferencesContext';
+import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
 import { AppConfig } from '@/contexts/AppContext';
 import AppRouter from './AppRouter';
 
@@ -53,14 +53,14 @@ export function App() {
             <NostrProvider>
               <NostrSync />
               <NWCProvider>
-                <TabPreferencesProvider>
+                <UserPreferencesProvider>
                   <TooltipProvider>
                     <Toaster />
                     <Suspense>
                       <AppRouter />
                     </Suspense>
                   </TooltipProvider>
-                </TabPreferencesProvider>
+                </UserPreferencesProvider>
               </NWCProvider>
             </NostrProvider>
           </NostrLoginProvider>

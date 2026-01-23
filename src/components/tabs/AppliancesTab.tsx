@@ -9,14 +9,13 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ApplianceDialog } from '@/components/ApplianceDialog';
 import { ApplianceDetailDialog } from '@/components/ApplianceDetailDialog';
 import { useAppliances } from '@/hooks/useAppliances';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useUserPreferences } from '@/hooks/useTabPreferences';
 import type { Appliance } from '@/lib/types';
-
-type ViewMode = 'list' | 'card';
 
 export function AppliancesTab() {
   const { data: appliances = [], isLoading } = useAppliances();
-  const [viewMode, setViewMode] = useLocalStorage<ViewMode>('homelog-appliances-view', 'card');
+  const { preferences, setAppliancesViewMode } = useUserPreferences();
+  const viewMode = preferences.appliancesViewMode;
 
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -78,7 +77,7 @@ export function AppliancesTab() {
             <ToggleGroup 
               type="single" 
               value={viewMode} 
-              onValueChange={(value) => value && setViewMode(value as ViewMode)}
+              onValueChange={(value) => value && setAppliancesViewMode(value as 'list' | 'card')}
               className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5"
             >
               <ToggleGroupItem 

@@ -1,0 +1,334 @@
+import { createContext, useContext, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { useNostr } from '@nostrify/react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
+
+// NIP-78: Application-specific data
+const APP_DATA_KIND = 30078;
+const APP_IDENTIFIER = 'homelog/preferences';
+
+export type TabId = 
+  | 'home'
+  | 'appliances'
+  | 'maintenance'
+  | 'vehicles'
+  | 'subscriptions'
+  | 'warranties'
+  | 'contractors'
+  | 'projects';
+
+export interface TabDefinition {
+  id: TabId;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+export const AVAILABLE_TABS: TabDefinition[] = [
+  { id: 'appliances', label: 'Appliances', icon: 'Package', description: 'Track home appliances and equipment' },
+  { id: 'maintenance', label: 'Home Maintenance', icon: 'Wrench', description: 'Schedule and track maintenance tasks' },
+  { id: 'vehicles', label: 'Vehicles', icon: 'Car', description: 'Manage vehicle information and maintenance' },
+  { id: 'subscriptions', label: 'Subscriptions', icon: 'CreditCard', description: 'Track recurring subscriptions and payments' },
+  { id: 'warranties', label: 'Warranties', icon: 'Shield', description: 'Store warranty information and expiration dates' },
+  { id: 'contractors', label: 'Contractors/Services', icon: 'Users', description: 'Keep contact info for service providers' },
+  { id: 'projects', label: 'Projects', icon: 'FolderKanban', description: 'Plan and track home improvement projects' },
+];
+
+export interface UserPreferences {
+  // Tab preferences
+  activeTabs: TabId[];
+  activeTab: TabId;
+  // View preferences
+  appliancesViewMode: 'list' | 'card';
+  // Custom rooms
+  customRooms: string[];
+  // Version for future migrations
+  version: number;
+}
+
+const DEFAULT_PREFERENCES: UserPreferences = {
+  activeTabs: [],
+  activeTab: 'home',
+  appliancesViewMode: 'card',
+  customRooms: [],
+  version: 1,
+};
+
+interface UserPreferencesContextType {
+  preferences: UserPreferences;
+  isLoading: boolean;
+  isSyncing: boolean;
+  // Tab actions
+  addTab: (tabId: TabId) => void;
+  addTabs: (tabIds: TabId[]) => void;
+  removeTab: (tabId: TabId) => void;
+  setActiveTab: (tabId: TabId) => void;
+  reorderTabs: (newOrder: TabId[]) => void;
+  getTabDefinition: (tabId: TabId) => TabDefinition | undefined;
+  getAvailableTabs: () => TabDefinition[];
+  // View mode actions
+  setAppliancesViewMode: (mode: 'list' | 'card') => void;
+  // Custom rooms actions
+  addCustomRoom: (room: string) => void;
+  removeCustomRoom: (room: string) => void;
+}
+
+const UserPreferencesContext = createContext<UserPreferencesContextType | null>(null);
+
+export function UserPreferencesProvider({ children }: { children: ReactNode }) {
+  const { nostr } = useNostr();
+  const { user } = useCurrentUser();
+  const { mutateAsync: publishEvent } = useNostrPublish();
+  const queryClient = useQueryClient();
+  
+  // Local storage for immediate persistence
+  const [localPreferences, setLocalPreferences] = useLocalStorage<UserPreferences>(
+    'homelog-user-preferences',
+    DEFAULT_PREFERENCES
+  );
+
+  // Track if we've synced from remote on this session
+  const hasSyncedFromRemote = useRef(false);
+  const lastSyncedPubkey = useRef<string | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch preferences from Nostr
+  const { data: remotePreferences, isLoading: isLoadingRemote, isFetched } = useQuery({
+    queryKey: ['user-preferences', user?.pubkey],
+    queryFn: async (c) => {
+      if (!user?.pubkey) return null;
+
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+
+      const events = await nostr.query(
+        [
+          {
+            kinds: [APP_DATA_KIND],
+            authors: [user.pubkey],
+            '#d': [APP_IDENTIFIER],
+            limit: 1,
+          },
+        ],
+        { signal }
+      );
+
+      if (events.length === 0) {
+        return null;
+      }
+
+      try {
+        const preferences = JSON.parse(events[0].content) as UserPreferences;
+        return preferences;
+      } catch (error) {
+        console.warn('Failed to parse user preferences from Nostr:', error);
+        return null;
+      }
+    },
+    enabled: !!user?.pubkey,
+    staleTime: 60000,
+  });
+
+  // Sync remote preferences to local on login
+  useEffect(() => {
+    if (!user?.pubkey) {
+      // User logged out, reset sync state
+      hasSyncedFromRemote.current = false;
+      lastSyncedPubkey.current = null;
+      return;
+    }
+
+    // Check if we need to sync (new user or different user)
+    if (lastSyncedPubkey.current !== user.pubkey) {
+      hasSyncedFromRemote.current = false;
+      lastSyncedPubkey.current = user.pubkey;
+    }
+
+    // If we have remote preferences and haven't synced yet, use them
+    if (isFetched && !hasSyncedFromRemote.current) {
+      if (remotePreferences) {
+        console.log('Syncing preferences from Nostr relay');
+        setLocalPreferences(remotePreferences);
+      }
+      hasSyncedFromRemote.current = true;
+    }
+  }, [user?.pubkey, remotePreferences, isFetched, setLocalPreferences]);
+
+  // Save preferences to Nostr (debounced)
+  const saveToNostr = useCallback(
+    async (preferences: UserPreferences) => {
+      if (!user) return;
+
+      // Clear any pending save
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // Debounce saves to avoid spamming relays
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          await publishEvent({
+            kind: APP_DATA_KIND,
+            content: JSON.stringify(preferences),
+            tags: [
+              ['d', APP_IDENTIFIER],
+              ['alt', 'Home Log user preferences'],
+            ],
+          });
+          console.log('Preferences saved to Nostr relay');
+        } catch (error) {
+          console.error('Failed to save preferences to Nostr:', error);
+        }
+      }, 2000); // 2 second debounce
+    },
+    [user, publishEvent]
+  );
+
+  // Update preferences (both local and remote)
+  const updatePreferences = useCallback(
+    (updater: (prev: UserPreferences) => UserPreferences) => {
+      setLocalPreferences((prev) => {
+        const newPrefs = updater(prev);
+        // Save to Nostr if user is logged in
+        if (user) {
+          saveToNostr(newPrefs);
+        }
+        return newPrefs;
+      });
+    },
+    [setLocalPreferences, saveToNostr, user]
+  );
+
+  // Tab actions
+  const addTab = useCallback((tabId: TabId) => {
+    if (tabId === 'home') return;
+    updatePreferences((prev) => {
+      if (prev.activeTabs.includes(tabId)) return prev;
+      return {
+        ...prev,
+        activeTabs: [...prev.activeTabs, tabId],
+        activeTab: tabId,
+      };
+    });
+  }, [updatePreferences]);
+
+  const addTabs = useCallback((tabIds: TabId[]) => {
+    updatePreferences((prev) => {
+      const newTabs = tabIds.filter(
+        id => id !== 'home' && !prev.activeTabs.includes(id)
+      );
+      if (newTabs.length === 0) return prev;
+      return {
+        ...prev,
+        activeTabs: [...prev.activeTabs, ...newTabs],
+        activeTab: newTabs[0],
+      };
+    });
+  }, [updatePreferences]);
+
+  const removeTab = useCallback((tabId: TabId) => {
+    if (tabId === 'home') return;
+    updatePreferences((prev) => ({
+      ...prev,
+      activeTabs: prev.activeTabs.filter(id => id !== tabId),
+      activeTab: prev.activeTab === tabId ? 'home' : prev.activeTab,
+    }));
+  }, [updatePreferences]);
+
+  const setActiveTab = useCallback((tabId: TabId) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      activeTab: tabId,
+    }));
+  }, [updatePreferences]);
+
+  const reorderTabs = useCallback((newOrder: TabId[]) => {
+    const filteredOrder = newOrder.filter(id => id !== 'home');
+    updatePreferences((prev) => ({
+      ...prev,
+      activeTabs: filteredOrder,
+    }));
+  }, [updatePreferences]);
+
+  const getTabDefinition = useCallback((tabId: TabId): TabDefinition | undefined => {
+    if (tabId === 'home') {
+      return { id: 'home', label: 'Home', icon: 'Home', description: 'Overview of all your tracked items' };
+    }
+    return AVAILABLE_TABS.find(tab => tab.id === tabId);
+  }, []);
+
+  const getAvailableTabs = useCallback((): TabDefinition[] => {
+    return AVAILABLE_TABS.filter(tab => !localPreferences.activeTabs.includes(tab.id));
+  }, [localPreferences.activeTabs]);
+
+  // View mode actions
+  const setAppliancesViewMode = useCallback((mode: 'list' | 'card') => {
+    updatePreferences((prev) => ({
+      ...prev,
+      appliancesViewMode: mode,
+    }));
+  }, [updatePreferences]);
+
+  // Custom rooms actions
+  const addCustomRoom = useCallback((room: string) => {
+    updatePreferences((prev) => {
+      if (prev.customRooms.includes(room)) return prev;
+      return {
+        ...prev,
+        customRooms: [...prev.customRooms, room],
+      };
+    });
+  }, [updatePreferences]);
+
+  const removeCustomRoom = useCallback((room: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      customRooms: prev.customRooms.filter(r => r !== room),
+    }));
+  }, [updatePreferences]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <UserPreferencesContext.Provider
+      value={{
+        preferences: localPreferences,
+        isLoading: isLoadingRemote && !hasSyncedFromRemote.current,
+        isSyncing: !!saveTimeoutRef.current,
+        addTab,
+        addTabs,
+        removeTab,
+        setActiveTab,
+        reorderTabs,
+        getTabDefinition,
+        getAvailableTabs,
+        setAppliancesViewMode,
+        addCustomRoom,
+        removeCustomRoom,
+      }}
+    >
+      {children}
+    </UserPreferencesContext.Provider>
+  );
+}
+
+export function useUserPreferences() {
+  const context = useContext(UserPreferencesContext);
+  if (!context) {
+    throw new Error('useUserPreferences must be used within a UserPreferencesProvider');
+  }
+  return context;
+}
+
+// Alias for backward compatibility with useTabPreferences
+export function useTabPreferences() {
+  return useUserPreferences();
+}
