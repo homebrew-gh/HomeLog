@@ -1,26 +1,28 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useSeoMeta } from '@unhead/react';
-import { Plus, ChevronDown, ChevronRight, Home, Wrench, Calendar, AlertTriangle, Clock, Package, Menu, Settings, Wifi } from 'lucide-react';
+import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LoginArea } from '@/components/auth/LoginArea';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { ApplianceDialog } from '@/components/ApplianceDialog';
-import { ApplianceDetailDialog } from '@/components/ApplianceDetailDialog';
-import { MaintenanceDialog } from '@/components/MaintenanceDialog';
-import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { RoomManagementDialog } from '@/components/RoomManagementDialog';
 import { RelayManagementDialog } from '@/components/RelayManagementDialog';
 import { DonateSection } from '@/components/DonateSection';
+import { TabNavigation } from '@/components/TabNavigation';
+import { AddTabDialog } from '@/components/AddTabDialog';
+import {
+  HomeTab,
+  AppliancesTab,
+  MaintenanceTab,
+  VehiclesTab,
+  SubscriptionsTab,
+  WarrantiesTab,
+  ContractorsTab,
+  ProjectsTab,
+} from '@/components/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
-import { useMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
-import { useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
-import type { Appliance, MaintenanceSchedule } from '@/lib/types';
+import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
 
 const Index = () => {
   useSeoMeta({
@@ -29,69 +31,48 @@ const Index = () => {
   });
 
   const { user } = useCurrentUser();
-  const { data: appliances = [], isLoading: isLoadingAppliances } = useAppliances();
-  const { data: maintenance = [], isLoading: isLoadingMaintenance } = useMaintenance();
+  const { preferences, setActiveTab } = useTabPreferences();
 
   // Dialog states
-  const [applianceDialogOpen, setApplianceDialogOpen] = useState(false);
-  const [editingAppliance, setEditingAppliance] = useState<Appliance | undefined>();
-  const [viewingAppliance, setViewingAppliance] = useState<Appliance | undefined>();
-
-  const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
-  const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceSchedule | undefined>();
-  const [viewingMaintenance, setViewingMaintenance] = useState<MaintenanceSchedule | undefined>();
-
-  // Room management dialog state
   const [roomManagementOpen, setRoomManagementOpen] = useState(false);
-
-  // Relay management dialog state
   const [relayManagementOpen, setRelayManagementOpen] = useState(false);
+  const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
 
-  // Collapsed rooms state
-  const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(new Set());
+  const handleNavigateToTab = (tabId: TabId) => {
+    setActiveTab(tabId);
+  };
 
-  // Group appliances by room
-  const appliancesByRoom = useMemo(() => {
-    const grouped: Record<string, Appliance[]> = {};
-
-    for (const appliance of appliances) {
-      const room = appliance.room || 'Uncategorized';
-      if (!grouped[room]) {
-        grouped[room] = [];
-      }
-      grouped[room].push(appliance);
+  const renderTabContent = () => {
+    switch (preferences.activeTab) {
+      case 'home':
+        return (
+          <HomeTab 
+            onNavigateToTab={handleNavigateToTab} 
+            onAddTab={() => setAddTabDialogOpen(true)} 
+          />
+        );
+      case 'appliances':
+        return <AppliancesTab />;
+      case 'maintenance':
+        return <MaintenanceTab />;
+      case 'vehicles':
+        return <VehiclesTab />;
+      case 'subscriptions':
+        return <SubscriptionsTab />;
+      case 'warranties':
+        return <WarrantiesTab />;
+      case 'contractors':
+        return <ContractorsTab />;
+      case 'projects':
+        return <ProjectsTab />;
+      default:
+        return (
+          <HomeTab 
+            onNavigateToTab={handleNavigateToTab} 
+            onAddTab={() => setAddTabDialogOpen(true)} 
+          />
+        );
     }
-
-    // Sort rooms alphabetically, but put "Uncategorized" at the end
-    const sortedRooms = Object.keys(grouped).sort((a, b) => {
-      if (a === 'Uncategorized') return 1;
-      if (b === 'Uncategorized') return -1;
-      return a.localeCompare(b);
-    });
-
-    return { grouped, sortedRooms };
-  }, [appliances]);
-
-  const toggleRoom = (room: string) => {
-    setCollapsedRooms(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(room)) {
-        newSet.delete(room);
-      } else {
-        newSet.add(room);
-      }
-      return newSet;
-    });
-  };
-
-  const handleEditAppliance = (appliance: Appliance) => {
-    setEditingAppliance(appliance);
-    setApplianceDialogOpen(true);
-  };
-
-  const handleEditMaintenance = (maint: MaintenanceSchedule) => {
-    setEditingMaintenance(maint);
-    setMaintenanceDialogOpen(true);
   };
 
   return (
@@ -133,6 +114,11 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      {/* Tab Navigation - Only shown when logged in */}
+      {user && (
+        <TabNavigation onAddTabClick={() => setAddTabDialogOpen(true)} />
+      )}
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
@@ -192,187 +178,10 @@ const Index = () => {
             </p>
           </div>
         ) : (
-          // Logged in - Main dashboard
+          // Logged in - Tab-based dashboard
           <div className="space-y-8">
-            {/* Appliances Section */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                  <Package className="h-6 w-6 text-sky-600 dark:text-sky-400" />
-                  Appliances
-                </h2>
-                <Button
-                  onClick={() => {
-                    setEditingAppliance(undefined);
-                    setApplianceDialogOpen(true);
-                  }}
-                  className="bg-sky-600 hover:bg-sky-700 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Appliance
-                </Button>
-              </div>
-
-              {isLoadingAppliances ? (
-                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
-                  <CardContent className="p-6 space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="space-y-2">
-                        <Skeleton className="h-6 w-32" />
-                        <div className="pl-6 space-y-2">
-                          <Skeleton className="h-4 w-48" />
-                          <Skeleton className="h-4 w-40" />
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              ) : appliances.length === 0 ? (
-                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 border-dashed">
-                  <CardContent className="py-12 text-center">
-                    <Package className="h-12 w-12 text-sky-300 dark:text-sky-700 mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-4">
-                      No appliances added yet. Start tracking your home equipment!
-                    </p>
-                    <Button
-                      onClick={() => {
-                        setEditingAppliance(undefined);
-                        setApplianceDialogOpen(true);
-                      }}
-                      variant="outline"
-                      className="border-sky-300 hover:bg-sky-50 dark:border-sky-700 dark:hover:bg-sky-900"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Appliance
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
-                  <CardContent className="p-4">
-                    {appliancesByRoom.sortedRooms.map((room) => (
-                      <Collapsible
-                        key={room}
-                        open={!collapsedRooms.has(room)}
-                        onOpenChange={() => toggleRoom(room)}
-                        className="mb-2 last:mb-0"
-                      >
-                        <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-sky-100 dark:hover:bg-slate-700 transition-colors">
-                          {collapsedRooms.has(room) ? (
-                            <ChevronRight className="h-4 w-4 text-slate-500" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-slate-500" />
-                          )}
-                          <Home className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                          <span className="font-semibold text-slate-700 dark:text-slate-200">
-                            {room}
-                          </span>
-                          <Badge variant="secondary" className="ml-auto bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
-                            {appliancesByRoom.grouped[room].length}
-                          </Badge>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <div className="pl-8 py-2 space-y-1">
-                            {appliancesByRoom.grouped[room].map((appliance) => (
-                              <button
-                                key={appliance.id}
-                                onClick={() => setViewingAppliance(appliance)}
-                                className="flex items-center gap-2 w-full p-2 rounded-lg text-left hover:bg-sky-50 dark:hover:bg-slate-700 transition-colors group"
-                              >
-                                <span className="text-slate-600 dark:text-slate-300 group-hover:text-sky-700 dark:group-hover:text-sky-300">
-                                  {appliance.model}
-                                </span>
-                                {appliance.manufacturer && (
-                                  <span className="text-sm text-slate-400 dark:text-slate-500">
-                                    - {appliance.manufacturer}
-                                  </span>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
-            </section>
-
-            {/* Maintenance Section */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                  <Wrench className="h-6 w-6 text-sky-600 dark:text-sky-400" />
-                  Maintenance
-                </h2>
-                <Button
-                  onClick={() => {
-                    setEditingMaintenance(undefined);
-                    setMaintenanceDialogOpen(true);
-                  }}
-                  className="bg-sky-600 hover:bg-sky-700 text-white"
-                  disabled={appliances.length === 0}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Maintenance
-                </Button>
-              </div>
-
-              {isLoadingMaintenance ? (
-                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
-                  <CardContent className="p-6 space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex items-center gap-4">
-                        <Skeleton className="h-10 w-10 rounded-full" />
-                        <div className="flex-1 space-y-2">
-                          <Skeleton className="h-4 w-48" />
-                          <Skeleton className="h-3 w-32" />
-                        </div>
-                        <Skeleton className="h-6 w-24" />
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              ) : maintenance.length === 0 ? (
-                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 border-dashed">
-                  <CardContent className="py-12 text-center">
-                    <Wrench className="h-12 w-12 text-sky-300 dark:text-sky-700 mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-4">
-                      {appliances.length === 0
-                        ? "Add an appliance first, then create maintenance schedules."
-                        : "No maintenance schedules yet. Stay on top of your home upkeep!"}
-                    </p>
-                    {appliances.length > 0 && (
-                      <Button
-                        onClick={() => {
-                          setEditingMaintenance(undefined);
-                          setMaintenanceDialogOpen(true);
-                        }}
-                        variant="outline"
-                        className="border-sky-300 hover:bg-sky-50 dark:border-sky-700 dark:hover:bg-sky-900"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Your First Maintenance Schedule
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
-                  <CardContent className="p-4">
-                    <div className="space-y-2">
-                      {maintenance.map((maint) => (
-                        <MaintenanceItem
-                          key={maint.id}
-                          maintenance={maint}
-                          onClick={() => setViewingMaintenance(maint)}
-                        />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </section>
+            {/* Tab Content */}
+            {renderTabContent()}
 
             {/* Donate Section */}
             <section>
@@ -390,42 +199,6 @@ const Index = () => {
       </main>
 
       {/* Dialogs */}
-      <ApplianceDialog
-        isOpen={applianceDialogOpen}
-        onClose={() => {
-          setApplianceDialogOpen(false);
-          setEditingAppliance(undefined);
-        }}
-        appliance={editingAppliance}
-      />
-
-      {viewingAppliance && (
-        <ApplianceDetailDialog
-          isOpen={!!viewingAppliance}
-          onClose={() => setViewingAppliance(undefined)}
-          appliance={viewingAppliance}
-          onEdit={() => handleEditAppliance(viewingAppliance)}
-        />
-      )}
-
-      <MaintenanceDialog
-        isOpen={maintenanceDialogOpen}
-        onClose={() => {
-          setMaintenanceDialogOpen(false);
-          setEditingMaintenance(undefined);
-        }}
-        maintenance={editingMaintenance}
-      />
-
-      {viewingMaintenance && (
-        <MaintenanceDetailDialog
-          isOpen={!!viewingMaintenance}
-          onClose={() => setViewingMaintenance(undefined)}
-          maintenance={viewingMaintenance}
-          onEdit={() => handleEditMaintenance(viewingMaintenance)}
-        />
-      )}
-
       <RoomManagementDialog
         isOpen={roomManagementOpen}
         onClose={() => setRoomManagementOpen(false)}
@@ -435,140 +208,13 @@ const Index = () => {
         isOpen={relayManagementOpen}
         onClose={() => setRelayManagementOpen(false)}
       />
+
+      <AddTabDialog
+        isOpen={addTabDialogOpen}
+        onClose={() => setAddTabDialogOpen(false)}
+      />
     </div>
   );
 };
-
-// Maintenance Item Component with Completion History
-function MaintenanceItem({
-  maintenance,
-  onClick
-}: {
-  maintenance: MaintenanceSchedule;
-  onClick: () => void;
-}) {
-  const [showHistory, setShowHistory] = useState(false);
-  const appliance = useApplianceById(maintenance.applianceId);
-  const completions = useCompletionsByMaintenance(maintenance.id);
-  const purchaseDate = appliance?.purchaseDate || '';
-
-  // Get the most recent completion date (completions are already sorted newest first)
-  const lastCompletionDate = completions.length > 0 ? completions[0].completedDate : undefined;
-
-  const nextDueDate = calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate);
-  const overdue = purchaseDate ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
-  const dueSoon = purchaseDate ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
-
-  const hasCompletions = completions.length > 0;
-
-  return (
-    <div className="space-y-1">
-      <div className={`flex items-center gap-2 rounded-lg transition-colors ${
-        overdue
-          ? 'bg-red-50 dark:bg-red-900'
-          : dueSoon
-            ? 'bg-amber-50 dark:bg-amber-900'
-            : 'bg-white dark:bg-slate-800'
-      }`}>
-        {/* Chevron for completion history */}
-        {hasCompletions && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowHistory(!showHistory);
-            }}
-            className="p-2 hover:bg-sky-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            {showHistory ? (
-              <ChevronDown className="h-4 w-4 text-slate-500" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-slate-500" />
-            )}
-          </button>
-        )}
-
-        {/* Main content button */}
-        <button
-          onClick={onClick}
-          className={`flex items-center gap-4 flex-1 p-3 rounded-lg text-left transition-colors ${
-            hasCompletions ? '' : 'ml-2'
-          } ${
-            overdue
-              ? 'hover:bg-red-100 dark:hover:bg-red-800'
-              : dueSoon
-                ? 'hover:bg-amber-100 dark:hover:bg-amber-800'
-                : 'hover:bg-sky-50 dark:hover:bg-slate-700'
-          }`}
-        >
-          <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-            overdue
-              ? 'bg-red-200 dark:bg-red-900'
-              : dueSoon
-                ? 'bg-amber-200 dark:bg-amber-900'
-                : 'bg-sky-200 dark:bg-sky-900'
-          }`}>
-            {overdue ? (
-              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-            ) : dueSoon ? (
-              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            ) : (
-              <Wrench className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
-              {appliance?.model || 'Unknown Appliance'}
-            </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
-              {maintenance.description}
-            </p>
-          </div>
-
-          <div className="text-right shrink-0">
-            <p className={`text-sm font-medium ${
-              overdue
-                ? 'text-red-600 dark:text-red-400'
-                : dueSoon
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-slate-600 dark:text-slate-300'
-            }`}>
-              {overdue ? 'Overdue' : dueSoon ? 'Due Soon' : 'Due'}
-            </p>
-            <p className={`text-sm ${
-              overdue
-                ? 'text-red-500 dark:text-red-500'
-                : dueSoon
-                  ? 'text-amber-500 dark:text-amber-500'
-                  : 'text-slate-500 dark:text-slate-400'
-            }`}>
-              {formatDueDate(nextDueDate)}
-            </p>
-          </div>
-        </button>
-      </div>
-
-      {/* Completion History */}
-      {hasCompletions && showHistory && (
-        <div className="ml-8 pl-4 border-l-2 border-green-200 dark:border-green-800 space-y-1 bg-white dark:bg-slate-800 rounded-r-lg py-2 pr-2">
-          <p className="text-xs font-medium text-green-700 dark:text-green-300 py-1">
-            Completion History
-          </p>
-          {completions.map((completion) => (
-            <div
-              key={completion.id}
-              className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-900 text-sm"
-            >
-              <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <span className="text-green-800 dark:text-green-200">
-                Completed on {completion.completedDate}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default Index;

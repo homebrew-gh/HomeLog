@@ -1,0 +1,192 @@
+import { useState, useRef } from 'react';
+import { 
+  Home, 
+  Plus, 
+  Package, 
+  Wrench, 
+  Car, 
+  CreditCard, 
+  Shield, 
+  Users, 
+  FolderKanban,
+  X,
+  GripVertical
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
+
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Home,
+  Package,
+  Wrench,
+  Car,
+  CreditCard,
+  Shield,
+  Users,
+  FolderKanban,
+  Plus,
+};
+
+interface TabNavigationProps {
+  onAddTabClick: () => void;
+}
+
+export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
+  const { preferences, setActiveTab, removeTab, reorderTabs, getTabDefinition } = useTabPreferences();
+  const [draggedTab, setDraggedTab] = useState<TabId | null>(null);
+  const [dragOverTab, setDragOverTab] = useState<TabId | null>(null);
+  const dragCounter = useRef(0);
+
+  // Build the full tab list: Home first, then active tabs, then +
+  const allTabs: (TabId | 'add')[] = ['home', ...preferences.activeTabs, 'add'];
+
+  const handleDragStart = (e: React.DragEvent, tabId: TabId) => {
+    if (tabId === 'home') return; // Can't drag home
+    setDraggedTab(tabId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', tabId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTab(null);
+    setDragOverTab(null);
+    dragCounter.current = 0;
+  };
+
+  const handleDragEnter = (e: React.DragEvent, tabId: TabId) => {
+    e.preventDefault();
+    if (tabId === 'home' || tabId === draggedTab) return;
+    dragCounter.current++;
+    setDragOverTab(tabId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setDragOverTab(null);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetTabId: TabId) => {
+    e.preventDefault();
+    if (!draggedTab || targetTabId === 'home' || draggedTab === targetTabId) return;
+
+    const currentTabs = [...preferences.activeTabs];
+    const draggedIndex = currentTabs.indexOf(draggedTab);
+    const targetIndex = currentTabs.indexOf(targetTabId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    // Remove dragged item and insert at target position
+    currentTabs.splice(draggedIndex, 1);
+    currentTabs.splice(targetIndex, 0, draggedTab);
+
+    reorderTabs(currentTabs);
+    handleDragEnd();
+  };
+
+  return (
+    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-b border-sky-200 dark:border-slate-700">
+      <div className="container mx-auto px-4">
+        <nav className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-hide">
+          {allTabs.map((tabId) => {
+            if (tabId === 'add') {
+              return (
+                <Button
+                  key="add"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onAddTabClick}
+                  className={cn(
+                    "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg",
+                    "text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-slate-800",
+                    "border border-dashed border-sky-300 dark:border-sky-700",
+                    "transition-all duration-200 hover:border-sky-400 dark:hover:border-sky-600"
+                  )}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              );
+            }
+
+            const tab = getTabDefinition(tabId);
+            if (!tab) return null;
+
+            const IconComponent = ICON_MAP[tab.icon] || Home;
+            const isActive = preferences.activeTab === tabId;
+            const isHome = tabId === 'home';
+            const isDragging = draggedTab === tabId;
+            const isDragOver = dragOverTab === tabId;
+
+            return (
+              <div
+                key={tabId}
+                className={cn(
+                  "relative flex-shrink-0 group",
+                  isDragging && "opacity-50"
+                )}
+                draggable={!isHome}
+                onDragStart={(e) => handleDragStart(e, tabId)}
+                onDragEnd={handleDragEnd}
+                onDragEnter={(e) => handleDragEnter(e, tabId)}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, tabId)}
+              >
+                {/* Drop indicator */}
+                {isDragOver && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-0.5 h-8 bg-sky-500 rounded-full" />
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveTab(tabId)}
+                  className={cn(
+                    "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg transition-all duration-200",
+                    isActive
+                      ? "bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 shadow-sm"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-800",
+                    !isHome && "pr-2 cursor-grab active:cursor-grabbing"
+                  )}
+                >
+                  {/* Drag handle for non-home tabs */}
+                  {!isHome && (
+                    <GripVertical className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity -ml-1 mr-0.5" />
+                  )}
+                  <IconComponent className="h-4 w-4" />
+                  <span className="text-sm font-medium">{tab.label}</span>
+                </Button>
+
+                {/* Remove button for non-home tabs */}
+                {!isHome && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeTab(tabId);
+                    }}
+                    className={cn(
+                      "absolute -top-1 -right-1 p-0.5 rounded-full",
+                      "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
+                      "opacity-0 group-hover:opacity-100 transition-opacity",
+                      "hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900 dark:hover:text-red-400"
+                    )}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+      </div>
+    </div>
+  );
+}
