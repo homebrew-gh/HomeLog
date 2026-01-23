@@ -16,7 +16,7 @@ type ViewMode = 'list' | 'card';
 
 export function AppliancesTab() {
   const { data: appliances = [], isLoading } = useAppliances();
-  const [viewMode, setViewMode] = useLocalStorage<ViewMode>('homelog-appliances-view', 'list');
+  const [viewMode, setViewMode] = useLocalStorage<ViewMode>('homelog-appliances-view', 'card');
 
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
