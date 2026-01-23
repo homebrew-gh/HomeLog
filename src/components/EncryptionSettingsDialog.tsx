@@ -76,8 +76,11 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
         { signal: AbortSignal.timeout(5000) }
       );
 
-      // Find an event with encrypted content
-      const encryptedEvent = events.find(e => e.content && e.content.startsWith(ENCRYPTED_MARKER));
+      // Find all events with encrypted content, then pick one at random
+      const encryptedEvents = events.filter(e => e.content && e.content.startsWith(ENCRYPTED_MARKER));
+      const encryptedEvent = encryptedEvents.length > 0 
+        ? encryptedEvents[Math.floor(Math.random() * encryptedEvents.length)]
+        : undefined;
 
       if (encryptedEvent) {
         setVerifyState({
