@@ -3,6 +3,7 @@ import { ScrollToTop } from "./components/ScrollToTop";
 
 import Index from "./pages/Index";
 import FAQ from "./pages/FAQ";
+import Privacy from "./pages/Privacy";
 import { NIP19Page } from "./pages/NIP19Page";
 import SignerCallback from "./pages/SignerCallback";
 import NotFound from "./pages/NotFound";
@@ -14,6 +15,7 @@ export function AppRouter() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/faq" element={<FAQ />} />
+        <Route path="/privacy" element={<Privacy />} />
         {/* Callback route for NIP-55 Android signer (Amber) */}
         <Route path="/signer-callback" element={<SignerCallback />} />
         {/* NIP-19 route for npub1, note1, naddr1, nevent1, nprofile1 */}
