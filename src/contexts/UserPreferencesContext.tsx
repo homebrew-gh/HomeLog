@@ -42,10 +42,15 @@ export interface UserPreferences {
   activeTab: TabId;
   // View preferences
   appliancesViewMode: 'list' | 'card';
+  vehiclesViewMode: 'list' | 'card';
   // Custom rooms
   customRooms: string[];
   // Hidden default rooms (allows users to "delete" default rooms)
   hiddenDefaultRooms: string[];
+  // Custom vehicle types
+  customVehicleTypes: string[];
+  // Hidden default vehicle types
+  hiddenDefaultVehicleTypes: string[];
   // Version for future migrations
   version: number;
 }
@@ -54,8 +59,11 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   activeTabs: [],
   activeTab: 'home',
   appliancesViewMode: 'card',
+  vehiclesViewMode: 'card',
   customRooms: [],
   hiddenDefaultRooms: [],
+  customVehicleTypes: [],
+  hiddenDefaultVehicleTypes: [],
   version: 1,
 };
 
@@ -73,11 +81,17 @@ interface UserPreferencesContextType {
   getAvailableTabs: () => TabDefinition[];
   // View mode actions
   setAppliancesViewMode: (mode: 'list' | 'card') => void;
+  setVehiclesViewMode: (mode: 'list' | 'card') => void;
   // Room actions
   addCustomRoom: (room: string) => void;
   removeCustomRoom: (room: string) => void;
   hideDefaultRoom: (room: string) => void;
   restoreDefaultRoom: (room: string) => void;
+  // Vehicle type actions
+  addCustomVehicleType: (type: string) => void;
+  removeCustomVehicleType: (type: string) => void;
+  hideDefaultVehicleType: (type: string) => void;
+  restoreDefaultVehicleType: (type: string) => void;
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | null>(null);
@@ -275,6 +289,13 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  const setVehiclesViewMode = useCallback((mode: 'list' | 'card') => {
+    updatePreferences((prev) => ({
+      ...prev,
+      vehiclesViewMode: mode,
+    }));
+  }, [updatePreferences]);
+
   // Room actions
   const addCustomRoom = useCallback((room: string) => {
     updatePreferences((prev) => {
@@ -315,6 +336,46 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  // Vehicle type actions
+  const addCustomVehicleType = useCallback((type: string) => {
+    updatePreferences((prev) => {
+      const currentCustomTypes = prev.customVehicleTypes || [];
+      const currentHiddenTypes = prev.hiddenDefaultVehicleTypes || [];
+      if (currentCustomTypes.includes(type)) return prev;
+      return {
+        ...prev,
+        customVehicleTypes: [...currentCustomTypes, type],
+        // If adding a type that was a hidden default, remove it from hidden
+        hiddenDefaultVehicleTypes: currentHiddenTypes.filter(t => t !== type),
+      };
+    });
+  }, [updatePreferences]);
+
+  const removeCustomVehicleType = useCallback((type: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      customVehicleTypes: (prev.customVehicleTypes || []).filter(t => t !== type),
+    }));
+  }, [updatePreferences]);
+
+  const hideDefaultVehicleType = useCallback((type: string) => {
+    updatePreferences((prev) => {
+      const currentHiddenTypes = prev.hiddenDefaultVehicleTypes || [];
+      if (currentHiddenTypes.includes(type)) return prev;
+      return {
+        ...prev,
+        hiddenDefaultVehicleTypes: [...currentHiddenTypes, type],
+      };
+    });
+  }, [updatePreferences]);
+
+  const restoreDefaultVehicleType = useCallback((type: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      hiddenDefaultVehicleTypes: (prev.hiddenDefaultVehicleTypes || []).filter(t => t !== type),
+    }));
+  }, [updatePreferences]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -329,8 +390,11 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     activeTabs: localPreferences.activeTabs || [],
     activeTab: localPreferences.activeTab || 'home',
     appliancesViewMode: localPreferences.appliancesViewMode || 'card',
+    vehiclesViewMode: localPreferences.vehiclesViewMode || 'card',
     customRooms: localPreferences.customRooms || [],
     hiddenDefaultRooms: localPreferences.hiddenDefaultRooms || [],
+    customVehicleTypes: localPreferences.customVehicleTypes || [],
+    hiddenDefaultVehicleTypes: localPreferences.hiddenDefaultVehicleTypes || [],
     version: localPreferences.version || 1,
   };
 
@@ -348,10 +412,15 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         getTabDefinition,
         getAvailableTabs,
         setAppliancesViewMode,
+        setVehiclesViewMode,
         addCustomRoom,
         removeCustomRoom,
         hideDefaultRoom,
         restoreDefaultRoom,
+        addCustomVehicleType,
+        removeCustomVehicleType,
+        hideDefaultVehicleType,
+        restoreDefaultVehicleType,
       }}
     >
       {children}

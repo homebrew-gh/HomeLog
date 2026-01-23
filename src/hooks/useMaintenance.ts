@@ -4,7 +4,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { MAINTENANCE_KIND, APPLIANCE_KIND, type MaintenanceSchedule } from '@/lib/types';
+import { MAINTENANCE_KIND, APPLIANCE_KIND, VEHICLE_KIND, type MaintenanceSchedule } from '@/lib/types';
 
 // Helper to get tag value
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
@@ -18,22 +18,41 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
   const frequency = getTagValue(event, 'frequency');
   const frequencyUnit = getTagValue(event, 'frequency_unit');
 
-  // Get appliance reference from 'a' tag
-  const aTag = event.tags.find(([name]) => name === 'a')?.[1];
-  const applianceId = aTag?.split(':')[2]; // Format: kind:pubkey:d-tag
+  // Get reference from 'a' tags - could be appliance or vehicle
+  const aTags = event.tags.filter(([name]) => name === 'a');
+  let applianceId: string | undefined;
+  let vehicleId: string | undefined;
 
-  if (!id || !description || !frequency || !frequencyUnit || !applianceId) return null;
+  for (const aTag of aTags) {
+    const parts = aTag[1]?.split(':');
+    if (parts && parts.length >= 3) {
+      const kind = parseInt(parts[0], 10);
+      const refId = parts[2];
+      if (kind === APPLIANCE_KIND) {
+        applianceId = refId;
+      } else if (kind === VEHICLE_KIND) {
+        vehicleId = refId;
+      }
+    }
+  }
+
+  // Must have either applianceId or vehicleId
+  if (!id || !description || !frequency || !frequencyUnit || (!applianceId && !vehicleId)) return null;
 
   const validUnits = ['days', 'weeks', 'months', 'years'];
   if (!validUnits.includes(frequencyUnit)) return null;
 
+  const mileageInterval = getTagValue(event, 'mileage_interval');
+
   return {
     id,
     applianceId,
+    vehicleId,
     description,
     partNumber: getTagValue(event, 'part_number'),
     frequency: parseInt(frequency, 10),
     frequencyUnit: frequencyUnit as MaintenanceSchedule['frequencyUnit'],
+    mileageInterval: mileageInterval ? parseInt(mileageInterval, 10) : undefined,
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
@@ -77,6 +96,25 @@ function getDeletedApplianceIds(deletionEvents: NostrEvent[], pubkey: string): S
   return deletedIds;
 }
 
+// Extract deleted vehicle IDs from kind 5 events (to filter out orphaned maintenance)
+function getDeletedVehicleIds(deletionEvents: NostrEvent[], pubkey: string): Set<string> {
+  const deletedIds = new Set<string>();
+
+  for (const event of deletionEvents) {
+    for (const tag of event.tags) {
+      if (tag[0] === 'a') {
+        // Parse "kind:pubkey:d-tag" format
+        const parts = tag[1].split(':');
+        if (parts.length >= 3 && parts[0] === String(VEHICLE_KIND) && parts[1] === pubkey) {
+          deletedIds.add(parts[2]);
+        }
+      }
+    }
+  }
+
+  return deletedIds;
+}
+
 export function useMaintenance() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
@@ -101,17 +139,21 @@ export function useMaintenance() {
       const maintenanceEvents = events.filter(e => e.kind === MAINTENANCE_KIND);
       const deletionEvents = events.filter(e => e.kind === 5);
 
-      // Get the set of deleted maintenance IDs and deleted appliance IDs
+      // Get the set of deleted maintenance IDs, appliance IDs, and vehicle IDs
       const deletedMaintenanceIds = getDeletedMaintenanceIds(deletionEvents, user.pubkey);
       const deletedApplianceIds = getDeletedApplianceIds(deletionEvents, user.pubkey);
+      const deletedVehicleIds = getDeletedVehicleIds(deletionEvents, user.pubkey);
 
       const schedules: MaintenanceSchedule[] = [];
       for (const event of maintenanceEvents) {
         const schedule = parseMaintenance(event);
-        // Only include maintenance that hasn't been deleted and whose appliance hasn't been deleted
-        if (schedule && !deletedMaintenanceIds.has(schedule.id) && !deletedApplianceIds.has(schedule.applianceId)) {
-          schedules.push(schedule);
-        }
+        if (!schedule || deletedMaintenanceIds.has(schedule.id)) continue;
+        
+        // Check if the linked appliance or vehicle has been deleted
+        if (schedule.applianceId && deletedApplianceIds.has(schedule.applianceId)) continue;
+        if (schedule.vehicleId && deletedVehicleIds.has(schedule.vehicleId)) continue;
+        
+        schedules.push(schedule);
       }
 
       // Sort by creation date (newest first)
@@ -127,6 +169,24 @@ export function useMaintenanceByAppliance(applianceId: string | undefined) {
   return maintenance?.filter(m => m.applianceId === applianceId) || [];
 }
 
+export function useMaintenanceByVehicle(vehicleId: string | undefined) {
+  const { data: maintenance } = useMaintenance();
+  if (!vehicleId) return [];
+  return maintenance?.filter(m => m.vehicleId === vehicleId) || [];
+}
+
+// Get all appliance maintenance (for home maintenance tab)
+export function useApplianceMaintenance() {
+  const { data: maintenance } = useMaintenance();
+  return maintenance?.filter(m => m.applianceId && !m.vehicleId) || [];
+}
+
+// Get all vehicle maintenance (for maintenance tab vehicle section)
+export function useVehicleMaintenance() {
+  const { data: maintenance } = useMaintenance();
+  return maintenance?.filter(m => m.vehicleId && !m.applianceId) || [];
+}
+
 export function useMaintenanceActions() {
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
@@ -134,18 +194,27 @@ export function useMaintenanceActions() {
 
   const createMaintenance = async (data: Omit<MaintenanceSchedule, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
+    if (!data.applianceId && !data.vehicleId) throw new Error('Must have either applianceId or vehicleId');
 
     const id = crypto.randomUUID();
     const tags: string[][] = [
       ['d', id],
       ['alt', `Maintenance schedule: ${data.description}`],
-      ['a', `${APPLIANCE_KIND}:${user.pubkey}:${data.applianceId}`, '', 'appliance'],
       ['description', data.description],
       ['frequency', data.frequency.toString()],
       ['frequency_unit', data.frequencyUnit],
     ];
 
+    // Add reference to appliance or vehicle
+    if (data.applianceId) {
+      tags.push(['a', `${APPLIANCE_KIND}:${user.pubkey}:${data.applianceId}`, '', 'appliance']);
+    }
+    if (data.vehicleId) {
+      tags.push(['a', `${VEHICLE_KIND}:${user.pubkey}:${data.vehicleId}`, '', 'vehicle']);
+    }
+
     if (data.partNumber) tags.push(['part_number', data.partNumber]);
+    if (data.mileageInterval) tags.push(['mileage_interval', data.mileageInterval.toString()]);
 
     await publishEvent({
       kind: MAINTENANCE_KIND,
@@ -160,17 +229,26 @@ export function useMaintenanceActions() {
 
   const updateMaintenance = async (id: string, data: Omit<MaintenanceSchedule, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
+    if (!data.applianceId && !data.vehicleId) throw new Error('Must have either applianceId or vehicleId');
 
     const tags: string[][] = [
       ['d', id],
       ['alt', `Maintenance schedule: ${data.description}`],
-      ['a', `${APPLIANCE_KIND}:${user.pubkey}:${data.applianceId}`, '', 'appliance'],
       ['description', data.description],
       ['frequency', data.frequency.toString()],
       ['frequency_unit', data.frequencyUnit],
     ];
 
+    // Add reference to appliance or vehicle
+    if (data.applianceId) {
+      tags.push(['a', `${APPLIANCE_KIND}:${user.pubkey}:${data.applianceId}`, '', 'appliance']);
+    }
+    if (data.vehicleId) {
+      tags.push(['a', `${VEHICLE_KIND}:${user.pubkey}:${data.vehicleId}`, '', 'vehicle']);
+    }
+
     if (data.partNumber) tags.push(['part_number', data.partNumber]);
+    if (data.mileageInterval) tags.push(['mileage_interval', data.mileageInterval.toString()]);
 
     await publishEvent({
       kind: MAINTENANCE_KIND,

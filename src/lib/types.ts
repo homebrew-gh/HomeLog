@@ -12,13 +12,68 @@ export interface Appliance {
   createdAt: number;
 }
 
+// Vehicle Types
+export const DEFAULT_VEHICLE_TYPES = [
+  'Personal Vehicle',
+  'Recreational',
+  'Farm Machinery',
+  'Business Vehicle',
+  'Boat',
+  'Plane',
+] as const;
+
+export type DefaultVehicleType = typeof DEFAULT_VEHICLE_TYPES[number];
+
+export interface Vehicle {
+  id: string;
+  vehicleType: string;
+  // Common fields for all vehicles
+  name: string; // Display name (e.g., "2020 Toyota Camry" or "John Deere Tractor")
+  make?: string;
+  model?: string;
+  year?: string;
+  purchaseDate?: string; // MM/DD/YYYY format
+  purchasePrice?: string;
+  // Vehicle-specific fields
+  vin?: string; // VIN for cars/trucks
+  licensePlate?: string;
+  mileage?: string;
+  fuelType?: string;
+  // Registration/Insurance
+  registrationExpiry?: string; // MM/DD/YYYY format
+  insuranceProvider?: string;
+  insurancePolicyNumber?: string;
+  insuranceExpiry?: string; // MM/DD/YYYY format
+  // Boat-specific fields
+  hullId?: string; // HIN for boats
+  registrationNumber?: string;
+  engineHours?: string;
+  // Plane-specific fields
+  tailNumber?: string;
+  hobbsTime?: string;
+  // Farm machinery specific
+  serialNumber?: string;
+  // Documents
+  receiptUrl?: string;
+  warrantyUrl?: string;
+  warrantyExpiry?: string; // MM/DD/YYYY format
+  documentsUrls?: string[]; // Array of PDF/document URLs
+  // Metadata
+  notes?: string;
+  pubkey: string;
+  createdAt: number;
+}
+
 export interface MaintenanceSchedule {
   id: string;
-  applianceId: string;
+  applianceId?: string; // Optional - for appliance maintenance
+  vehicleId?: string; // Optional - for vehicle maintenance
   description: string;
   partNumber?: string;
   frequency: number;
   frequencyUnit: 'days' | 'weeks' | 'months' | 'years';
+  // Additional fields for mileage-based maintenance
+  mileageInterval?: number; // e.g., every 5000 miles
   pubkey: string;
   createdAt: number;
 }
@@ -27,6 +82,8 @@ export interface MaintenanceCompletion {
   id: string;
   maintenanceId: string;
   completedDate: string; // MM/DD/YYYY format
+  mileageAtCompletion?: string; // For vehicle maintenance tracking
+  notes?: string;
   pubkey: string;
   createdAt: number;
 }
@@ -51,7 +108,20 @@ export const FREQUENCY_UNITS = [
   { value: 'years', label: 'Years' },
 ] as const;
 
+export const FUEL_TYPES = [
+  { value: 'gasoline', label: 'Gasoline' },
+  { value: 'diesel', label: 'Diesel' },
+  { value: 'electric', label: 'Electric' },
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'propane', label: 'Propane' },
+  { value: 'natural_gas', label: 'Natural Gas' },
+  { value: 'jet_fuel', label: 'Jet Fuel' },
+  { value: 'avgas', label: 'Aviation Gas' },
+  { value: 'other', label: 'Other' },
+] as const;
+
 // Kind numbers for our custom events
 export const APPLIANCE_KIND = 32627;
+export const VEHICLE_KIND = 32628;
 export const MAINTENANCE_KIND = 30229;
 export const MAINTENANCE_COMPLETION_KIND = 9413;
