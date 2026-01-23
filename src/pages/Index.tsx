@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car, Shield } from 'lucide-react';
+import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car, Shield, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -119,6 +120,14 @@ const Index = () => {
                       <Wifi className="h-4 w-4 mr-2" />
                       Manage Relays
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Help</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link to="/faq">
+                        <HelpCircle className="h-4 w-4 mr-2" />
+                        FAQ & Data Info
+                      </Link>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -200,11 +209,18 @@ const Index = () => {
 
             <LoginArea className="justify-center" />
 
-            <p className="mt-8 text-sm text-slate-500 dark:text-slate-400">
-              <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
-                Vibed with Shakespeare
-              </a>
-            </p>
+            <div className="mt-8 text-sm text-slate-500 dark:text-slate-400 space-y-2">
+              <p>
+                <Link to="/faq" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                  FAQ & Data Info
+                </Link>
+              </p>
+              <p>
+                <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                  Vibed with Shakespeare
+                </a>
+              </p>
+            </div>
           </div>
         ) : (
           // Logged in - Tab-based dashboard
@@ -218,10 +234,17 @@ const Index = () => {
             </section>
 
             {/* Footer */}
-            <footer className="text-center py-8 text-sm text-slate-500 dark:text-slate-400">
-              <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
-                Vibed with Shakespeare
-              </a>
+            <footer className="text-center py-8 text-sm text-slate-500 dark:text-slate-400 space-y-2">
+              <p>
+                <Link to="/faq" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                  FAQ & Data Info
+                </Link>
+              </p>
+              <p>
+                <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                  Vibed with Shakespeare
+                </a>
+              </p>
             </footer>
           </div>
         )}
