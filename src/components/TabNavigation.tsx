@@ -140,7 +140,7 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
 
   return (
     <>
-      <div className="sticky top-[52px] z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-sky-200 dark:border-slate-700">
+      <div>
         <div className="container mx-auto px-4">
           <nav className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-hide">
             {allTabs.map((tabId, index) => {

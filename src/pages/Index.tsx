@@ -77,48 +77,50 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-sky-100 dark:from-slate-900 dark:to-slate-800 tool-pattern-bg">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          {/* Left - Menu & Logo */}
-          <div className="flex items-center gap-3">
-            {user && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuItem onClick={() => setRoomManagementOpen(true)}>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Manage Rooms
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setRelayManagementOpen(true)}>
-                    <Wifi className="h-4 w-4 mr-2" />
-                    Manage Relays
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+      {/* Header + Tab Navigation - Combined sticky container */}
+      <div className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-sky-200 dark:border-slate-700">
+        <header>
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+            {/* Left - Menu & Logo */}
+            <div className="flex items-center gap-3">
+              {user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuItem onClick={() => setRoomManagementOpen(true)}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Manage Rooms
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setRelayManagementOpen(true)}>
+                      <Wifi className="h-4 w-4 mr-2" />
+                      Manage Relays
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              <div className="flex items-center gap-2">
+                <Home className="h-6 w-6 text-sky-600 dark:text-sky-400" />
+                <span className="font-bold text-xl text-sky-700 dark:text-sky-300">Home Log</span>
+              </div>
+            </div>
+
+            {/* Right - Theme Toggle & Login */}
             <div className="flex items-center gap-2">
-              <Home className="h-6 w-6 text-sky-600 dark:text-sky-400" />
-              <span className="font-bold text-xl text-sky-700 dark:text-sky-300">Home Log</span>
+              <ThemeToggle />
+              <LoginArea className="max-w-48" />
             </div>
           </div>
+        </header>
 
-          {/* Right - Theme Toggle & Login */}
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <LoginArea className="max-w-48" />
-          </div>
-        </div>
-      </header>
-
-      {/* Tab Navigation - Only shown when logged in */}
-      {user && (
-        <TabNavigation onAddTabClick={() => setAddTabDialogOpen(true)} />
-      )}
+        {/* Tab Navigation - Only shown when logged in */}
+        {user && (
+          <TabNavigation onAddTabClick={() => setAddTabDialogOpen(true)} />
+        )}
+      </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
