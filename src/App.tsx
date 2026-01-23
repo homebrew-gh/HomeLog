@@ -14,6 +14,7 @@ import { NostrLoginProvider } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
 import { NWCProvider } from '@/contexts/NWCContext';
 import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
+import { EncryptionProvider } from '@/contexts/EncryptionContext';
 import { AppConfig } from '@/contexts/AppContext';
 import AppRouter from './AppRouter';
 
@@ -55,13 +56,15 @@ export function App() {
               <NostrSync />
               <NWCProvider>
                 <UserPreferencesProvider>
-                  <TooltipProvider>
-                    <Toaster />
-                    <PWAManager />
-                    <Suspense>
-                      <AppRouter />
-                    </Suspense>
-                  </TooltipProvider>
+                  <EncryptionProvider>
+                    <TooltipProvider>
+                      <Toaster />
+                      <PWAManager />
+                      <Suspense>
+                        <AppRouter />
+                      </Suspense>
+                    </TooltipProvider>
+                  </EncryptionProvider>
                 </UserPreferencesProvider>
               </NWCProvider>
             </NostrProvider>

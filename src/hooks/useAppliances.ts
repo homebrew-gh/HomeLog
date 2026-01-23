@@ -4,15 +4,30 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { useEncryption } from './useEncryption';
+import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { APPLIANCE_KIND, type Appliance } from '@/lib/types';
+
+// Encrypted content marker
+const ENCRYPTED_MARKER = 'nip44:';
 
 // Helper to get tag value
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
   return event.tags.find(([name]) => name === tagName)?.[1];
 }
 
-// Parse a Nostr event into an Appliance object
-function parseAppliance(event: NostrEvent): Appliance | null {
+// Data stored in encrypted content
+interface ApplianceData {
+  model: string;
+  manufacturer: string;
+  purchaseDate: string;
+  room: string;
+  receiptUrl?: string;
+  manualUrl?: string;
+}
+
+// Parse a Nostr event into an Appliance object (plaintext version)
+function parseAppliancePlaintext(event: NostrEvent): Appliance | null {
   const id = getTagValue(event, 'd');
   const model = getTagValue(event, 'model');
 
@@ -29,6 +44,33 @@ function parseAppliance(event: NostrEvent): Appliance | null {
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
+}
+
+// Parse encrypted appliance from content
+async function parseApplianceEncrypted(
+  event: NostrEvent,
+  decryptFn: (content: string) => Promise<ApplianceData>
+): Promise<Appliance | null> {
+  const id = getTagValue(event, 'd');
+  if (!id) return null;
+
+  try {
+    const data = await decryptFn(event.content);
+    return {
+      id,
+      model: data.model,
+      manufacturer: data.manufacturer || '',
+      purchaseDate: data.purchaseDate || '',
+      room: data.room || '',
+      receiptUrl: data.receiptUrl,
+      manualUrl: data.manualUrl,
+      pubkey: event.pubkey,
+      createdAt: event.created_at,
+    };
+  } catch (error) {
+    console.error('[Appliances] Failed to decrypt appliance:', id, error);
+    return null;
+  }
 }
 
 // Extract deleted appliance IDs from kind 5 events
@@ -53,6 +95,7 @@ function getDeletedApplianceIds(deletionEvents: NostrEvent[], pubkey: string): S
 export function useAppliances() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const { decryptForCategory } = useEncryption();
 
   return useQuery({
     queryKey: ['appliances', user?.pubkey],
@@ -78,11 +121,27 @@ export function useAppliances() {
       const deletedIds = getDeletedApplianceIds(deletionEvents, user.pubkey);
 
       const appliances: Appliance[] = [];
+      
       for (const event of applianceEvents) {
-        const appliance = parseAppliance(event);
-        // Only include appliances that haven't been deleted
-        if (appliance && !deletedIds.has(appliance.id)) {
-          appliances.push(appliance);
+        const id = getTagValue(event, 'd');
+        if (!id || deletedIds.has(id)) continue;
+
+        // Check if content is encrypted
+        if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
+          // Decrypt and parse
+          const appliance = await parseApplianceEncrypted(
+            event,
+            (content) => decryptForCategory<ApplianceData>(content)
+          );
+          if (appliance) {
+            appliances.push(appliance);
+          }
+        } else {
+          // Parse plaintext from tags
+          const appliance = parseAppliancePlaintext(event);
+          if (appliance) {
+            appliances.push(appliance);
+          }
         }
       }
 
@@ -102,26 +161,47 @@ export function useApplianceActions() {
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
+  const { encryptForCategory, shouldEncrypt } = useEncryption();
+  const { isEncryptionEnabled } = useEncryptionSettings();
 
   const createAppliance = async (data: Omit<Appliance, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
 
     const id = crypto.randomUUID();
+    const useEncryption = isEncryptionEnabled('appliances');
+
+    // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', `Home appliance: ${data.model}`],
-      ['model', data.model],
+      ['alt', useEncryption ? 'Encrypted Home Log appliance data' : `Home appliance: ${data.model}`],
     ];
 
-    if (data.manufacturer) tags.push(['manufacturer', data.manufacturer]);
-    if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
-    if (data.room) tags.push(['room', data.room]);
-    if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
-    if (data.manualUrl) tags.push(['manual_url', data.manualUrl]);
+    let content = '';
+
+    if (useEncryption && shouldEncrypt('appliances')) {
+      // Store data in encrypted content
+      const applianceData: ApplianceData = {
+        model: data.model,
+        manufacturer: data.manufacturer,
+        purchaseDate: data.purchaseDate,
+        room: data.room,
+        receiptUrl: data.receiptUrl,
+        manualUrl: data.manualUrl,
+      };
+      content = await encryptForCategory('appliances', applianceData);
+    } else {
+      // Store data in plaintext tags (legacy format)
+      tags.push(['model', data.model]);
+      if (data.manufacturer) tags.push(['manufacturer', data.manufacturer]);
+      if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
+      if (data.room) tags.push(['room', data.room]);
+      if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
+      if (data.manualUrl) tags.push(['manual_url', data.manualUrl]);
+    }
 
     await publishEvent({
       kind: APPLIANCE_KIND,
-      content: '',
+      content,
       tags,
     });
 
@@ -134,21 +214,40 @@ export function useApplianceActions() {
   const updateAppliance = async (id: string, data: Omit<Appliance, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
 
+    const useEncryption = isEncryptionEnabled('appliances');
+
+    // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', `Home appliance: ${data.model}`],
-      ['model', data.model],
+      ['alt', useEncryption ? 'Encrypted Home Log appliance data' : `Home appliance: ${data.model}`],
     ];
 
-    if (data.manufacturer) tags.push(['manufacturer', data.manufacturer]);
-    if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
-    if (data.room) tags.push(['room', data.room]);
-    if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
-    if (data.manualUrl) tags.push(['manual_url', data.manualUrl]);
+    let content = '';
+
+    if (useEncryption && shouldEncrypt('appliances')) {
+      // Store data in encrypted content
+      const applianceData: ApplianceData = {
+        model: data.model,
+        manufacturer: data.manufacturer,
+        purchaseDate: data.purchaseDate,
+        room: data.room,
+        receiptUrl: data.receiptUrl,
+        manualUrl: data.manualUrl,
+      };
+      content = await encryptForCategory('appliances', applianceData);
+    } else {
+      // Store data in plaintext tags (legacy format)
+      tags.push(['model', data.model]);
+      if (data.manufacturer) tags.push(['manufacturer', data.manufacturer]);
+      if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
+      if (data.room) tags.push(['room', data.room]);
+      if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
+      if (data.manualUrl) tags.push(['manual_url', data.manualUrl]);
+    }
 
     await publishEvent({
       kind: APPLIANCE_KIND,
-      content: '',
+      content,
       tags,
     });
 

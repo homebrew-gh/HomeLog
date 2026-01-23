@@ -4,7 +4,12 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { useEncryption } from './useEncryption';
+import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { VEHICLE_KIND, type Vehicle } from '@/lib/types';
+
+// Encrypted content marker
+const ENCRYPTED_MARKER = 'nip44:';
 
 // Helper to get tag value
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
@@ -19,8 +24,11 @@ function getTagValues(event: NostrEvent, tagName: string): string[] {
     .filter(Boolean);
 }
 
-// Parse a Nostr event into a Vehicle object
-function parseVehicle(event: NostrEvent): Vehicle | null {
+// Data stored in encrypted content
+type VehicleData = Omit<Vehicle, 'id' | 'pubkey' | 'createdAt'>;
+
+// Parse a Nostr event into a Vehicle object (plaintext version)
+function parseVehiclePlaintext(event: NostrEvent): Vehicle | null {
   const id = getTagValue(event, 'd');
   const name = getTagValue(event, 'name');
   const vehicleType = getTagValue(event, 'vehicle_type');
@@ -60,6 +68,28 @@ function parseVehicle(event: NostrEvent): Vehicle | null {
   };
 }
 
+// Parse encrypted vehicle from content
+async function parseVehicleEncrypted(
+  event: NostrEvent,
+  decryptFn: (content: string) => Promise<VehicleData>
+): Promise<Vehicle | null> {
+  const id = getTagValue(event, 'd');
+  if (!id) return null;
+
+  try {
+    const data = await decryptFn(event.content);
+    return {
+      id,
+      ...data,
+      pubkey: event.pubkey,
+      createdAt: event.created_at,
+    };
+  } catch (error) {
+    console.error('[Vehicles] Failed to decrypt vehicle:', id, error);
+    return null;
+  }
+}
+
 // Extract deleted vehicle IDs from kind 5 events
 function getDeletedVehicleIds(deletionEvents: NostrEvent[], pubkey: string): Set<string> {
   const deletedIds = new Set<string>();
@@ -82,6 +112,7 @@ function getDeletedVehicleIds(deletionEvents: NostrEvent[], pubkey: string): Set
 export function useVehicles() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const { decryptForCategory } = useEncryption();
 
   return useQuery({
     queryKey: ['vehicles', user?.pubkey],
@@ -107,11 +138,27 @@ export function useVehicles() {
       const deletedIds = getDeletedVehicleIds(deletionEvents, user.pubkey);
 
       const vehicles: Vehicle[] = [];
+      
       for (const event of vehicleEvents) {
-        const vehicle = parseVehicle(event);
-        // Only include vehicles that haven't been deleted
-        if (vehicle && !deletedIds.has(vehicle.id)) {
-          vehicles.push(vehicle);
+        const id = getTagValue(event, 'd');
+        if (!id || deletedIds.has(id)) continue;
+
+        // Check if content is encrypted
+        if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
+          // Decrypt and parse
+          const vehicle = await parseVehicleEncrypted(
+            event,
+            (content) => decryptForCategory<VehicleData>(content)
+          );
+          if (vehicle) {
+            vehicles.push(vehicle);
+          }
+        } else {
+          // Parse plaintext from tags
+          const vehicle = parseVehiclePlaintext(event);
+          if (vehicle) {
+            vehicles.push(vehicle);
+          }
         }
       }
 
@@ -131,57 +178,68 @@ export function useVehicleActions() {
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
+  const { encryptForCategory, shouldEncrypt } = useEncryption();
+  const { isEncryptionEnabled } = useEncryptionSettings();
 
   const createVehicle = async (data: Omit<Vehicle, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
 
     const id = crypto.randomUUID();
+    const useEncryption = isEncryptionEnabled('vehicles');
+
+    // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', `Vehicle: ${data.name}`],
-      ['name', data.name],
-      ['vehicle_type', data.vehicleType],
+      ['alt', useEncryption ? 'Encrypted Home Log vehicle data' : `Vehicle: ${data.name}`],
     ];
 
-    // Add optional fields if present
-    if (data.make) tags.push(['make', data.make]);
-    if (data.model) tags.push(['model', data.model]);
-    if (data.year) tags.push(['year', data.year]);
-    if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
-    if (data.purchasePrice) tags.push(['purchase_price', data.purchasePrice]);
-    if (data.vin) tags.push(['vin', data.vin]);
-    if (data.licensePlate) tags.push(['license_plate', data.licensePlate]);
-    if (data.mileage) tags.push(['mileage', data.mileage]);
-    if (data.fuelType) tags.push(['fuel_type', data.fuelType]);
-    if (data.registrationExpiry) tags.push(['registration_expiry', data.registrationExpiry]);
-    if (data.insuranceProvider) tags.push(['insurance_provider', data.insuranceProvider]);
-    if (data.insurancePolicyNumber) tags.push(['insurance_policy_number', data.insurancePolicyNumber]);
-    if (data.insuranceExpiry) tags.push(['insurance_expiry', data.insuranceExpiry]);
-    if (data.hullId) tags.push(['hull_id', data.hullId]);
-    if (data.registrationNumber) tags.push(['registration_number', data.registrationNumber]);
-    if (data.engineHours) tags.push(['engine_hours', data.engineHours]);
-    if (data.tailNumber) tags.push(['tail_number', data.tailNumber]);
-    if (data.hobbsTime) tags.push(['hobbs_time', data.hobbsTime]);
-    if (data.serialNumber) tags.push(['serial_number', data.serialNumber]);
-    if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
-    if (data.warrantyUrl) tags.push(['warranty_url', data.warrantyUrl]);
-    if (data.warrantyExpiry) tags.push(['warranty_expiry', data.warrantyExpiry]);
-    if (data.notes) tags.push(['notes', data.notes]);
+    let content = '';
 
-    // Add document URLs as separate tags
-    if (data.documentsUrls) {
-      for (const url of data.documentsUrls) {
-        tags.push(['document_url', url]);
+    if (useEncryption && shouldEncrypt('vehicles')) {
+      // Store data in encrypted content
+      content = await encryptForCategory('vehicles', data);
+    } else {
+      // Store data in plaintext tags (legacy format)
+      tags.push(['name', data.name]);
+      tags.push(['vehicle_type', data.vehicleType]);
+      
+      if (data.make) tags.push(['make', data.make]);
+      if (data.model) tags.push(['model', data.model]);
+      if (data.year) tags.push(['year', data.year]);
+      if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
+      if (data.purchasePrice) tags.push(['purchase_price', data.purchasePrice]);
+      if (data.vin) tags.push(['vin', data.vin]);
+      if (data.licensePlate) tags.push(['license_plate', data.licensePlate]);
+      if (data.mileage) tags.push(['mileage', data.mileage]);
+      if (data.fuelType) tags.push(['fuel_type', data.fuelType]);
+      if (data.registrationExpiry) tags.push(['registration_expiry', data.registrationExpiry]);
+      if (data.insuranceProvider) tags.push(['insurance_provider', data.insuranceProvider]);
+      if (data.insurancePolicyNumber) tags.push(['insurance_policy_number', data.insurancePolicyNumber]);
+      if (data.insuranceExpiry) tags.push(['insurance_expiry', data.insuranceExpiry]);
+      if (data.hullId) tags.push(['hull_id', data.hullId]);
+      if (data.registrationNumber) tags.push(['registration_number', data.registrationNumber]);
+      if (data.engineHours) tags.push(['engine_hours', data.engineHours]);
+      if (data.tailNumber) tags.push(['tail_number', data.tailNumber]);
+      if (data.hobbsTime) tags.push(['hobbs_time', data.hobbsTime]);
+      if (data.serialNumber) tags.push(['serial_number', data.serialNumber]);
+      if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
+      if (data.warrantyUrl) tags.push(['warranty_url', data.warrantyUrl]);
+      if (data.warrantyExpiry) tags.push(['warranty_expiry', data.warrantyExpiry]);
+      if (data.notes) tags.push(['notes', data.notes]);
+
+      if (data.documentsUrls) {
+        for (const url of data.documentsUrls) {
+          tags.push(['document_url', url]);
+        }
       }
     }
 
     await publishEvent({
       kind: VEHICLE_KIND,
-      content: '',
+      content,
       tags,
     });
 
-    // Invalidate the query to refresh the list
     await queryClient.invalidateQueries({ queryKey: ['vehicles'] });
 
     return id;
@@ -190,48 +248,58 @@ export function useVehicleActions() {
   const updateVehicle = async (id: string, data: Omit<Vehicle, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
 
+    const useEncryption = isEncryptionEnabled('vehicles');
+
+    // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', `Vehicle: ${data.name}`],
-      ['name', data.name],
-      ['vehicle_type', data.vehicleType],
+      ['alt', useEncryption ? 'Encrypted Home Log vehicle data' : `Vehicle: ${data.name}`],
     ];
 
-    // Add optional fields if present
-    if (data.make) tags.push(['make', data.make]);
-    if (data.model) tags.push(['model', data.model]);
-    if (data.year) tags.push(['year', data.year]);
-    if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
-    if (data.purchasePrice) tags.push(['purchase_price', data.purchasePrice]);
-    if (data.vin) tags.push(['vin', data.vin]);
-    if (data.licensePlate) tags.push(['license_plate', data.licensePlate]);
-    if (data.mileage) tags.push(['mileage', data.mileage]);
-    if (data.fuelType) tags.push(['fuel_type', data.fuelType]);
-    if (data.registrationExpiry) tags.push(['registration_expiry', data.registrationExpiry]);
-    if (data.insuranceProvider) tags.push(['insurance_provider', data.insuranceProvider]);
-    if (data.insurancePolicyNumber) tags.push(['insurance_policy_number', data.insurancePolicyNumber]);
-    if (data.insuranceExpiry) tags.push(['insurance_expiry', data.insuranceExpiry]);
-    if (data.hullId) tags.push(['hull_id', data.hullId]);
-    if (data.registrationNumber) tags.push(['registration_number', data.registrationNumber]);
-    if (data.engineHours) tags.push(['engine_hours', data.engineHours]);
-    if (data.tailNumber) tags.push(['tail_number', data.tailNumber]);
-    if (data.hobbsTime) tags.push(['hobbs_time', data.hobbsTime]);
-    if (data.serialNumber) tags.push(['serial_number', data.serialNumber]);
-    if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
-    if (data.warrantyUrl) tags.push(['warranty_url', data.warrantyUrl]);
-    if (data.warrantyExpiry) tags.push(['warranty_expiry', data.warrantyExpiry]);
-    if (data.notes) tags.push(['notes', data.notes]);
+    let content = '';
 
-    // Add document URLs as separate tags
-    if (data.documentsUrls) {
-      for (const url of data.documentsUrls) {
-        tags.push(['document_url', url]);
+    if (useEncryption && shouldEncrypt('vehicles')) {
+      // Store data in encrypted content
+      content = await encryptForCategory('vehicles', data);
+    } else {
+      // Store data in plaintext tags (legacy format)
+      tags.push(['name', data.name]);
+      tags.push(['vehicle_type', data.vehicleType]);
+      
+      if (data.make) tags.push(['make', data.make]);
+      if (data.model) tags.push(['model', data.model]);
+      if (data.year) tags.push(['year', data.year]);
+      if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
+      if (data.purchasePrice) tags.push(['purchase_price', data.purchasePrice]);
+      if (data.vin) tags.push(['vin', data.vin]);
+      if (data.licensePlate) tags.push(['license_plate', data.licensePlate]);
+      if (data.mileage) tags.push(['mileage', data.mileage]);
+      if (data.fuelType) tags.push(['fuel_type', data.fuelType]);
+      if (data.registrationExpiry) tags.push(['registration_expiry', data.registrationExpiry]);
+      if (data.insuranceProvider) tags.push(['insurance_provider', data.insuranceProvider]);
+      if (data.insurancePolicyNumber) tags.push(['insurance_policy_number', data.insurancePolicyNumber]);
+      if (data.insuranceExpiry) tags.push(['insurance_expiry', data.insuranceExpiry]);
+      if (data.hullId) tags.push(['hull_id', data.hullId]);
+      if (data.registrationNumber) tags.push(['registration_number', data.registrationNumber]);
+      if (data.engineHours) tags.push(['engine_hours', data.engineHours]);
+      if (data.tailNumber) tags.push(['tail_number', data.tailNumber]);
+      if (data.hobbsTime) tags.push(['hobbs_time', data.hobbsTime]);
+      if (data.serialNumber) tags.push(['serial_number', data.serialNumber]);
+      if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
+      if (data.warrantyUrl) tags.push(['warranty_url', data.warrantyUrl]);
+      if (data.warrantyExpiry) tags.push(['warranty_expiry', data.warrantyExpiry]);
+      if (data.notes) tags.push(['notes', data.notes]);
+
+      if (data.documentsUrls) {
+        for (const url of data.documentsUrls) {
+          tags.push(['document_url', url]);
+        }
       }
     }
 
     await publishEvent({
       kind: VEHICLE_KIND,
-      content: '',
+      content,
       tags,
     });
 
