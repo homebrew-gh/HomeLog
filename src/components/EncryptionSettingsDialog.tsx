@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Unlock, Shield, AlertTriangle, RotateCcw, Eye, EyeOff, Search, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Lock, Unlock, Shield, AlertTriangle, RotateCcw, Eye, EyeOff, Search, CheckCircle2, XCircle, Loader2, Wifi, ChevronDown, ChevronRight } from 'lucide-react';
 import { useNostr } from '@nostrify/react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
@@ -8,7 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useAppContext } from '@/hooks/useAppContext';
 import { 
   useEncryptionSettings, 
   CATEGORY_INFO, 
@@ -47,18 +49,67 @@ interface VerificationState {
 export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettingsDialogProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const { config } = useAppContext();
   const { 
     settings, 
     setEncryptionEnabled, 
-    resetToDefaults 
+    resetToDefaults,
+    isRelayEnabledForCategory,
+    setRelayEnabledForCategory,
+    isPrivateRelay,
   } = useEncryptionSettings();
 
   // Trust but Verify state
   const [verifyState, setVerifyState] = useState<VerificationState>({ status: 'idle' });
   const [showDecrypted, setShowDecrypted] = useState(false);
+  
+  // Track which categories have their relay list expanded
+  const [expandedCategories, setExpandedCategories] = useState<Set<EncryptableCategory>>(new Set());
 
   const encryptedCount = Object.values(settings).filter(Boolean).length;
   const totalCount = Object.keys(settings).length;
+
+  // Get relays from config, sorted with private relays first
+  const allRelays = config.relayMetadata.relays
+    .filter(r => r.write) // Only show relays that can write
+    .map(r => r.url)
+    .sort((a, b) => {
+      const aIsPrivate = isPrivateRelay(a);
+      const bIsPrivate = isPrivateRelay(b);
+      if (aIsPrivate && !bIsPrivate) return -1;
+      if (!aIsPrivate && bIsPrivate) return 1;
+      return 0;
+    });
+
+  const toggleCategoryExpanded = (category: EncryptableCategory) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
+  // Helper to render relay URL nicely
+  const renderRelayUrl = (url: string): string => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'wss:') {
+        return parsed.pathname === '/' ? parsed.host : parsed.host + parsed.pathname;
+      }
+      return parsed.href;
+    } catch {
+      return url;
+    }
+  };
+
+  // Count enabled relays for a category
+  const getEnabledRelayCount = (category: EncryptableCategory): number => {
+    return allRelays.filter(url => isRelayEnabledForCategory(category, url)).length;
+  };
 
   // Find an encrypted event from relays
   const findEncryptedEvent = async () => {
@@ -201,45 +252,123 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
             {CATEGORY_ORDER.map((category) => {
               const info = CATEGORY_INFO[category];
               const isEnabled = settings[category];
+              const isExpanded = expandedCategories.has(category);
+              const enabledRelayCount = getEnabledRelayCount(category);
               
               return (
                 <div
                   key={category}
-                  className={`flex items-start justify-between p-3 rounded-lg border transition-colors ${
+                  className={`rounded-lg border transition-colors ${
                     isEnabled 
                       ? 'border-sky-200 bg-sky-50/50 dark:border-sky-800 dark:bg-sky-950/50' 
                       : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800'
                   }`}
                 >
-                  <div className="flex-1 min-w-0 mr-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      {isEnabled ? (
-                        <Lock className="h-4 w-4 text-sky-600 flex-shrink-0" />
-                      ) : (
-                        <Unlock className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                      )}
-                      <span className="font-medium text-slate-800 dark:text-slate-200">
-                        {info.label}
-                      </span>
-                      {info.recommendEncryption ? (
-                        <Badge variant="secondary" className="text-xs bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
-                          Recommended
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">
-                          Shareable
-                        </Badge>
-                      )}
+                  {/* Category Header */}
+                  <div className="flex items-start justify-between p-3">
+                    <div className="flex-1 min-w-0 mr-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        {isEnabled ? (
+                          <Lock className="h-4 w-4 text-sky-600 flex-shrink-0" />
+                        ) : (
+                          <Unlock className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                        )}
+                        <span className="font-medium text-slate-800 dark:text-slate-200">
+                          {info.label}
+                        </span>
+                        {info.recommendEncryption ? (
+                          <Badge variant="secondary" className="text-xs bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
+                            Recommended
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            Shareable
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {info.description}
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {info.description}
-                    </p>
+                    <Switch
+                      checked={isEnabled}
+                      onCheckedChange={(checked) => setEncryptionEnabled(category, checked)}
+                      className="flex-shrink-0"
+                    />
                   </div>
-                  <Switch
-                    checked={isEnabled}
-                    onCheckedChange={(checked) => setEncryptionEnabled(category, checked)}
-                    className="flex-shrink-0"
-                  />
+
+                  {/* Relay List Collapsible */}
+                  <Collapsible open={isExpanded} onOpenChange={() => toggleCategoryExpanded(category)}>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-2 border-t border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <Wifi className="h-3 w-3" />
+                        <span>Publishing to {enabledRelayCount} of {allRelays.length} relays</span>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronDown className="h-3 w-3 text-slate-400" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3 text-slate-400" />
+                      )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="px-3 pb-3 space-y-1.5">
+                        {/* Private relay recommendation */}
+                        {allRelays.some(url => isPrivateRelay(url)) && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 pb-1">
+                            <Shield className="h-3 w-3" />
+                            Private relays are prioritized for sensitive data
+                          </p>
+                        )}
+                        
+                        {allRelays.length === 0 ? (
+                          <p className="text-xs text-slate-400 dark:text-slate-500 py-2">
+                            No write-enabled relays configured
+                          </p>
+                        ) : (
+                          allRelays.map(relayUrl => {
+                            const isRelayEnabled = isRelayEnabledForCategory(category, relayUrl);
+                            const isPrivate = isPrivateRelay(relayUrl);
+                            
+                            return (
+                              <div
+                                key={relayUrl}
+                                className={`flex items-center justify-between py-1.5 px-2 rounded text-xs ${
+                                  isPrivate 
+                                    ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50' 
+                                    : 'bg-slate-50 dark:bg-slate-800/50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <Wifi className={`h-3 w-3 flex-shrink-0 ${
+                                    isRelayEnabled 
+                                      ? isPrivate ? 'text-amber-500' : 'text-green-500'
+                                      : 'text-slate-300 dark:text-slate-600'
+                                  }`} />
+                                  <span className={`font-mono truncate ${
+                                    isRelayEnabled 
+                                      ? 'text-slate-600 dark:text-slate-300' 
+                                      : 'text-slate-400 dark:text-slate-500'
+                                  }`} title={relayUrl}>
+                                    {renderRelayUrl(relayUrl)}
+                                  </span>
+                                  {isPrivate && (
+                                    <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                                      Private
+                                    </Badge>
+                                  )}
+                                </div>
+                                <Switch
+                                  checked={isRelayEnabled}
+                                  onCheckedChange={(checked) => setRelayEnabledForCategory(category, relayUrl, checked)}
+                                  className="scale-75 flex-shrink-0"
+                                />
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
               );
             })}

@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Wifi, Settings } from 'lucide-react';
+import { Plus, X, Wifi, Settings, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useToast } from '@/hooks/useToast';
+import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 
 interface Relay {
   url: string;
@@ -21,6 +24,7 @@ export function RelayListManager() {
   const { user } = useCurrentUser();
   const { mutate: publishEvent } = useNostrPublish();
   const { toast } = useToast();
+  const { isPrivateRelay, setPrivateRelay } = useEncryptionSettings();
 
   const [relays, setRelays] = useState<Relay[]>(config.relayMetadata.relays);
   const [newRelayUrl, setNewRelayUrl] = useState('');
@@ -179,71 +183,116 @@ export function RelayListManager() {
     }
   }
 
+  // Sort relays with private ones first
+  const sortedRelays = [...relays].sort((a, b) => {
+    const aIsPrivate = isPrivateRelay(a.url);
+    const bIsPrivate = isPrivateRelay(b.url);
+    if (aIsPrivate && !bIsPrivate) return -1;
+    if (!aIsPrivate && bIsPrivate) return 1;
+    return 0;
+  });
+
   return (
     <div className="space-y-4">
       {/* Relay List */}
       <div className="space-y-2">
-        {relays.map((relay) => (
-          <div
-            key={relay.url}
-            className="flex items-center gap-3 p-3 rounded-md border bg-muted/20"
-          >
-            <Wifi className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="font-mono text-sm flex-1 truncate" title={relay.url}>
-              {renderRelayUrl(relay.url)}
-            </span>
-
-            {/* Settings Popover */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-5 text-muted-foreground hover:text-foreground shrink-0"
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48" align="end">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor={`read-${relay.url}`} className="text-sm cursor-pointer">
-                      Read
-                    </Label>
-                    <Switch
-                      id={`read-${relay.url}`}
-                      checked={relay.read}
-                      onCheckedChange={() => handleToggleRead(relay.url)}
-                      className="data-[state=checked]:bg-green-500 scale-75"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor={`write-${relay.url}`} className="text-sm cursor-pointer">
-                      Write
-                    </Label>
-                    <Switch
-                      id={`write-${relay.url}`}
-                      checked={relay.write}
-                      onCheckedChange={() => handleToggleWrite(relay.url)}
-                      className="data-[state=checked]:bg-blue-500 scale-75"
-                    />
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            {/* Remove Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleRemoveRelay(relay.url)}
-              className="size-5 text-muted-foreground hover:text-destructive hover:bg-transparent shrink-0"
-              disabled={relays.length <= 1}
+        {sortedRelays.map((relay) => {
+          const isPrivate = isPrivateRelay(relay.url);
+          
+          return (
+            <div
+              key={relay.url}
+              className={`flex items-center gap-3 p-3 rounded-md border ${
+                isPrivate 
+                  ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30' 
+                  : 'bg-muted/20'
+              }`}
             >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+              <Wifi className={`h-4 w-4 shrink-0 ${isPrivate ? 'text-amber-600' : 'text-muted-foreground'}`} />
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <span className="font-mono text-sm truncate" title={relay.url}>
+                  {renderRelayUrl(relay.url)}
+                </span>
+                {isPrivate && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 shrink-0">
+                    <Lock className="h-2.5 w-2.5 mr-0.5" />
+                    Private
+                  </Badge>
+                )}
+              </div>
+
+              {/* Settings Popover */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-5 text-muted-foreground hover:text-foreground shrink-0"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56" align="end">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`read-${relay.url}`} className="text-sm cursor-pointer">
+                        Read
+                      </Label>
+                      <Switch
+                        id={`read-${relay.url}`}
+                        checked={relay.read}
+                        onCheckedChange={() => handleToggleRead(relay.url)}
+                        className="data-[state=checked]:bg-green-500 scale-75"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`write-${relay.url}`} className="text-sm cursor-pointer">
+                        Write
+                      </Label>
+                      <Switch
+                        id={`write-${relay.url}`}
+                        checked={relay.write}
+                        onCheckedChange={() => handleToggleWrite(relay.url)}
+                        className="data-[state=checked]:bg-blue-500 scale-75"
+                      />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor={`private-${relay.url}`} className="text-sm cursor-pointer flex items-center gap-1">
+                          <Lock className="h-3 w-3" />
+                          Private Relay
+                        </Label>
+                        <p className="text-[10px] text-muted-foreground">
+                          Prioritized for sensitive data
+                        </p>
+                      </div>
+                      <Switch
+                        id={`private-${relay.url}`}
+                        checked={isPrivate}
+                        onCheckedChange={(checked) => setPrivateRelay(relay.url, checked)}
+                        className="data-[state=checked]:bg-amber-500 scale-75"
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Remove Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveRelay(relay.url)}
+                className="size-5 text-muted-foreground hover:text-destructive hover:bg-transparent shrink-0"
+                disabled={relays.length <= 1}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        })}
       </div>
 
       {/* Add Relay Form */}
