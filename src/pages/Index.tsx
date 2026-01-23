@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSeoMeta } from '@unhead/react';
-import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Loader2 } from 'lucide-react';
+import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -11,6 +11,7 @@ import { RelayManagementDialog } from '@/components/RelayManagementDialog';
 import { DonateSection } from '@/components/DonateSection';
 import { TabNavigation } from '@/components/TabNavigation';
 import { AddTabDialog } from '@/components/AddTabDialog';
+import { LoadingAnimation } from '@/components/LoadingAnimation';
 import {
   HomeTab,
   AppliancesTab,
@@ -128,17 +129,11 @@ const Index = () => {
       <main className="container mx-auto px-4 py-8">
         {isProfileLoading ? (
           // Loading profile from relay
-          <div className="flex flex-col items-center justify-center py-24">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-sky-100 dark:bg-sky-900 mb-6">
-              <Loader2 className="h-10 w-10 text-sky-600 dark:text-sky-400 animate-spin" />
-            </div>
-            <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">
-              Loading your profile...
-            </h2>
-            <p className="text-muted-foreground">
-              Fetching your data from the relay
-            </p>
-          </div>
+          <LoadingAnimation 
+            size="md"
+            message="Loading your profile..."
+            subMessage="Fetching your data from the relay"
+          />
         ) : !user ? (
           // Not logged in - Welcome screen
           <div className="max-w-2xl mx-auto text-center py-16">
