@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useSeoMeta } from '@unhead/react';
-import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi } from 'lucide-react';
+import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { LoginArea } from '@/components/auth/LoginArea';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { RoomManagementDialog } from '@/components/RoomManagementDialog';
 import { RelayManagementDialog } from '@/components/RelayManagementDialog';
+import { VehicleTypeManagementDialog } from '@/components/VehicleTypeManagementDialog';
 import { DonateSection } from '@/components/DonateSection';
 import { TabNavigation } from '@/components/TabNavigation';
 import { AddTabDialog } from '@/components/AddTabDialog';
@@ -39,6 +40,7 @@ const Index = () => {
   // Dialog states
   const [roomManagementOpen, setRoomManagementOpen] = useState(false);
   const [relayManagementOpen, setRelayManagementOpen] = useState(false);
+  const [vehicleTypeManagementOpen, setVehicleTypeManagementOpen] = useState(false);
   const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
 
   const handleNavigateToTab = (tabId: TabId) => {
@@ -93,11 +95,18 @@ const Index = () => {
                       <Menu className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>Settings</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => setRoomManagementOpen(true)}>
                       <Settings className="h-4 w-4 mr-2" />
                       Manage Rooms
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setVehicleTypeManagementOpen(true)}>
+                      <Car className="h-4 w-4 mr-2" />
+                      Manage Vehicle Types
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Relay Settings</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => setRelayManagementOpen(true)}>
                       <Wifi className="h-4 w-4 mr-2" />
                       Manage Relays
@@ -224,6 +233,11 @@ const Index = () => {
       <AddTabDialog
         isOpen={addTabDialogOpen}
         onClose={() => setAddTabDialogOpen(false)}
+      />
+
+      <VehicleTypeManagementDialog
+        isOpen={vehicleTypeManagementOpen}
+        onClose={() => setVehicleTypeManagementOpen(false)}
       />
     </div>
   );

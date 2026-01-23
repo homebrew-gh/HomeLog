@@ -28,7 +28,7 @@ export interface TabDefinition {
 
 export const AVAILABLE_TABS: TabDefinition[] = [
   { id: 'appliances', label: 'Appliances', icon: 'Package', description: 'Track home appliances and equipment' },
-  { id: 'maintenance', label: 'Home Maintenance', icon: 'Wrench', description: 'Schedule and track maintenance tasks' },
+  { id: 'maintenance', label: 'Maintenance', icon: 'Wrench', description: 'Schedule and track maintenance tasks' },
   { id: 'vehicles', label: 'Vehicles', icon: 'Car', description: 'Manage vehicle information and maintenance' },
   { id: 'subscriptions', label: 'Subscriptions', icon: 'CreditCard', description: 'Track recurring subscriptions and payments' },
   { id: 'warranties', label: 'Warranties', icon: 'Shield', description: 'Store warranty information and expiration dates' },

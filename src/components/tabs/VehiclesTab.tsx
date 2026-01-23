@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, ChevronDown, ChevronRight, Car, List, LayoutGrid, Calendar, Factory, Settings, Plane, Ship, Tractor, Gauge } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Car, List, LayoutGrid, Calendar, Factory, Plane, Ship, Tractor, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { VehicleDialog } from '@/components/VehicleDialog';
 import { VehicleDetailDialog } from '@/components/VehicleDetailDialog';
-import { VehicleTypeManagementDialog } from '@/components/VehicleTypeManagementDialog';
 import { useVehicles } from '@/hooks/useVehicles';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import type { Vehicle } from '@/lib/types';
@@ -36,7 +35,6 @@ export function VehiclesTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | undefined>();
   const [viewingVehicle, setViewingVehicle] = useState<Vehicle | undefined>();
-  const [typeManagementOpen, setTypeManagementOpen] = useState(false);
 
   // Collapsed types state (for list view)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
@@ -88,16 +86,6 @@ export function VehiclesTab() {
           Vehicles
         </h2>
         <div className="flex items-center gap-2">
-          {/* Settings button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTypeManagementOpen(true)}
-            className="rounded-full"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
-          
           {/* View Toggle */}
           {vehicles.length > 0 && (
             <ToggleGroup 
@@ -293,11 +281,6 @@ export function VehiclesTab() {
           onEdit={() => handleEditVehicle(viewingVehicle)}
         />
       )}
-
-      <VehicleTypeManagementDialog
-        isOpen={typeManagementOpen}
-        onClose={() => setTypeManagementOpen(false)}
-      />
     </section>
   );
 }
