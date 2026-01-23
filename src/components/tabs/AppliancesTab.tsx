@@ -1,24 +1,29 @@
 import { useState, useMemo } from 'react';
-import { Plus, ChevronDown, ChevronRight, Home, Package } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Home, Package, List, LayoutGrid, Calendar, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ApplianceDialog } from '@/components/ApplianceDialog';
 import { ApplianceDetailDialog } from '@/components/ApplianceDetailDialog';
 import { useAppliances } from '@/hooks/useAppliances';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import type { Appliance } from '@/lib/types';
+
+type ViewMode = 'list' | 'card';
 
 export function AppliancesTab() {
   const { data: appliances = [], isLoading } = useAppliances();
+  const [viewMode, setViewMode] = useLocalStorage<ViewMode>('homelog-appliances-view', 'list');
 
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAppliance, setEditingAppliance] = useState<Appliance | undefined>();
   const [viewingAppliance, setViewingAppliance] = useState<Appliance | undefined>();
 
-  // Collapsed rooms state
+  // Collapsed rooms state (for list view)
   const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(new Set());
 
   // Group appliances by room
@@ -67,32 +72,77 @@ export function AppliancesTab() {
           <Package className="h-6 w-6 text-sky-600 dark:text-sky-400" />
           Appliances
         </h2>
-        <Button
-          onClick={() => {
-            setEditingAppliance(undefined);
-            setDialogOpen(true);
-          }}
-          className="bg-sky-600 hover:bg-sky-700 text-white"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Appliance
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          {appliances.length > 0 && (
+            <ToggleGroup 
+              type="single" 
+              value={viewMode} 
+              onValueChange={(value) => value && setViewMode(value as ViewMode)}
+              className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5"
+            >
+              <ToggleGroupItem 
+                value="list" 
+                aria-label="List view"
+                className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+              >
+                <List className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem 
+                value="card" 
+                aria-label="Card view"
+                className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+          )}
+          <Button
+            onClick={() => {
+              setEditingAppliance(undefined);
+              setDialogOpen(true);
+            }}
+            className="bg-sky-600 hover:bg-sky-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Appliance
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
-        <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
-          <CardContent className="p-6 space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-6 w-32" />
-                <div className="pl-6 space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-4 w-40" />
+        viewMode === 'list' ? (
+          <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+            <CardContent className="p-6 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-6 w-32" />
+                  <div className="pl-6 space-y-2">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
                 </div>
-              </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {[1, 2].map((i) => (
+              <Card key={i} className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+                <CardHeader className="pb-3">
+                  <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[1, 2, 3].map((j) => (
+                      <Skeleton key={j} className="h-32 rounded-xl" />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        )
       ) : appliances.length === 0 ? (
         <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 border-dashed">
           <CardContent className="py-12 text-center">
@@ -113,7 +163,8 @@ export function AppliancesTab() {
             </Button>
           </CardContent>
         </Card>
-      ) : (
+      ) : viewMode === 'list' ? (
+        /* List View */
         <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
           <CardContent className="p-4">
             {appliancesByRoom.sortedRooms.map((room) => (
@@ -161,6 +212,36 @@ export function AppliancesTab() {
             ))}
           </CardContent>
         </Card>
+      ) : (
+        /* Card View */
+        <div className="space-y-6">
+          {appliancesByRoom.sortedRooms.map((room) => (
+            <Card key={room} className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 overflow-hidden">
+              <CardHeader className="pb-3 bg-gradient-to-r from-sky-50 to-transparent dark:from-sky-900/30 dark:to-transparent">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900">
+                    <Home className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  </div>
+                  <span className="text-slate-700 dark:text-slate-200">{room}</span>
+                  <Badge variant="secondary" className="ml-auto bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
+                    {appliancesByRoom.grouped[room].length} {appliancesByRoom.grouped[room].length === 1 ? 'item' : 'items'}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {appliancesByRoom.grouped[room].map((appliance) => (
+                    <ApplianceCard
+                      key={appliance.id}
+                      appliance={appliance}
+                      onClick={() => setViewingAppliance(appliance)}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
       {/* Dialogs */}
@@ -182,5 +263,50 @@ export function AppliancesTab() {
         />
       )}
     </section>
+  );
+}
+
+interface ApplianceCardProps {
+  appliance: Appliance;
+  onClick: () => void;
+}
+
+function ApplianceCard({ appliance, onClick }: ApplianceCardProps) {
+  return (
+    <button
+      onClick={onClick}
+      className="group relative flex flex-col p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 hover:border-sky-300 dark:hover:border-sky-700 hover:shadow-md transition-all duration-200 text-left"
+    >
+      {/* Icon */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-900/50 group-hover:bg-sky-200 dark:group-hover:bg-sky-800 transition-colors">
+          <Package className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+        </div>
+      </div>
+
+      {/* Model/Name */}
+      <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1 line-clamp-2 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition-colors">
+        {appliance.model}
+      </h3>
+
+      {/* Manufacturer */}
+      {appliance.manufacturer && (
+        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-2">
+          <Building2 className="h-3.5 w-3.5" />
+          <span className="truncate">{appliance.manufacturer}</span>
+        </p>
+      )}
+
+      {/* Purchase Date */}
+      {appliance.purchaseDate && (
+        <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
+          <Calendar className="h-3 w-3" />
+          <span>Purchased {appliance.purchaseDate}</span>
+        </p>
+      )}
+
+      {/* Hover indicator */}
+      <div className="absolute inset-0 rounded-xl ring-2 ring-sky-500 ring-opacity-0 group-hover:ring-opacity-20 transition-all pointer-events-none" />
+    </button>
   );
 }
