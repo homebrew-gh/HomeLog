@@ -17,8 +17,16 @@ export default function SignerCallback() {
 
   useEffect(() => {
     async function handleCallback() {
+      // Log all URL parameters for debugging
+      const allParams = Object.fromEntries(searchParams.entries());
+      console.log('[SignerCallback] URL params:', allParams);
+      console.log('[SignerCallback] Full URL:', window.location.href);
+      
       const eventParam = searchParams.get('event');
       const pendingRequest = getPendingRequest();
+
+      console.log('[SignerCallback] Event param:', eventParam);
+      console.log('[SignerCallback] Pending request:', pendingRequest);
 
       if (!eventParam) {
         setStatus('error');
@@ -27,8 +35,23 @@ export default function SignerCallback() {
       }
 
       if (!pendingRequest) {
+        // Try to process anyway if we have an event param that looks like a pubkey
+        // This handles cases where localStorage was cleared
+        const decodedEvent = decodeURIComponent(eventParam).trim();
+        if (/^[0-9a-f]{64}$/i.test(decodedEvent)) {
+          console.log('[SignerCallback] No pending request, but valid pubkey detected. Attempting login...');
+          try {
+            await processLoginCallback(eventParam);
+            setStatus('success');
+            setTimeout(() => navigate('/', { replace: true }), 1500);
+            return;
+          } catch (error) {
+            console.error('[SignerCallback] Login attempt failed:', error);
+          }
+        }
+        
         setStatus('error');
-        setErrorMessage('No pending request found. The request may have expired.');
+        setErrorMessage('No pending request found. The request may have expired. Please try logging in again.');
         return;
       }
 
@@ -50,7 +73,7 @@ export default function SignerCallback() {
           setErrorMessage(`Unknown request type: ${pendingRequest.type}`);
         }
       } catch (error) {
-        console.error('Failed to process signer callback:', error);
+        console.error('[SignerCallback] Failed to process signer callback:', error);
         setStatus('error');
         setErrorMessage(
           error instanceof Error 

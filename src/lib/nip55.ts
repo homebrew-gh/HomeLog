@@ -152,6 +152,7 @@ export async function decodeGzipResult(result: string): Promise<string> {
 
 /**
  * Storage key for pending signer requests
+ * Using localStorage instead of sessionStorage for better persistence across app navigations
  */
 const PENDING_SIGNER_REQUEST_KEY = 'nostr_pending_signer_request';
 
@@ -165,26 +166,35 @@ export function storePendingRequest(requestType: string, data?: Record<string, s
     returnPath: window.location.pathname + window.location.search,
     ...data,
   };
-  sessionStorage.setItem(PENDING_SIGNER_REQUEST_KEY, JSON.stringify(request));
+  localStorage.setItem(PENDING_SIGNER_REQUEST_KEY, JSON.stringify(request));
+  console.log('[NIP-55] Stored pending request:', request);
 }
 
 /**
  * Get and clear the pending signer request
  */
 export function getPendingRequest(): { type: string; timestamp: number; returnPath: string; [key: string]: unknown } | null {
-  const stored = sessionStorage.getItem(PENDING_SIGNER_REQUEST_KEY);
-  if (!stored) return null;
+  const stored = localStorage.getItem(PENDING_SIGNER_REQUEST_KEY);
+  console.log('[NIP-55] Retrieved pending request:', stored);
   
-  sessionStorage.removeItem(PENDING_SIGNER_REQUEST_KEY);
+  if (!stored) {
+    console.log('[NIP-55] No pending request found');
+    return null;
+  }
+  
+  // Clear the request immediately
+  localStorage.removeItem(PENDING_SIGNER_REQUEST_KEY);
   
   try {
     const request = JSON.parse(stored);
     // Expire requests older than 5 minutes
     if (Date.now() - request.timestamp > 5 * 60 * 1000) {
+      console.log('[NIP-55] Pending request expired');
       return null;
     }
     return request;
-  } catch {
+  } catch (e) {
+    console.error('[NIP-55] Failed to parse pending request:', e);
     return null;
   }
 }

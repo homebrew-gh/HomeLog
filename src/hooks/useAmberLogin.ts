@@ -98,15 +98,30 @@ export function useAmberLogin() {
    * The event parameter contains the pubkey
    */
   const processLoginCallback = useCallback(async (pubkeyResult: string) => {
-    // The result should be the hex pubkey
-    const pubkey = pubkeyResult.trim();
+    // The result might be URL-encoded, so decode it first
+    let pubkey = pubkeyResult;
+    
+    try {
+      pubkey = decodeURIComponent(pubkeyResult);
+    } catch {
+      // If decoding fails, use the original value
+      pubkey = pubkeyResult;
+    }
+    
+    // Trim whitespace
+    pubkey = pubkey.trim();
+    
+    // Log for debugging
+    console.log('[Amber] Received pubkey result:', pubkeyResult);
+    console.log('[Amber] Decoded pubkey:', pubkey);
     
     // Validate it looks like a hex pubkey (64 hex characters)
     if (!/^[0-9a-f]{64}$/i.test(pubkey)) {
-      throw new Error('Invalid public key received from signer');
+      console.error('[Amber] Invalid pubkey format. Expected 64 hex chars, got:', pubkey);
+      throw new Error(`Invalid public key received from signer. Got: "${pubkey.substring(0, 20)}..."`);
     }
 
-    // Store the pubkey for this session
+    // Store the pubkey for this session (use localStorage for persistence)
     localStorage.setItem(AMBER_PUBKEY_KEY, pubkey);
 
     // Create a signer that uses the nostrsigner: protocol
@@ -117,6 +132,8 @@ export function useAmberLogin() {
     
     // Add the login
     addLogin(login);
+    
+    console.log('[Amber] Login successful for pubkey:', pubkey);
   }, [addLogin]);
 
   /**
