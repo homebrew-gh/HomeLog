@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, X, Wifi, Settings, Lock } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, X, Wifi, Settings, Lock, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
@@ -19,6 +20,38 @@ interface Relay {
   write: boolean;
 }
 
+type RelayStatus = 'checking' | 'connected' | 'error' | 'unknown';
+
+// Check relay connectivity by attempting a WebSocket connection
+async function checkRelayConnectivity(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      const ws = new WebSocket(url);
+      const timeout = setTimeout(() => {
+        ws.close();
+        resolve(false);
+      }, 5000); // 5 second timeout
+
+      ws.onopen = () => {
+        clearTimeout(timeout);
+        ws.close();
+        resolve(true);
+      };
+
+      ws.onerror = () => {
+        clearTimeout(timeout);
+        ws.close();
+        resolve(false);
+      };
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+// Interval for periodic connectivity checks (30 seconds)
+const CONNECTIVITY_CHECK_INTERVAL = 30000;
+
 export function RelayListManager() {
   const { config, updateConfig } = useAppContext();
   const { user } = useCurrentUser();
@@ -28,11 +61,59 @@ export function RelayListManager() {
 
   const [relays, setRelays] = useState<Relay[]>(config.relayMetadata.relays);
   const [newRelayUrl, setNewRelayUrl] = useState('');
+  const [relayStatuses, setRelayStatuses] = useState<Record<string, RelayStatus>>({});
+  const [isCheckingAll, setIsCheckingAll] = useState(false);
+  const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check connectivity for a single relay
+  const checkRelay = useCallback(async (url: string) => {
+    setRelayStatuses(prev => ({ ...prev, [url]: 'checking' }));
+    const isConnected = await checkRelayConnectivity(url);
+    setRelayStatuses(prev => ({ ...prev, [url]: isConnected ? 'connected' : 'error' }));
+  }, []);
+
+  // Check connectivity for all relays
+  const checkAllRelays = useCallback(async () => {
+    setIsCheckingAll(true);
+    const urls = config.relayMetadata.relays.map(r => r.url);
+    
+    // Set all to checking
+    setRelayStatuses(prev => {
+      const newStatuses = { ...prev };
+      urls.forEach(url => {
+        newStatuses[url] = 'checking';
+      });
+      return newStatuses;
+    });
+
+    // Check all in parallel
+    await Promise.all(urls.map(async (url) => {
+      const isConnected = await checkRelayConnectivity(url);
+      setRelayStatuses(prev => ({ ...prev, [url]: isConnected ? 'connected' : 'error' }));
+    }));
+
+    setIsCheckingAll(false);
+  }, [config.relayMetadata.relays]);
 
   // Sync local state with config when it changes (e.g., from NostrProvider sync)
   useEffect(() => {
     setRelays(config.relayMetadata.relays);
   }, [config.relayMetadata.relays]);
+
+  // Initial connectivity check and periodic re-check
+  useEffect(() => {
+    // Initial check
+    checkAllRelays();
+
+    // Set up periodic check
+    checkIntervalRef.current = setInterval(checkAllRelays, CONNECTIVITY_CHECK_INTERVAL);
+
+    return () => {
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current);
+      }
+    };
+  }, [checkAllRelays]);
 
   const normalizeRelayUrl = (url: string): string => {
     url = url.trim();
@@ -192,12 +273,45 @@ export function RelayListManager() {
     return 0;
   });
 
+  // Get status indicator color and tooltip
+  const getStatusInfo = (status: RelayStatus) => {
+    switch (status) {
+      case 'connected':
+        return { color: 'bg-green-500', tooltip: 'Connected' };
+      case 'error':
+        return { color: 'bg-red-500', tooltip: 'Cannot reach relay' };
+      case 'checking':
+        return { color: 'bg-yellow-500 animate-pulse', tooltip: 'Checking...' };
+      default:
+        return { color: 'bg-slate-400', tooltip: 'Unknown' };
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Header with refresh button */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          {Object.values(relayStatuses).filter(s => s === 'connected').length} of {relays.length} relays connected
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={checkAllRelays}
+          disabled={isCheckingAll}
+          className="h-7 px-2 text-xs"
+        >
+          <RefreshCw className={`h-3 w-3 mr-1 ${isCheckingAll ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
       {/* Relay List */}
       <div className="space-y-2">
         {sortedRelays.map((relay) => {
           const isPrivate = isPrivateRelay(relay.url);
+          const status = relayStatuses[relay.url] || 'unknown';
+          const statusInfo = getStatusInfo(status);
           
           return (
             <div
@@ -208,6 +322,16 @@ export function RelayListManager() {
                   : 'bg-muted/20'
               }`}
             >
+              {/* Status Indicator */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${statusInfo.color}`} />
+                </TooltipTrigger>
+                <TooltipContent side="left" className="text-xs">
+                  {statusInfo.tooltip}
+                </TooltipContent>
+              </Tooltip>
+
               <Wifi className={`h-4 w-4 shrink-0 ${isPrivate ? 'text-amber-600' : 'text-muted-foreground'}`} />
               <div className="flex-1 min-w-0 flex items-center gap-2">
                 <span className="font-mono text-sm truncate" title={relay.url}>

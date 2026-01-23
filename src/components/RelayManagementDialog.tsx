@@ -18,24 +18,7 @@ export function RelayManagementDialog({ isOpen, onClose }: RelayManagementDialog
         </DialogHeader>
 
         <div className="py-4 space-y-6">
-          {/* Public Relays Section */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-sky-600" />
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Public Relays
-              </h3>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Nostr relays are servers that store and distribute your data. Add or remove relays to control where your appliance and maintenance data is saved.
-            </p>
-            
-            <RelayListManager />
-          </div>
-
-          <Separator />
-
-          {/* Private Relays Section */}
+          {/* Private Relays Section - Now on top */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Lock className="h-4 w-4 text-amber-600" />
@@ -57,8 +40,8 @@ export function RelayManagementDialog({ isOpen, onClose }: RelayManagementDialog
               </p>
               <ol className="text-sm text-slate-600 dark:text-slate-400 list-decimal list-inside space-y-1.5">
                 <li>Set up your own relay or use a paid private relay service</li>
-                <li>Add the relay URL in the Public Relays section above</li>
-                <li>Configure it for both read and write access</li>
+                <li>Add the relay URL in the Relays section below</li>
+                <li>Click the settings icon and enable "Private Relay"</li>
                 <li>Optionally disable write access on public relays</li>
               </ol>
               
@@ -99,6 +82,23 @@ export function RelayManagementDialog({ isOpen, onClose }: RelayManagementDialog
                 </div>
               </div>
             </div>
+          </div>
+
+          <Separator />
+
+          {/* Relays Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-sky-600" />
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Relays
+              </h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Nostr relays are servers that store and distribute your data. A green indicator means the relay is reachable; red means it cannot be reached.
+            </p>
+            
+            <RelayListManager />
           </div>
         </div>
       </DialogContent>
