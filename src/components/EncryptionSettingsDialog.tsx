@@ -1,15 +1,20 @@
-import { Lock, Unlock, Shield, AlertTriangle, RotateCcw } from 'lucide-react';
+import { useState } from 'react';
+import { Lock, Unlock, Shield, AlertTriangle, RotateCcw, Eye, EyeOff, Search, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { useNostr } from '@nostrify/react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { 
   useEncryptionSettings, 
   CATEGORY_INFO, 
   type EncryptableCategory 
 } from '@/contexts/EncryptionContext';
+import { APPLIANCE_KIND, VEHICLE_KIND, MAINTENANCE_KIND } from '@/lib/types';
 
 interface EncryptionSettingsDialogProps {
   isOpen: boolean;
@@ -26,15 +31,119 @@ const CATEGORY_ORDER: EncryptableCategory[] = [
   'projects',
 ];
 
+// Encrypted content marker
+const ENCRYPTED_MARKER = 'nip44:';
+
+// Type for verification state
+interface VerificationState {
+  status: 'idle' | 'searching' | 'found' | 'decrypting' | 'success' | 'error' | 'no-data';
+  rawContent?: string;
+  decryptedContent?: string;
+  eventKind?: number;
+  eventId?: string;
+  errorMessage?: string;
+}
+
 export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettingsDialogProps) {
+  const { nostr } = useNostr();
+  const { user } = useCurrentUser();
   const { 
     settings, 
     setEncryptionEnabled, 
     resetToDefaults 
   } = useEncryptionSettings();
 
+  // Trust but Verify state
+  const [verifyState, setVerifyState] = useState<VerificationState>({ status: 'idle' });
+  const [showDecrypted, setShowDecrypted] = useState(false);
+
   const encryptedCount = Object.values(settings).filter(Boolean).length;
   const totalCount = Object.keys(settings).length;
+
+  // Find an encrypted event from relays
+  const findEncryptedEvent = async () => {
+    if (!user?.pubkey) return;
+
+    setVerifyState({ status: 'searching' });
+    setShowDecrypted(false);
+
+    try {
+      // Query for encrypted events (appliances, vehicles, maintenance)
+      const events = await nostr.query(
+        [
+          { kinds: [APPLIANCE_KIND, VEHICLE_KIND, MAINTENANCE_KIND], authors: [user.pubkey], limit: 50 },
+        ],
+        { signal: AbortSignal.timeout(5000) }
+      );
+
+      // Find an event with encrypted content
+      const encryptedEvent = events.find(e => e.content && e.content.startsWith(ENCRYPTED_MARKER));
+
+      if (encryptedEvent) {
+        setVerifyState({
+          status: 'found',
+          rawContent: encryptedEvent.content,
+          eventKind: encryptedEvent.kind,
+          eventId: encryptedEvent.id.slice(0, 16) + '...',
+        });
+      } else {
+        setVerifyState({
+          status: 'no-data',
+          errorMessage: 'No encrypted data found on your relays. Try adding some data with encryption enabled first.',
+        });
+      }
+    } catch (error) {
+      setVerifyState({
+        status: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Failed to query relays',
+      });
+    }
+  };
+
+  // Decrypt the found content
+  const decryptContent = async () => {
+    if (!user?.signer?.nip44 || !verifyState.rawContent) return;
+
+    setVerifyState(prev => ({ ...prev, status: 'decrypting' }));
+
+    try {
+      // Remove marker and decrypt
+      const encryptedData = verifyState.rawContent.slice(ENCRYPTED_MARKER.length);
+      const decrypted = await user.signer.nip44.decrypt(user.pubkey, encryptedData);
+      
+      // Pretty print JSON if possible
+      let formatted = decrypted;
+      try {
+        const parsed = JSON.parse(decrypted);
+        formatted = JSON.stringify(parsed, null, 2);
+      } catch {
+        // Not JSON, keep as-is
+      }
+
+      setVerifyState(prev => ({
+        ...prev,
+        status: 'success',
+        decryptedContent: formatted,
+      }));
+      setShowDecrypted(true);
+    } catch (error) {
+      setVerifyState(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Failed to decrypt content',
+      }));
+    }
+  };
+
+  // Get kind label
+  const getKindLabel = (kind?: number) => {
+    switch (kind) {
+      case APPLIANCE_KIND: return 'Appliance';
+      case VEHICLE_KIND: return 'Vehicle';
+      case MAINTENANCE_KIND: return 'Maintenance';
+      default: return 'Event';
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -155,6 +264,187 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
             <p>
               Encrypted data cannot be searched or filtered at the relay level.
             </p>
+          </div>
+
+          <Separator />
+
+          {/* Trust but Verify Section */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <Eye className="h-4 w-4 text-sky-600" />
+              Trust but Verify
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Fetch encrypted data from your relays and manually decrypt it to verify your data is truly encrypted.
+            </p>
+
+            {/* Action buttons based on state */}
+            {verifyState.status === 'idle' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={findEncryptedEvent}
+                disabled={!user}
+                className="w-full border-sky-200 hover:bg-sky-50 dark:border-sky-800 dark:hover:bg-sky-900"
+              >
+                <Search className="h-4 w-4 mr-2" />
+                Find Encrypted Data
+              </Button>
+            )}
+
+            {verifyState.status === 'searching' && (
+              <div className="flex items-center justify-center gap-2 py-4 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Searching relays for encrypted data...
+              </div>
+            )}
+
+            {verifyState.status === 'no-data' && (
+              <div className="space-y-3">
+                <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+                    {verifyState.errorMessage}
+                  </AlertDescription>
+                </Alert>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVerifyState({ status: 'idle' })}
+                  className="w-full"
+                >
+                  Try Again
+                </Button>
+              </div>
+            )}
+
+            {verifyState.status === 'error' && (
+              <div className="space-y-3">
+                <Alert variant="destructive">
+                  <XCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    {verifyState.errorMessage}
+                  </AlertDescription>
+                </Alert>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVerifyState({ status: 'idle' })}
+                  className="w-full"
+                >
+                  Try Again
+                </Button>
+              </div>
+            )}
+
+            {(verifyState.status === 'found' || verifyState.status === 'decrypting' || verifyState.status === 'success') && (
+              <div className="space-y-3">
+                {/* Event info */}
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <Badge variant="secondary" className="text-xs">
+                    {getKindLabel(verifyState.eventKind)}
+                  </Badge>
+                  <span>Event ID: {verifyState.eventId}</span>
+                </div>
+
+                {/* Raw encrypted content */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                    <Lock className="h-3 w-3" />
+                    Raw Encrypted Data (from relay)
+                  </label>
+                  <ScrollArea className="h-24 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-2">
+                    <code className="text-xs text-slate-600 dark:text-slate-400 break-all font-mono">
+                      {verifyState.rawContent}
+                    </code>
+                  </ScrollArea>
+                </div>
+
+                {/* Decrypt button */}
+                {verifyState.status === 'found' && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={decryptContent}
+                    disabled={!user?.signer?.nip44}
+                    className="w-full bg-sky-600 hover:bg-sky-700"
+                  >
+                    <Unlock className="h-4 w-4 mr-2" />
+                    Decrypt with Your Key
+                  </Button>
+                )}
+
+                {verifyState.status === 'decrypting' && (
+                  <div className="flex items-center justify-center gap-2 py-2 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Decrypting...
+                  </div>
+                )}
+
+                {/* Decrypted content */}
+                {verifyState.status === 'success' && verifyState.decryptedContent && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-green-600 dark:text-green-400 flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Decrypted Content
+                      </label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowDecrypted(!showDecrypted)}
+                        className="h-6 px-2 text-xs"
+                      >
+                        {showDecrypted ? (
+                          <>
+                            <EyeOff className="h-3 w-3 mr-1" />
+                            Hide
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3 w-3 mr-1" />
+                            Show
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    {showDecrypted && (
+                      <ScrollArea className="h-32 rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-2">
+                        <pre className="text-xs text-green-700 dark:text-green-300 whitespace-pre-wrap font-mono">
+                          {verifyState.decryptedContent}
+                        </pre>
+                      </ScrollArea>
+                    )}
+                    <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/50">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-sm text-green-800 dark:text-green-200">
+                        Your data is encrypted! Only your private key can decrypt it.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+
+                {/* Reset button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setVerifyState({ status: 'idle' });
+                    setShowDecrypted(false);
+                  }}
+                  className="w-full"
+                >
+                  <RotateCcw className="h-3 w-3 mr-2" />
+                  Start Over
+                </Button>
+              </div>
+            )}
+
+            {!user && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">
+                Log in to verify your encrypted data
+              </p>
+            )}
           </div>
 
           {/* Close Button */}
