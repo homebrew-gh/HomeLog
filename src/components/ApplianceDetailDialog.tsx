@@ -3,6 +3,7 @@ import { ExternalLink, FileText, Image, Calendar, Factory, Home, Edit, Trash2 } 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { useApplianceActions } from '@/hooks/useAppliances';
 import { toast } from '@/hooks/useToast';
 import type { Appliance } from '@/lib/types';
@@ -21,15 +22,15 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDe
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
+    setShowDeleteConfirm(false);
     setIsDeleting(true);
     try {
       await deleteAppliance(appliance.id);
-      setShowDeleteConfirm(false);
       toast({
         title: 'Appliance deleted',
         description: 'The appliance has been removed.',
       });
-      // Close dialog first, then notify parent of deletion
+      // Close dialog and notify parent of deletion
       onClose();
       onDelete?.();
     } catch {
@@ -39,9 +40,23 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDe
         variant: 'destructive',
       });
       setIsDeleting(false);
-      setShowDeleteConfirm(false);
     }
   };
+
+  // Show full-screen loading overlay during deletion
+  if (isDeleting) {
+    return (
+      <Dialog open={true}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md" hideCloseButton>
+          <LoadingAnimation 
+            size="md" 
+            message="Deleting Appliance" 
+            subMessage="Please wait..."
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const handleEdit = () => {
     onClose();
