@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { useVehicleActions } from '@/hooks/useVehicles';
 import { toast } from '@/hooks/useToast';
 import { FUEL_TYPES, type Vehicle } from '@/lib/types';
@@ -32,6 +33,7 @@ interface VehicleDetailDialogProps {
   onClose: () => void;
   vehicle: Vehicle;
   onEdit: () => void;
+  onDelete?: () => void;
 }
 
 // Get icon based on vehicle type
@@ -54,12 +56,13 @@ function getFuelTypeLabel(value: string): string {
   return fuelType?.label || value;
 }
 
-export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit }: VehicleDetailDialogProps) {
+export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete }: VehicleDetailDialogProps) {
   const { deleteVehicle } = useVehicleActions();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
+    setShowDeleteConfirm(false);
     setIsDeleting(true);
     try {
       await deleteVehicle(vehicle.id);
@@ -67,18 +70,33 @@ export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit }: Vehicl
         title: 'Vehicle deleted',
         description: 'The vehicle has been removed.',
       });
+      // Close dialog and notify parent of deletion
       onClose();
+      onDelete?.();
     } catch {
       toast({
         title: 'Error',
         description: 'Failed to delete vehicle. Please try again.',
         variant: 'destructive',
       });
-    } finally {
       setIsDeleting(false);
-      setShowDeleteConfirm(false);
     }
   };
+
+  // Show full-screen loading overlay during deletion
+  if (isDeleting) {
+    return (
+      <Dialog open={true}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md" hideCloseButton>
+          <LoadingAnimation 
+            size="md" 
+            message="Deleting Vehicle" 
+            subMessage="Please wait..."
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const handleEdit = () => {
     onClose();

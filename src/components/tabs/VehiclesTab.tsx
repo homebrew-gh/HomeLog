@@ -279,6 +279,7 @@ export function VehiclesTab() {
           onClose={() => setViewingVehicle(undefined)}
           vehicle={viewingVehicle}
           onEdit={() => handleEditVehicle(viewingVehicle)}
+          onDelete={() => setViewingVehicle(undefined)}
         />
       )}
     </section>
