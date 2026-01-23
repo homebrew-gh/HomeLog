@@ -2,7 +2,7 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Upload, AlertTriangle, ChevronDown, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLoginActions } from '@/hooks/useLoginActions';
+import { useAmberLogin } from '@/hooks/useAmberLogin';
 import { DialogTitle } from '@radix-ui/react-dialog';
 
 interface LoginDialogProps {
@@ -36,9 +37,11 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
     bunker?: string;
     file?: string;
     extension?: string;
+    amber?: string;
   }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const login = useLoginActions();
+  const amberLogin = useAmberLogin();
 
   // Reset all state when dialog opens/closes
   useEffect(() => {
@@ -77,6 +80,26 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
         extension: error instanceof Error ? error.message : 'Extension login failed'
       }));
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAmberLogin = () => {
+    setIsLoading(true);
+    setErrors(prev => ({ ...prev, amber: undefined }));
+
+    try {
+      // This will redirect to the Amber app
+      amberLogin.initiateLogin();
+      // Note: The page will redirect, so we don't need to handle success here
+      // The callback page will process the response
+    } catch (e: unknown) {
+      const error = e as Error;
+      console.error('Amber login failed:', error);
+      setErrors(prev => ({
+        ...prev,
+        amber: error instanceof Error ? error.message : 'Failed to open Amber'
+      }));
       setIsLoading(false);
     }
   };
@@ -171,6 +194,8 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
   };
 
   const hasExtension = 'nostr' in window;
+  const hasAmber = amberLogin.isAvailable();
+  const hasPrimaryLogin = hasExtension || hasAmber;
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
 
   const renderTabs = () => (
@@ -295,27 +320,53 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
         </div>
 
         <div className='px-6 pb-6 space-y-4 overflow-y-auto'>
-          {/* Extension Login Button - shown if extension is available */}
-          {hasExtension && (
-            <div className="space-y-4">
-              {errors.extension && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>{errors.extension}</AlertDescription>
-                </Alert>
+          {/* Primary Login Options - Extension or Amber */}
+          {hasPrimaryLogin && (
+            <div className="space-y-3">
+              {/* Extension Login Button - shown if extension is available */}
+              {hasExtension && (
+                <>
+                  {errors.extension && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>{errors.extension}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    className="w-full h-12 px-9"
+                    onClick={handleExtensionLogin}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Logging in...' : 'Log in with Extension'}
+                  </Button>
+                </>
               )}
-              <Button
-                className="w-full h-12 px-9"
-                onClick={handleExtensionLogin}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Logging in...' : 'Log in with Extension'}
-              </Button>
+
+              {/* Amber Login Button - shown on Android devices */}
+              {hasAmber && (
+                <>
+                  {errors.amber && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>{errors.amber}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    className="w-full h-12 px-9"
+                    onClick={handleAmberLogin}
+                    disabled={isLoading}
+                    variant={hasExtension ? "outline" : "default"}
+                  >
+                    <Smartphone className="w-4 h-4 mr-2" />
+                    {isLoading ? 'Opening Amber...' : 'Log in with Amber'}
+                  </Button>
+                </>
+              )}
             </div>
           )}
 
-          {/* Tabs - wrapped in collapsible if extension is available, otherwise shown directly */}
-          {hasExtension ? (
+          {/* Tabs - wrapped in collapsible if primary login is available, otherwise shown directly */}
+          {hasPrimaryLogin ? (
             <Collapsible className="space-y-4" open={isMoreOptionsOpen} onOpenChange={setIsMoreOptionsOpen}>
               <CollapsibleTrigger asChild>
                 <button className="w-full flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
