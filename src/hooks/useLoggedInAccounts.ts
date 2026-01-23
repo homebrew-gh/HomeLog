@@ -14,7 +14,7 @@ export function useLoggedInAccounts() {
   const { nostr } = useNostr();
   const { logins, setLogin, removeLogin } = useNostrLogin();
 
-  const { data: authors = [] } = useQuery({
+  const { data: authors = [], isLoading, isFetched } = useQuery({
     queryKey: ['nostr', 'logins', logins.map((l) => l.id).join(';')],
     queryFn: async ({ signal }) => {
       const events = await nostr.query(
@@ -33,6 +33,7 @@ export function useLoggedInAccounts() {
       });
     },
     retry: 3,
+    enabled: logins.length > 0,
   });
 
   // Current user is the first login
@@ -46,11 +47,15 @@ export function useLoggedInAccounts() {
   // Other users are all logins except the current one
   const otherUsers = (authors || []).slice(1) as Account[];
 
+  // Profile is loading if we have logins but haven't fetched profile data yet
+  const isProfileLoading = logins.length > 0 && isLoading && !isFetched;
+
   return {
     authors,
     currentUser,
     otherUsers,
     setLogin,
     removeLogin,
+    isProfileLoading,
   };
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSeoMeta } from '@unhead/react';
-import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi } from 'lucide-react';
+import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -23,6 +23,7 @@ import {
 } from '@/components/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
+import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
 
 const Index = () => {
   useSeoMeta({
@@ -31,6 +32,7 @@ const Index = () => {
   });
 
   const { user } = useCurrentUser();
+  const { isProfileLoading } = useLoggedInAccounts();
   const { preferences, setActiveTab } = useTabPreferences();
 
   // Dialog states
@@ -83,7 +85,7 @@ const Index = () => {
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             {/* Left - Menu & Logo */}
             <div className="flex items-center gap-3">
-              {user && (
+              {user && !isProfileLoading && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full">
@@ -116,15 +118,28 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Tab Navigation - Only shown when logged in */}
-        {user && (
+        {/* Tab Navigation - Only shown when logged in and profile is loaded */}
+        {user && !isProfileLoading && (
           <TabNavigation onAddTabClick={() => setAddTabDialogOpen(true)} />
         )}
       </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {!user ? (
+        {isProfileLoading ? (
+          // Loading profile from relay
+          <div className="flex flex-col items-center justify-center py-24">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-sky-100 dark:bg-sky-900 mb-6">
+              <Loader2 className="h-10 w-10 text-sky-600 dark:text-sky-400 animate-spin" />
+            </div>
+            <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">
+              Loading your profile...
+            </h2>
+            <p className="text-muted-foreground">
+              Fetching your data from the relay
+            </p>
+          </div>
+        ) : !user ? (
           // Not logged in - Welcome screen
           <div className="max-w-2xl mx-auto text-center py-16">
             <div className="mb-8">
