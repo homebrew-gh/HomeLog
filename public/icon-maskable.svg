@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Solid background for maskable icon (safe zone is inner 80%) -->
+  <!-- Solid background for maskable icon -->
   <rect width="512" height="512" fill="#bae6fd"/>
   
-  <!-- Home icon centered in safe zone -->
-  <g fill="none" stroke="#0284c7" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
-    <!-- House walls -->
-    <path d="M186 270 L186 360 L326 360 L326 270"/>
+  <!-- Home icon - bold and centered in safe zone -->
+  <g fill="none" stroke="#38bdf8" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <!-- House body (walls) -->
+    <path d="M190 275 L190 345 L322 345 L322 275"/>
     
     <!-- Roof -->
-    <path d="M162 278 L256 192 L350 278"/>
+    <path d="M168 284 L256 205 L344 284"/>
     
     <!-- Door -->
-    <rect x="232" y="296" width="48" height="64" rx="5" stroke-width="12"/>
+    <rect x="228" y="286" width="56" height="59" rx="7"/>
   </g>
 </svg>

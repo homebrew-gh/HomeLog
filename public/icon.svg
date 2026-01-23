@@ -1,23 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Soft light background -->
+  <!-- Light background -->
   <rect width="512" height="512" fill="#f0f9ff"/>
   
-  <!-- Subtle decorative accents -->
-  <circle cx="420" cy="100" r="50" fill="#dbeafe" opacity="0.6"/>
-  <circle cx="80" cy="420" r="70" fill="#dbeafe" opacity="0.5"/>
+  <!-- Subtle decorative circles -->
+  <circle cx="400" cy="100" r="60" fill="#e0f2fe" opacity="0.6"/>
+  <circle cx="90" cy="420" r="80" fill="#e0f2fe" opacity="0.5"/>
   
-  <!-- Main circular background for icon -->
-  <circle cx="256" cy="256" r="140" fill="#bae6fd"/>
+  <!-- Main circular background -->
+  <circle cx="256" cy="256" r="130" fill="#bae6fd"/>
   
-  <!-- Home icon group -->
-  <g fill="none" stroke="#0284c7" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
-    <!-- House walls -->
-    <path d="M196 260 L196 340 L316 340 L316 260"/>
+  <!-- Home icon - bold and centered -->
+  <g fill="none" stroke="#38bdf8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <!-- House body (walls) -->
+    <path d="M200 268 L200 330 L312 330 L312 268"/>
     
     <!-- Roof -->
-    <path d="M176 268 L256 196 L336 268"/>
+    <path d="M182 276 L256 210 L330 276"/>
     
     <!-- Door -->
-    <rect x="236" y="284" width="40" height="56" rx="4" stroke-width="10"/>
+    <rect x="232" y="280" width="48" height="50" rx="6"/>
   </g>
 </svg>
