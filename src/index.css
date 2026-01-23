@@ -256,3 +256,60 @@
 .animate-impact-flash {
   animation: impact-flash 1s ease-out infinite;
 }
+
+/* PWA-specific styles */
+
+/* Offline indicator body class adjustment */
+body.offline {
+  padding-top: 36px;
+}
+
+/* Smooth slide-in animation for PWA banners */
+@keyframes slide-in-from-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in.slide-in-from-bottom-4 {
+  animation: slide-in-from-bottom 0.3s ease-out;
+}
+
+/* Standalone mode adjustments (when running as installed PWA) */
+@media all and (display-mode: standalone) {
+  /* Add safe area padding for notched devices */
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Adjust header for standalone mode */
+  .sticky.top-0 {
+    top: env(safe-area-inset-top);
+  }
+}
+
+/* iOS-specific PWA adjustments */
+@supports (-webkit-touch-callout: none) {
+  /* Prevent bounce effect when scrolling at boundaries */
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  body {
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent text selection on long press for interactive elements */
+  button, a, [role="button"] {
+    -webkit-touch-callout: none;
+  }
+}

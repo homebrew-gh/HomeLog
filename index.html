@@ -2,23 +2,34 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <title>Home Log - Home Ownership Management</title>
-    <meta name="description" content="Manage your home appliances and maintenance schedules with Nostr." />
+    <meta name="description" content="Manage your home appliances, vehicles, and maintenance schedules with Nostr." />
     <meta http-equiv="content-security-policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self' https:; font-src 'self'; base-uri 'self'; manifest-src 'self'; connect-src 'self' blob: https: wss:; img-src 'self' data: blob: https:; media-src 'self' https:">
 
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#0ea5e9" />
+    <meta name="theme-color" content="#0ea5e9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c4a6e" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Home Log" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="application-name" content="Home Log" />
     <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-TileColor" content="#075985" />
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- Preconnect to common resources -->
+    <link rel="preconnect" href="https://relay.damus.io" />
+    <link rel="preconnect" href="https://relay.nostr.band" />
+    
+    <!-- DNS Prefetch for relays -->
+    <link rel="dns-prefetch" href="https://relay.ditto.pub" />
 
     <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23075985'/%3E%3Cpath d='M256 192 L256 192 L352 272 L352 368 L160 368 L160 272 Z' fill='none' stroke='%237dd3fc' stroke-width='18' stroke-linejoin='round'/%3E%3Cpath d='M256 160 L128 272 L152 272 L256 186 L360 272 L384 272 Z' fill='%237dd3fc'/%3E%3Crect x='228' y='300' width='56' height='68' rx='3' fill='%23075985' stroke='%237dd3fc' stroke-width='12'/%3E%3C/svg%3E" />
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23075985'/%3E%3Cpath d='M256 192 L256 192 L352 272 L352 368 L160 368 L160 272 Z' fill='none' stroke='%237dd3fc' stroke-width='18' stroke-linejoin='round'/%3E%3Cpath d='M256 160 L128 272 L152 272 L256 186 L360 272 L384 272 Z' fill='%237dd3fc'/%3E%3Crect x='228' y='300' width='56' height='68' rx='3' fill='%23075985' stroke='%237dd3fc' stroke-width='12'/%3E%3C/svg%3E" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='0' fill='%23075985'/%3E%3Cpath d='M256 192 L256 192 L352 272 L352 368 L160 368 L160 272 Z' fill='none' stroke='%237dd3fc' stroke-width='18' stroke-linejoin='round'/%3E%3Cpath d='M256 160 L128 272 L152 272 L256 186 L360 272 L384 272 Z' fill='%237dd3fc'/%3E%3Crect x='228' y='300' width='56' height='68' rx='3' fill='%23075985' stroke='%237dd3fc' stroke-width='12'/%3E%3C/svg%3E" />
+    <link rel="mask-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath d='M256 192 L256 192 L352 272 L352 368 L160 368 L160 272 Z' fill='none' stroke='black' stroke-width='18' stroke-linejoin='round'/%3E%3Cpath d='M256 160 L128 272 L152 272 L256 186 L360 272 L384 272 Z' fill='black'/%3E%3Crect x='228' y='300' width='56' height='68' rx='3' stroke='black' stroke-width='12' fill='white'/%3E%3C/svg%3E" color="#075985" />
 
     <link rel="manifest" href="/manifest.webmanifest">
   </head>
@@ -26,19 +37,98 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration & Update Handler -->
     <script>
+      // Service Worker Registration
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('SW registered:', registration.scope);
-            })
-            .catch((error) => {
-              console.log('SW registration failed:', error);
+        window.addEventListener('load', async () => {
+          try {
+            const registration = await navigator.serviceWorker.register('/sw.js', {
+              scope: '/',
+              updateViaCache: 'none'
             });
+            console.log('[App] SW registered:', registration.scope);
+
+            // Check for updates periodically
+            setInterval(() => {
+              registration.update();
+            }, 60 * 60 * 1000); // Check every hour
+
+            // Handle updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New version available - show update notification
+                    if (window.showUpdateNotification) {
+                      window.showUpdateNotification();
+                    } else {
+                      console.log('[App] New version available. Refresh to update.');
+                    }
+                  }
+                });
+              }
+            });
+          } catch (error) {
+            console.error('[App] SW registration failed:', error);
+          }
+        });
+
+        // Handle controller change (when new SW takes over)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('[App] New service worker activated');
         });
       }
+
+      // Offline/Online status handling
+      window.addEventListener('online', () => {
+        document.body.classList.remove('offline');
+        if (window.handleOnlineStatus) window.handleOnlineStatus(true);
+      });
+
+      window.addEventListener('offline', () => {
+        document.body.classList.add('offline');
+        if (window.handleOnlineStatus) window.handleOnlineStatus(false);
+      });
+
+      // Initial offline check
+      if (!navigator.onLine) {
+        document.body.classList.add('offline');
+      }
+
+      // Prevent pull-to-refresh on mobile (for native app feel)
+      document.body.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 1) return; // Allow pinch zoom
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        if (scrollTop === 0 && e.touches[0].clientY > 0) {
+          // Only prevent at very top
+        }
+      }, { passive: true });
     </script>
+
+    <!-- Fallback content for no-JS -->
+    <noscript>
+      <style>
+        #root { display: none; }
+        .noscript-message {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          padding: 2rem;
+          text-align: center;
+          font-family: system-ui, sans-serif;
+          background: linear-gradient(to bottom, #f0f9ff, #e0f2fe);
+        }
+        .noscript-message h1 { color: #075985; margin-bottom: 1rem; }
+        .noscript-message p { color: #64748b; max-width: 400px; }
+      </style>
+      <div class="noscript-message">
+        <h1>JavaScript Required</h1>
+        <p>Home Log requires JavaScript to run. Please enable JavaScript in your browser settings and refresh the page.</p>
+      </div>
+    </noscript>
   </body>
 </html>
