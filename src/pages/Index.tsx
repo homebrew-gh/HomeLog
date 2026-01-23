@@ -147,8 +147,7 @@ const Index = () => {
                 Welcome to Home Log
               </h1>
               <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-                Keep track of your home appliances and maintenance schedules.
-                Your data is stored securely on the Nostr network.
+                Keep track of home appliances, vehicle maintenance, general home maintenance, contractors/service providers, subscriptions, warranties, and future home projects. Caring for your home has never been easier or more organized!
               </p>
             </div>
 
@@ -156,9 +155,9 @@ const Index = () => {
               <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
                 <CardContent className="pt-6">
                   <Package className="h-10 w-10 text-sky-500 mx-auto mb-3" />
-                  <h3 className="font-semibold mb-2">Track Appliances</h3>
+                  <h3 className="font-semibold mb-2">Track Everything</h3>
                   <p className="text-sm text-muted-foreground">
-                    Store details about all your home appliances in one place.
+                    Appliances, vehicles, warranties, and contractors all in one place.
                   </p>
                 </CardContent>
               </Card>
@@ -166,9 +165,9 @@ const Index = () => {
               <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
                 <CardContent className="pt-6">
                   <Wrench className="h-10 w-10 text-sky-500 mx-auto mb-3" />
-                  <h3 className="font-semibold mb-2">Schedule Maintenance</h3>
+                  <h3 className="font-semibold mb-2">Never Miss a Task</h3>
                   <p className="text-sm text-muted-foreground">
-                    Never miss a filter change or maintenance task again.
+                    Schedule maintenance for your home, vehicles, and subscriptions.
                   </p>
                 </CardContent>
               </Card>
@@ -176,9 +175,9 @@ const Index = () => {
               <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
                 <CardContent className="pt-6">
                   <Calendar className="h-10 w-10 text-sky-500 mx-auto mb-3" />
-                  <h3 className="font-semibold mb-2">Stay Organized</h3>
+                  <h3 className="font-semibold mb-2">Plan Ahead</h3>
                   <p className="text-sm text-muted-foreground">
-                    View upcoming maintenance and keep your home running smoothly.
+                    Organize future projects and keep your home running smoothly.
                   </p>
                 </CardContent>
               </Card>
