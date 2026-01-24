@@ -66,15 +66,20 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const [draggedCardSize, setDraggedCardSize] = useState<{ width: number; height: number } | null>(null);
   const cardRefs = useRef<Map<TabId, HTMLDivElement>>(new Map());
   
-  // Generate random animation delays for each card (persist across renders)
-  const [animationDelays] = useState<Map<TabId, number>>(() => {
-    const delays = new Map<TabId, number>();
+  // Generate random animation parameters for each card (persist across renders)
+  // This creates the iOS-style "fake randomness" effect
+  const [animationParams] = useState<Map<TabId, { delay: number; duration: number }>>(() => {
+    const params = new Map<TabId, { delay: number; duration: number }>();
     const allTabs: TabId[] = ['home', 'appliances', 'maintenance', 'vehicles', 'subscriptions', 'warranties', 'contractors', 'projects'];
     allTabs.forEach(tab => {
-      // Random delay between 0 and 300ms
-      delays.set(tab, Math.random() * 300);
+      // Random negative delay (-0.05s to -0.75s) to offset animation start
+      // Random duration (0.22s to 0.33s) for slight speed variation
+      params.set(tab, {
+        delay: -(Math.random() * 0.7 + 0.05), // -0.05s to -0.75s
+        duration: Math.random() * 0.11 + 0.22, // 0.22s to 0.33s
+      });
     });
-    return delays;
+    return params;
   });
 
   const hasActiveTabs = preferences.activeTabs.length > 0;
@@ -305,10 +310,18 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     };
   }, [draggedCard, handleMouseMove, handleMouseUp]);
 
-  // Get animation delay for a specific card
-  const getAnimationDelay = (tabId: TabId): string => {
-    const delay = animationDelays.get(tabId) ?? 0;
-    return `${delay}ms`;
+  // Get animation styles for a specific card (iOS-style random parameters)
+  const getAnimationStyle = (tabId: TabId, index: number): React.CSSProperties => {
+    const params = animationParams.get(tabId) ?? { delay: -0.3, duration: 0.25 };
+    return {
+      animationDelay: `${params.delay}s`,
+      animationDuration: `${params.duration}s`,
+    };
+  };
+  
+  // Get the appropriate wiggle class based on card index (alternating even/odd)
+  const getWiggleClass = (index: number): string => {
+    return index % 2 === 0 ? 'animate-wiggle-card-even' : 'animate-wiggle-card-odd';
   };
 
   return (
@@ -501,9 +514,10 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                   fullWidth && "md:col-span-2",
                   isDragging && "dashboard-card-placeholder",
                   isDragOver && "dashboard-card-drop-target",
-                  isEditMode && !isDragging && "animate-wiggle-card cursor-grab"
+                  isEditMode && !isDragging && getWiggleClass(index),
+                  isEditMode && !isDragging && "cursor-grab"
                 )}
-                style={isEditMode && !isDragging ? { animationDelay: getAnimationDelay(tabId) } : undefined}
+                style={isEditMode && !isDragging ? getAnimationStyle(tabId, index) : undefined}
                 onMouseDown={(e) => handleMouseDown(e, tabId)}
               >
                 {/* Drag handle overlay in edit mode */}
