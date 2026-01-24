@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useVehicleActions } from '@/hooks/useVehicles';
 import { useVehicleTypes } from '@/hooks/useVehicleTypes';
-import { useUploadFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
+import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import { FUEL_TYPES, type Vehicle } from '@/lib/types';
 
@@ -47,6 +48,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
   const { createVehicle, updateVehicle } = useVehicleActions();
   const { allVehicleTypes, addCustomVehicleType } = useVehicleTypes();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+  const { mutateAsync: deleteFile, isPending: isDeleting } = useDeleteFile();
   const canUploadFiles = useCanUploadFiles();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -230,11 +232,59 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
     e.target.value = '';
   };
 
-  const handleRemoveDocument = (index: number) => {
+  const handleRemoveDocument = (index: number, deleteFromServer: boolean = false) => {
+    const url = formData.documentsUrls[index];
+    
     setFormData(prev => ({
       ...prev,
       documentsUrls: prev.documentsUrls.filter((_, i) => i !== index),
     }));
+
+    if (deleteFromServer && url) {
+      deleteFile(url)
+        .then(() => {
+          toast({
+            title: 'File deleted',
+            description: 'Document has been removed from your media server.',
+          });
+        })
+        .catch((error) => {
+          console.error('Failed to delete file from server:', error);
+          toast({
+            title: 'Could not delete from server',
+            description: error instanceof Error ? error.message : 'The file reference was removed but the file may still exist on the server.',
+            variant: 'destructive',
+          });
+        });
+    }
+  };
+
+  const handleRemoveFile = async (type: 'receipt' | 'warranty', deleteFromServer: boolean = false) => {
+    const url = type === 'receipt' ? formData.receiptUrl : formData.warrantyUrl;
+    
+    // Clear the URL from form data first
+    setFormData(prev => ({
+      ...prev,
+      [type === 'receipt' ? 'receiptUrl' : 'warrantyUrl']: '',
+    }));
+
+    // Optionally delete from server
+    if (deleteFromServer && url) {
+      try {
+        await deleteFile(url);
+        toast({
+          title: 'File deleted',
+          description: 'File has been removed from your media server.',
+        });
+      } catch (error) {
+        console.error('Failed to delete file from server:', error);
+        toast({
+          title: 'Could not delete from server',
+          description: error instanceof Error ? error.message : 'The file reference was removed but the file may still exist on the server.',
+          variant: 'destructive',
+        });
+      }
+    }
   };
 
   const handleAddType = () => {
@@ -685,15 +735,37 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <FileText className="h-4 w-4" />
                     <span className="truncate flex-1">{formData.warrantyUrl}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2"
-                      onClick={() => setFormData(prev => ({ ...prev, warrantyUrl: '' }))}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2"
+                          disabled={isDeleting}
+                        >
+                          {isDeleting ? (
+                            <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <MoreVertical className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleRemoveFile('warranty', false)}>
+                          <X className="h-4 w-4 mr-2" />
+                          Remove from vehicle
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => handleRemoveFile('warranty', true)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete from server
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 )}
               </div>
@@ -749,15 +821,37 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Image className="h-4 w-4" />
                 <span className="truncate flex-1">{formData.receiptUrl}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => setFormData(prev => ({ ...prev, receiptUrl: '' }))}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <MoreVertical className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleRemoveFile('receipt', false)}>
+                      <X className="h-4 w-4 mr-2" />
+                      Remove from vehicle
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => handleRemoveFile('receipt', true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete from server
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </div>
@@ -808,15 +902,37 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
                   <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
                     <FileText className="h-4 w-4" />
                     <span className="truncate flex-1">Document {index + 1}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2"
-                      onClick={() => handleRemoveDocument(index)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2"
+                          disabled={isDeleting}
+                        >
+                          {isDeleting ? (
+                            <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <MoreVertical className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleRemoveDocument(index, false)}>
+                          <X className="h-4 w-4 mr-2" />
+                          Remove from vehicle
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => handleRemoveDocument(index, true)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete from server
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ))}
               </div>

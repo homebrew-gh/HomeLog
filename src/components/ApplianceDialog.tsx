@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, Image, AlertCircle } from 'lucide-react';
+import { Plus, Upload, X, FileText, Image, AlertCircle, Trash2, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,9 +7,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useApplianceActions } from '@/hooks/useAppliances';
 import { useCustomRooms } from '@/hooks/useCustomRooms';
-import { useUploadFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
+import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import type { Appliance } from '@/lib/types';
 
@@ -32,6 +33,7 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
   const { createAppliance, updateAppliance } = useApplianceActions();
   const { allRooms, addCustomRoom } = useCustomRooms();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+  const { mutateAsync: deleteFile, isPending: isDeleting } = useDeleteFile();
   const canUploadFiles = useCanUploadFiles();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -125,6 +127,34 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
     const file = e.target.files?.[0];
     if (file) handleFileUpload(file, 'manual');
     e.target.value = '';
+  };
+
+  const handleRemoveFile = async (type: 'receipt' | 'manual', deleteFromServer: boolean = false) => {
+    const url = type === 'receipt' ? formData.receiptUrl : formData.manualUrl;
+    
+    // Clear the URL from form data first
+    setFormData(prev => ({
+      ...prev,
+      [type === 'receipt' ? 'receiptUrl' : 'manualUrl']: '',
+    }));
+
+    // Optionally delete from server
+    if (deleteFromServer && url) {
+      try {
+        await deleteFile(url);
+        toast({
+          title: 'File deleted',
+          description: 'File has been removed from your media server.',
+        });
+      } catch (error) {
+        console.error('Failed to delete file from server:', error);
+        toast({
+          title: 'Could not delete from server',
+          description: error instanceof Error ? error.message : 'The file reference was removed but the file may still exist on the server.',
+          variant: 'destructive',
+        });
+      }
+    }
   };
 
   const handleAddRoom = () => {
@@ -337,15 +367,37 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Image className="h-4 w-4" />
                 <span className="truncate flex-1">{formData.receiptUrl}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => setFormData(prev => ({ ...prev, receiptUrl: '' }))}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <MoreVertical className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleRemoveFile('receipt', false)}>
+                      <X className="h-4 w-4 mr-2" />
+                      Remove from appliance
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => handleRemoveFile('receipt', true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete from server
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </div>
@@ -399,15 +451,37 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <FileText className="h-4 w-4" />
                 <span className="truncate flex-1">{formData.manualUrl}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => setFormData(prev => ({ ...prev, manualUrl: '' }))}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <MoreVertical className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleRemoveFile('manual', false)}>
+                      <X className="h-4 w-4 mr-2" />
+                      Remove from appliance
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => handleRemoveFile('manual', true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete from server
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </div>

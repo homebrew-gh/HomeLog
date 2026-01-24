@@ -103,3 +103,122 @@ export function useCanUploadFiles(): boolean {
   const { hasPrivateBlossomServer } = useUserPreferences();
   return hasPrivateBlossomServer();
 }
+
+/**
+ * Extract the file hash (SHA-256) from a Blossom/nostr.build URL
+ * URLs typically look like:
+ * - https://image.nostr.build/abc123def456.jpg
+ * - https://blossom.primal.net/abc123def456.png
+ * - https://cdn.satellite.earth/abc123def456.webp
+ */
+function extractFileHash(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const pathname = parsed.pathname;
+    // Get the filename from the path (last segment)
+    const filename = pathname.split('/').pop();
+    if (!filename) return null;
+    // Remove extension to get hash
+    const hash = filename.replace(/\.[^.]+$/, '');
+    // SHA-256 hashes are 64 hex characters
+    if (/^[a-f0-9]{64}$/i.test(hash)) {
+      return hash.toLowerCase();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get the base server URL from a file URL
+ */
+function getServerFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    // Handle different nostr.build subdomains -> use blossom.nostr.build for deletion
+    if (parsed.hostname === 'image.nostr.build' || 
+        parsed.hostname === 'media.nostr.build' ||
+        parsed.hostname === 'video.nostr.build') {
+      return 'https://blossom.nostr.build/';
+    }
+    // For other URLs, use the origin
+    return parsed.origin + '/';
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Hook to delete a file from the media server
+ * 
+ * Blossom DELETE endpoint (BUD-02):
+ * DELETE /<sha256> with signed authorization header
+ */
+export function useDeleteFile() {
+  const { user } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async (fileUrl: string) => {
+      if (!user) {
+        throw new Error('Must be logged in to delete files');
+      }
+
+      const hash = extractFileHash(fileUrl);
+      if (!hash) {
+        console.warn('Could not extract file hash from URL:', fileUrl);
+        throw new Error('Could not determine file hash from URL. The file may need to be deleted manually from your media server.');
+      }
+
+      const server = getServerFromUrl(fileUrl);
+      if (!server) {
+        throw new Error('Could not determine server from URL');
+      }
+
+      console.log('Attempting to delete file:', { url: fileUrl, hash, server });
+
+      // Create Blossom delete authorization event (kind 24242)
+      const now = Math.floor(Date.now() / 1000);
+      const deleteEvent = await user.signer.signEvent({
+        kind: 24242,
+        content: 'Delete file',
+        created_at: now,
+        tags: [
+          ['t', 'delete'],
+          ['x', hash],
+          ['expiration', String(now + 60)], // 1 minute expiration
+        ],
+      });
+
+      // Base64 encode the signed event for the Authorization header
+      const authHeader = 'Nostr ' + btoa(JSON.stringify(deleteEvent));
+
+      // Make DELETE request to the server
+      const deleteUrl = `${server}${hash}`;
+      console.log('Sending DELETE request to:', deleteUrl);
+
+      const response = await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': authHeader,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('Delete failed:', response.status, errorText);
+        
+        if (response.status === 404) {
+          // File already deleted or doesn't exist - treat as success
+          console.log('File not found on server (may already be deleted)');
+          return { success: true, alreadyDeleted: true };
+        }
+        
+        throw new Error(`Failed to delete file: ${response.status} ${errorText}`);
+      }
+
+      console.log('File deleted successfully');
+      return { success: true, alreadyDeleted: false };
+    },
+  });
+}
