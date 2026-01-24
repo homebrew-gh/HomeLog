@@ -1,6 +1,6 @@
 // Home Log Service Worker
 // Version should be updated when deploying new versions
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `homelog-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `homelog-dynamic-${CACHE_VERSION}`;
 
@@ -16,6 +16,12 @@ const EXTERNAL_RESOURCES = [];
 
 // Maximum items in dynamic cache
 const MAX_DYNAMIC_CACHE_ITEMS = 50;
+
+// URLs that should NEVER be cached (always fetch from network)
+const NEVER_CACHE_PATTERNS = [
+  /^wss?:\/\//,  // WebSocket connections
+  /\/api\//,     // API endpoints
+];
 
 // Install event - cache app shell
 self.addEventListener('install', (event) => {
@@ -108,6 +114,11 @@ function isApiRequest(request) {
   );
 }
 
+// Helper to check if URL should never be cached
+function shouldNeverCache(url) {
+  return NEVER_CACHE_PATTERNS.some(pattern => pattern.test(url));
+}
+
 // Network-first strategy with cache fallback
 async function networkFirst(request, cacheName = DYNAMIC_CACHE) {
   try {
@@ -170,22 +181,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip WebSocket requests
+  // Skip WebSocket requests entirely - let them pass through
   if (url.protocol === 'wss:' || url.protocol === 'ws:') {
+    return;
+  }
+
+  // Skip requests that should never be cached
+  if (shouldNeverCache(request.url)) {
     return;
   }
 
   // Skip cross-origin requests that aren't cacheable
   if (url.origin !== location.origin) {
-    // Allow caching of external fonts and CDN resources
+    // Allow caching of external fonts and CDN resources only
     if (!url.pathname.includes('fonts') && 
         !url.hostname.includes('cdn') &&
         !url.hostname.includes('esm.sh')) {
+      // For other cross-origin requests, don't intercept - let them go directly to network
       return;
     }
   }
 
-  // Handle navigation requests (HTML pages)
+  // Handle navigation requests (HTML pages) - always try network first for fresh content
   if (request.mode === 'navigate') {
     event.respondWith(
       networkFirst(request, STATIC_CACHE)

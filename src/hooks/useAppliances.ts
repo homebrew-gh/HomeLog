@@ -102,7 +102,8 @@ export function useAppliances() {
     queryFn: async (c) => {
       if (!user?.pubkey) return [];
 
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      // Longer timeout for PWA mode where network might be slower
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(10000)]);
 
       // Query both appliance events and deletion events in one request
       const events = await nostr.query(
