@@ -284,6 +284,55 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     return widgetsFromTabs;
   }, [preferences.activeTabs, widgetOrder]);
 
+  // Auto-scroll configuration
+  const SCROLL_ZONE_SIZE = 80; // pixels from edge to trigger scroll
+  const SCROLL_SPEED_SLOW = 2; // pixels per frame (slow, deliberate)
+  const SCROLL_SPEED_FAST = 5; // pixels per frame when closer to edge
+  const autoScrollRef = useRef<number | null>(null);
+  const currentPointerY = useRef<number>(0);
+
+  // Auto-scroll function that runs in animation frame loop
+  const performAutoScroll = useCallback(() => {
+    const viewportHeight = window.innerHeight;
+    const y = currentPointerY.current;
+    
+    let scrollAmount = 0;
+    
+    // Check if near top edge - scroll up
+    if (y < SCROLL_ZONE_SIZE) {
+      const intensity = 1 - (y / SCROLL_ZONE_SIZE); // 0 to 1, higher when closer to edge
+      scrollAmount = -(SCROLL_SPEED_SLOW + (SCROLL_SPEED_FAST - SCROLL_SPEED_SLOW) * intensity);
+    }
+    // Check if near bottom edge - scroll down
+    else if (y > viewportHeight - SCROLL_ZONE_SIZE) {
+      const intensity = 1 - ((viewportHeight - y) / SCROLL_ZONE_SIZE); // 0 to 1, higher when closer to edge
+      scrollAmount = SCROLL_SPEED_SLOW + (SCROLL_SPEED_FAST - SCROLL_SPEED_SLOW) * intensity;
+    }
+    
+    if (scrollAmount !== 0) {
+      window.scrollBy(0, scrollAmount);
+    }
+    
+    // Continue the loop if we're still dragging
+    if (draggedWidget) {
+      autoScrollRef.current = requestAnimationFrame(performAutoScroll);
+    }
+  }, [draggedWidget]);
+
+  // Start auto-scroll loop when dragging begins
+  useEffect(() => {
+    if (draggedWidget) {
+      autoScrollRef.current = requestAnimationFrame(performAutoScroll);
+    }
+    
+    return () => {
+      if (autoScrollRef.current) {
+        cancelAnimationFrame(autoScrollRef.current);
+        autoScrollRef.current = null;
+      }
+    };
+  }, [draggedWidget, performAutoScroll]);
+
   // Shared drag start logic for both mouse and touch
   const startDrag = useCallback((clientX: number, clientY: number, widgetId: WidgetId) => {
     const widgetElement = widgetRefs.current.get(widgetId);
@@ -305,6 +354,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     
     setDraggedWidget(widgetId);
     setDragPosition({ x: clientX, y: clientY });
+    currentPointerY.current = clientY;
   }, []);
 
   // Shared drag move logic for both mouse and touch
@@ -312,6 +362,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     if (!draggedWidget) return;
     
     setDragPosition({ x: clientX, y: clientY });
+    currentPointerY.current = clientY; // Update for auto-scroll
     
     // Find which widget we're hovering over
     let foundTarget: WidgetId | null = null;
@@ -337,6 +388,12 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   // Shared drag end logic for both mouse and touch
   const endDrag = useCallback(() => {
     if (!draggedWidget) return;
+    
+    // Stop auto-scroll
+    if (autoScrollRef.current) {
+      cancelAnimationFrame(autoScrollRef.current);
+      autoScrollRef.current = null;
+    }
     
     // If we're over a drop target, perform the swap
     if (dragOverWidget && draggedWidget !== dragOverWidget) {
@@ -424,19 +481,18 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   // Add and remove global touch event listeners
   useEffect(() => {
     if (draggedWidget) {
-      // Use passive: false to allow preventDefault
+      // Use passive: false to allow preventDefault on touchmove
+      // This prevents native scrolling so our auto-scroll can take over
       document.addEventListener('touchmove', handleTouchMove, { passive: false });
       document.addEventListener('touchend', handleTouchEnd);
       document.addEventListener('touchcancel', handleTouchEnd);
-      // Prevent body scrolling on iOS
-      document.body.style.overflow = 'hidden';
+      // Note: We don't set overflow:hidden anymore - auto-scroll handles scrolling
     }
     
     return () => {
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('touchcancel', handleTouchEnd);
-      document.body.style.overflow = '';
     };
   }, [draggedWidget, handleTouchMove, handleTouchEnd]);
 
