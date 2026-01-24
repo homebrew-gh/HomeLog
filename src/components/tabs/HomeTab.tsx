@@ -245,19 +245,8 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     handleDragEnd();
   };
 
-  // Get wiggle animation class based on card index (same cadence as tab navigation)
-  const getWiggleClass = (index: number) => {
-    const wiggleClasses = [
-      'animate-wiggle-card animate-wiggle-1',
-      'animate-wiggle-card animate-wiggle-2',
-      'animate-wiggle-card animate-wiggle-3',
-      'animate-wiggle-card animate-wiggle-4',
-      'animate-wiggle-card animate-wiggle-5',
-      'animate-wiggle-card animate-wiggle-6',
-      'animate-wiggle-card animate-wiggle-7',
-    ];
-    return wiggleClasses[index % wiggleClasses.length];
-  };
+  // All dashboard cards wiggle in sync with the same animation
+  const cardWiggleClass = 'animate-wiggle-card';
 
   return (
     <section className="space-y-6">
@@ -441,7 +430,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                   "relative",
                   fullWidth && "md:col-span-2",
                   isDragging && "opacity-50",
-                  isEditMode && getWiggleClass(index)
+                  isEditMode && cardWiggleClass
                 )}
                 draggable={isEditMode}
                 onDragStart={(e) => handleDragStart(e, tabId)}
