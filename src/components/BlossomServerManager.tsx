@@ -51,6 +51,10 @@ export function BlossomServerManager() {
   const servers = preferences.blossomServers || DEFAULT_BLOSSOM_SERVERS;
   const hasPrivateServer = hasPrivateBlossomServer();
 
+  // Use a ref to track servers for the interval callback to avoid recreating it
+  const serversRef = useRef(servers);
+  serversRef.current = servers;
+
   // Check connectivity for a single server
   const checkServer = useCallback(async (url: string) => {
     setServerStatuses(prev => ({ ...prev, [url]: 'checking' }));
@@ -58,10 +62,11 @@ export function BlossomServerManager() {
     setServerStatuses(prev => ({ ...prev, [url]: isConnected ? 'connected' : 'error' }));
   }, []);
 
-  // Check connectivity for all servers
+  // Check connectivity for all servers - stable function that reads from ref
   const checkAllServers = useCallback(async () => {
+    const currentServers = serversRef.current;
     setIsCheckingAll(true);
-    const urls = servers.map(s => s.url);
+    const urls = currentServers.map(s => s.url);
     
     // Set all to checking
     setServerStatuses(prev => {
@@ -79,9 +84,9 @@ export function BlossomServerManager() {
     }));
 
     setIsCheckingAll(false);
-  }, [servers]);
+  }, []);
 
-  // Initial connectivity check and periodic re-check
+  // Initial connectivity check and periodic re-check - runs only once on mount
   useEffect(() => {
     // Initial check
     checkAllServers();

@@ -65,6 +65,10 @@ export function RelayListManager() {
   const [isCheckingAll, setIsCheckingAll] = useState(false);
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Use a ref to track config relays for the interval callback to avoid recreating it
+  const configRelaysRef = useRef(config.relayMetadata.relays);
+  configRelaysRef.current = config.relayMetadata.relays;
+
   // Check connectivity for a single relay
   const checkRelay = useCallback(async (url: string) => {
     setRelayStatuses(prev => ({ ...prev, [url]: 'checking' }));
@@ -72,10 +76,11 @@ export function RelayListManager() {
     setRelayStatuses(prev => ({ ...prev, [url]: isConnected ? 'connected' : 'error' }));
   }, []);
 
-  // Check connectivity for all relays
+  // Check connectivity for all relays - stable function that reads from ref
   const checkAllRelays = useCallback(async () => {
+    const currentRelays = configRelaysRef.current;
     setIsCheckingAll(true);
-    const urls = config.relayMetadata.relays.map(r => r.url);
+    const urls = currentRelays.map(r => r.url);
     
     // Set all to checking
     setRelayStatuses(prev => {
@@ -93,14 +98,14 @@ export function RelayListManager() {
     }));
 
     setIsCheckingAll(false);
-  }, [config.relayMetadata.relays]);
+  }, []);
 
   // Sync local state with config when it changes (e.g., from NostrProvider sync)
   useEffect(() => {
     setRelays(config.relayMetadata.relays);
   }, [config.relayMetadata.relays]);
 
-  // Initial connectivity check and periodic re-check
+  // Initial connectivity check and periodic re-check - runs only once on mount
   useEffect(() => {
     // Initial check
     checkAllRelays();
