@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, ChevronDown, ChevronRight, Car, List, LayoutGrid, Calendar, Factory, Plane, Ship, Tractor, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +26,11 @@ function getVehicleIcon(type: string) {
   }
 }
 
-export function VehiclesTab() {
+interface VehiclesTabProps {
+  scrollTarget?: string;
+}
+
+export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
   const { data: vehicles = [], isLoading } = useVehicles();
   const { preferences, setVehiclesViewMode } = useUserPreferences();
   const viewMode = preferences.vehiclesViewMode;
@@ -38,6 +42,35 @@ export function VehiclesTab() {
 
   // Collapsed types state (for list view)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
+
+  // Refs for vehicle type sections
+  const typeRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Handle scroll to target when scrollTarget changes
+  useEffect(() => {
+    if (scrollTarget && scrollTarget.startsWith('type-') && !isLoading) {
+      const typeName = scrollTarget.replace('type-', '');
+      // Small delay to ensure the DOM has rendered
+      const timer = setTimeout(() => {
+        const element = typeRefs.current[typeName];
+        if (element) {
+          // Expand the type if it's collapsed (for list view)
+          setCollapsedTypes(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(typeName);
+            return newSet;
+          });
+          // Scroll into view with offset for sticky header
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Adjust for sticky header (approximately 120px)
+          setTimeout(() => {
+            window.scrollBy({ top: -120, behavior: 'smooth' });
+          }, 100);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [scrollTarget, isLoading]);
 
   // Group vehicles by type
   const vehiclesByType = useMemo(() => {
@@ -183,8 +216,11 @@ export function VehiclesTab() {
             {vehiclesByType.sortedTypes.map((type) => {
               const TypeIcon = getVehicleIcon(type);
               return (
-                <Collapsible
+                <div
                   key={type}
+                  ref={(el) => { typeRefs.current[type] = el; }}
+                >
+                <Collapsible
                   open={!collapsedTypes.has(type)}
                   onOpenChange={() => toggleType(type)}
                   className="mb-2 last:mb-0"
@@ -224,6 +260,7 @@ export function VehiclesTab() {
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+                </div>
               );
             })}
           </CardContent>
@@ -234,7 +271,11 @@ export function VehiclesTab() {
           {vehiclesByType.sortedTypes.map((type) => {
             const TypeIcon = getVehicleIcon(type);
             return (
-              <Card key={type} className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 overflow-hidden">
+              <Card 
+                key={type} 
+                ref={(el) => { typeRefs.current[type] = el; }}
+                className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 overflow-hidden"
+              >
                 <CardHeader className="pb-3 bg-gradient-to-r from-sky-50 to-transparent dark:from-sky-900/30 dark:to-transparent">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <div className="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900">

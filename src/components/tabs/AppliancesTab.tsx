@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, ChevronDown, ChevronRight, Home, Package, List, LayoutGrid, Calendar, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,11 @@ import { useAppliances } from '@/hooks/useAppliances';
 import { useUserPreferences } from '@/hooks/useTabPreferences';
 import type { Appliance } from '@/lib/types';
 
-export function AppliancesTab() {
+interface AppliancesTabProps {
+  scrollTarget?: string;
+}
+
+export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
   const { data: appliances = [], isLoading } = useAppliances();
   const { preferences, setAppliancesViewMode } = useUserPreferences();
   const viewMode = preferences.appliancesViewMode;
@@ -24,6 +28,35 @@ export function AppliancesTab() {
 
   // Collapsed rooms state (for list view)
   const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(new Set());
+
+  // Refs for room sections
+  const roomRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Handle scroll to target when scrollTarget changes
+  useEffect(() => {
+    if (scrollTarget && scrollTarget.startsWith('room-') && !isLoading) {
+      const roomName = scrollTarget.replace('room-', '');
+      // Small delay to ensure the DOM has rendered
+      const timer = setTimeout(() => {
+        const element = roomRefs.current[roomName];
+        if (element) {
+          // Expand the room if it's collapsed (for list view)
+          setCollapsedRooms(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(roomName);
+            return newSet;
+          });
+          // Scroll into view with offset for sticky header
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Adjust for sticky header (approximately 120px)
+          setTimeout(() => {
+            window.scrollBy({ top: -120, behavior: 'smooth' });
+          }, 100);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [scrollTarget, isLoading]);
 
   // Group appliances by room
   const appliancesByRoom = useMemo(() => {
@@ -167,8 +200,11 @@ export function AppliancesTab() {
         <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
           <CardContent className="p-4">
             {appliancesByRoom.sortedRooms.map((room) => (
-              <Collapsible
+              <div
                 key={room}
+                ref={(el) => { roomRefs.current[room] = el; }}
+              >
+              <Collapsible
                 open={!collapsedRooms.has(room)}
                 onOpenChange={() => toggleRoom(room)}
                 className="mb-2 last:mb-0"
@@ -208,6 +244,7 @@ export function AppliancesTab() {
                   </div>
                 </CollapsibleContent>
               </Collapsible>
+              </div>
             ))}
           </CardContent>
         </Card>
@@ -215,7 +252,11 @@ export function AppliancesTab() {
         /* Card View */
         <div className="space-y-6">
           {appliancesByRoom.sortedRooms.map((room) => (
-            <Card key={room} className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 overflow-hidden">
+            <Card 
+              key={room} 
+              ref={(el) => { roomRefs.current[room] = el; }}
+              className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 overflow-hidden"
+            >
               <CardHeader className="pb-3 bg-gradient-to-r from-sky-50 to-transparent dark:from-sky-900/30 dark:to-transparent">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <div className="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900">

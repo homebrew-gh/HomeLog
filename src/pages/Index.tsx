@@ -46,14 +46,22 @@ const Index = () => {
   const [vehicleTypeManagementOpen, setVehicleTypeManagementOpen] = useState(false);
   const [encryptionSettingsOpen, setEncryptionSettingsOpen] = useState(false);
   const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
+  
+  // Scroll target state for navigating to specific sections within tabs
+  const [scrollTarget, setScrollTarget] = useState<string | undefined>(undefined);
 
   const openRelayManagement = (tab: 'relays' | 'media' = 'relays') => {
     setRelayManagementDefaultTab(tab);
     setRelayManagementOpen(true);
   };
 
-  const handleNavigateToTab = (tabId: TabId) => {
+  const handleNavigateToTab = (tabId: TabId, target?: string) => {
+    setScrollTarget(target);
     setActiveTab(tabId);
+    // Clear the scroll target after a short delay so it can be re-triggered
+    if (target) {
+      setTimeout(() => setScrollTarget(undefined), 500);
+    }
   };
 
   const renderTabContent = () => {
@@ -66,11 +74,11 @@ const Index = () => {
           />
         );
       case 'appliances':
-        return <AppliancesTab />;
+        return <AppliancesTab scrollTarget={scrollTarget} />;
       case 'maintenance':
-        return <MaintenanceTab />;
+        return <MaintenanceTab scrollTarget={scrollTarget} />;
       case 'vehicles':
-        return <VehiclesTab />;
+        return <VehiclesTab scrollTarget={scrollTarget} />;
       case 'subscriptions':
         return <SubscriptionsTab />;
       case 'warranties':

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,11 @@ import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calcula
 import { useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
 import type { MaintenanceSchedule } from '@/lib/types';
 
-export function MaintenanceTab() {
+interface MaintenanceTabProps {
+  scrollTarget?: string;
+}
+
+export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
   const { data: appliances = [] } = useAppliances();
   const { data: vehicles = [] } = useVehicles();
   const { data: allMaintenance = [], isLoading } = useMaintenance();
@@ -24,6 +28,35 @@ export function MaintenanceTab() {
   const [dialogMode, setDialogMode] = useState<'appliance' | 'vehicle'>('appliance');
   const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceSchedule | undefined>();
   const [viewingMaintenance, setViewingMaintenance] = useState<MaintenanceSchedule | undefined>();
+
+  // Refs for maintenance sections
+  const homeMaintenanceRef = useRef<HTMLDivElement | null>(null);
+  const vehicleMaintenanceRef = useRef<HTMLDivElement | null>(null);
+
+  // Handle scroll to target when scrollTarget changes
+  useEffect(() => {
+    if (scrollTarget && !isLoading) {
+      const timer = setTimeout(() => {
+        let element: HTMLDivElement | null = null;
+        
+        if (scrollTarget === 'home-maintenance') {
+          element = homeMaintenanceRef.current;
+        } else if (scrollTarget === 'vehicle-maintenance') {
+          element = vehicleMaintenanceRef.current;
+        }
+        
+        if (element) {
+          // Scroll into view with offset for sticky header
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Adjust for sticky header (approximately 120px)
+          setTimeout(() => {
+            window.scrollBy({ top: -120, behavior: 'smooth' });
+          }, 100);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [scrollTarget, isLoading]);
 
   const handleEditMaintenance = (maint: MaintenanceSchedule) => {
     setEditingMaintenance(maint);
@@ -65,7 +98,10 @@ export function MaintenanceTab() {
       ) : (
         <>
           {/* Home/Appliance Maintenance Section */}
-          <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+          <Card 
+            ref={homeMaintenanceRef}
+            className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700"
+          >
             <CardHeader className="pb-3 bg-gradient-to-r from-sky-50 to-transparent dark:from-sky-900/30 dark:to-transparent">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -112,7 +148,10 @@ export function MaintenanceTab() {
           </Card>
 
           {/* Vehicle Maintenance Section */}
-          <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+          <Card 
+            ref={vehicleMaintenanceRef}
+            className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700"
+          >
             <CardHeader className="pb-3 bg-gradient-to-r from-sky-50 to-transparent dark:from-sky-900/30 dark:to-transparent">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
