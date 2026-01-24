@@ -245,66 +245,67 @@
 }
 
 /* Hammer and nail loading animation */
-/* Hammer swings from vertical (0deg) down through 90deg arc to strike nail on the left */
+/* Hammer: head on top, handle below, pivots from bottom (hand position at 80,85) */
+/* Starts raised/cocked back (positive rotation), swings down-left (negative rotation) to strike */
 @keyframes hammer-swing {
   0%, 100% {
-    transform: rotate(0deg); /* Vertical position - cocked back */
+    transform: rotate(45deg); /* Raised position - cocked back to the right */
   }
-  15% {
-    transform: rotate(5deg); /* Slight wind-up */
+  10% {
+    transform: rotate(50deg); /* Slight extra wind-up */
   }
-  40% {
-    transform: rotate(-85deg); /* Swing down toward nail */
+  35% {
+    transform: rotate(-30deg); /* Swinging down and to the left */
   }
-  45%, 55% {
-    transform: rotate(-90deg); /* Impact position - horizontal, striking nail */
+  42%, 52% {
+    transform: rotate(-45deg); /* Impact! Hammer head strikes nail */
   }
-  70% {
-    transform: rotate(-45deg); /* Recoil/lift back up */
+  65% {
+    transform: rotate(-20deg); /* Slight recoil after impact */
   }
-  85% {
-    transform: rotate(-10deg); /* Continue back up */
+  80% {
+    transform: rotate(20deg); /* Rising back up */
   }
 }
 
 @keyframes nail-drive {
-  0%, 40% {
-    transform: translateY(0);
+  0%, 38% {
+    transform: translateY(0); /* Nail at starting position */
   }
-  45%, 100% {
-    transform: translateY(3px);
+  42%, 100% {
+    transform: translateY(4px); /* Nail driven down on impact */
   }
 }
 
 @keyframes impact-flash {
-  0%, 40% {
+  0%, 38% {
     opacity: 0;
-    transform: scale(0.3);
+    transform: scale(0.2);
   }
-  45% {
+  42% {
     opacity: 1;
     transform: scale(1);
   }
-  60% {
-    opacity: 0.5;
-    transform: scale(1.3);
+  55% {
+    opacity: 0.7;
+    transform: scale(1.4);
   }
-  75%, 100% {
+  70%, 100% {
     opacity: 0;
-    transform: scale(1.5);
+    transform: scale(1.8);
   }
 }
 
 .animate-hammer-swing {
-  animation: hammer-swing 0.8s ease-in-out infinite;
+  animation: hammer-swing 1s ease-in-out infinite;
 }
 
 .animate-nail-drive {
-  animation: nail-drive 0.8s ease-out infinite;
+  animation: nail-drive 1s ease-out infinite;
 }
 
 .animate-impact-flash {
-  animation: impact-flash 0.8s ease-out infinite;
+  animation: impact-flash 1s ease-out infinite;
 }
 
 /* PWA-specific styles */

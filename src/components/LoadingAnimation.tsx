@@ -11,7 +11,8 @@ interface LoadingAnimationProps {
  * LoadingAnimation - A hammer hitting a nail animation
  * 
  * Default loading animation for the site, matching the home/construction theme.
- * Use this component whenever a loading state is needed.
+ * The hammer has its head at the top and handle at the bottom, held from the bottom-right.
+ * It swings down and to the left to strike a nail in a board.
  */
 export function LoadingAnimation({ 
   className, 
@@ -40,101 +41,111 @@ export function LoadingAnimation({
           className="w-full h-full"
           aria-label="Loading animation"
         >
-          {/* Wood Board */}
+          {/* Wood Board - at bottom left */}
           <rect 
-            x="10" 
-            y="78" 
-            width="50" 
+            x="5" 
+            y="80" 
+            width="55" 
             height="12" 
             rx="2"
             className="fill-amber-600 dark:fill-amber-700"
           />
           {/* Wood grain lines */}
-          <line x1="15" y1="82" x2="55" y2="82" className="stroke-amber-800/30 dark:stroke-amber-900/40" strokeWidth="0.5" />
-          <line x1="15" y1="86" x2="55" y2="86" className="stroke-amber-800/30 dark:stroke-amber-900/40" strokeWidth="0.5" />
+          <line x1="10" y1="84" x2="55" y2="84" className="stroke-amber-800/30 dark:stroke-amber-900/40" strokeWidth="0.5" />
+          <line x1="10" y1="88" x2="55" y2="88" className="stroke-amber-800/30 dark:stroke-amber-900/40" strokeWidth="0.5" />
           
-          {/* Nail (stationary, gets "driven" in) - positioned on left side of board */}
+          {/* Nail - sticking up from the board, gets driven in on impact */}
           <g className="animate-nail-drive">
-            {/* Nail head */}
-            <ellipse 
-              cx="35" 
-              cy="64" 
-              rx="5" 
-              ry="2"
-              className="fill-slate-400 dark:fill-slate-500"
-            />
             {/* Nail body */}
             <rect 
-              x="33" 
-              y="64" 
+              x="28" 
+              y="58" 
               width="4" 
-              height="16" 
+              height="24" 
               className="fill-slate-400 dark:fill-slate-500"
             />
-            {/* Nail tip */}
+            {/* Nail head - flat top */}
+            <rect 
+              x="25" 
+              y="55" 
+              width="10" 
+              height="4" 
+              rx="1"
+              className="fill-slate-500 dark:fill-slate-400"
+            />
+            {/* Nail tip - goes into the board */}
             <polygon 
-              points="33,80 37,80 35,85" 
+              points="28,82 32,82 30,88" 
               className="fill-slate-400 dark:fill-slate-500"
             />
           </g>
           
-          {/* Hammer (animated) - on right side, pivots from top-right corner of handle */}
-          {/* Pivot point is at (85, 20), hammer swings from vertical down 90 degrees to hit nail */}
-          <g className="origin-[85px_20px] animate-hammer-swing">
-            {/* Hammer handle - extends from pivot point */}
+          {/* Hammer - head on top, handle below, pivots from bottom of handle (hand position) */}
+          {/* Pivot point at bottom-right where hand would hold it: (80, 85) */}
+          {/* Hammer starts raised up (tilted back to the right), swings down-left to hit nail */}
+          <g className="origin-[80px_85px] animate-hammer-swing">
+            {/* Hammer handle - from pivot point going up */}
             <rect 
-              x="82" 
-              y="20" 
+              x="77" 
+              y="40" 
               width="6" 
-              height="40" 
+              height="45" 
               rx="2"
               className="fill-amber-800 dark:fill-amber-900"
             />
-            {/* Handle grip lines */}
-            <line x1="83" y1="25" x2="87" y2="25" className="stroke-amber-950/30" strokeWidth="0.5" />
-            <line x1="83" y1="30" x2="87" y2="30" className="stroke-amber-950/30" strokeWidth="0.5" />
-            <line x1="83" y1="35" x2="87" y2="35" className="stroke-amber-950/30" strokeWidth="0.5" />
+            {/* Handle grip lines near bottom (where hand grips) */}
+            <line x1="78" y1="75" x2="82" y2="75" className="stroke-amber-950/30" strokeWidth="0.5" />
+            <line x1="78" y1="70" x2="82" y2="70" className="stroke-amber-950/30" strokeWidth="0.5" />
+            <line x1="78" y1="65" x2="82" y2="65" className="stroke-amber-950/30" strokeWidth="0.5" />
             
-            {/* Hammer head - at bottom of handle, extends to the left (toward nail) */}
+            {/* Hammer head - at top of handle, extends to left (striking direction) */}
             <rect 
-              x="62" 
-              y="57" 
-              width="26" 
-              height="10" 
+              x="58" 
+              y="32" 
+              width="28" 
+              height="12" 
               rx="2"
               className="fill-sky-600 dark:fill-sky-500"
             />
-            {/* Hammer head highlight */}
+            {/* Hammer head highlight (top edge) */}
             <rect 
-              x="62" 
-              y="57" 
-              width="26" 
-              height="3" 
+              x="58" 
+              y="32" 
+              width="28" 
+              height="4" 
               rx="1"
               className="fill-sky-400/50 dark:fill-sky-400/30"
             />
             {/* Hammer face (striking surface) - left side of head */}
             <rect 
-              x="58" 
-              y="59" 
+              x="54" 
+              y="34" 
               width="6" 
-              height="6" 
+              height="8" 
               rx="1"
+              className="fill-sky-700 dark:fill-sky-600"
+            />
+            {/* Claw end of hammer (right side) */}
+            <path 
+              d="M86 35 L92 32 L92 34 L88 36 L88 40 L92 42 L92 44 L86 41 Z"
               className="fill-sky-700 dark:fill-sky-600"
             />
           </g>
           
-          {/* Impact effect (appears on hit) - centered on nail head */}
+          {/* Impact effect - appears when hammer strikes nail */}
           <g className="animate-impact-flash">
-            <circle cx="35" cy="64" r="10" className="fill-amber-400/50 dark:fill-amber-300/30" />
-            {/* Impact lines - radiating outward */}
-            <line x1="23" y1="60" x2="17" y2="55" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
-            <line x1="47" y1="60" x2="53" y2="55" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
-            <line x1="21" y1="68" x2="13" y2="72" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
-            <line x1="49" y1="68" x2="57" y2="72" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
-            {/* Extra spark lines */}
-            <line x1="25" y1="56" x2="23" y2="50" className="stroke-yellow-400 dark:stroke-yellow-300" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="45" y1="56" x2="47" y2="50" className="stroke-yellow-400 dark:stroke-yellow-300" strokeWidth="1.5" strokeLinecap="round" />
+            {/* Central flash */}
+            <circle cx="30" cy="55" r="12" className="fill-yellow-400/60 dark:fill-yellow-300/40" />
+            {/* Spark lines radiating from impact */}
+            <line x1="18" y1="50" x2="10" y2="44" className="stroke-yellow-500 dark:stroke-yellow-400" strokeWidth="2" strokeLinecap="round" />
+            <line x1="42" y1="50" x2="50" y2="44" className="stroke-yellow-500 dark:stroke-yellow-400" strokeWidth="2" strokeLinecap="round" />
+            <line x1="20" y1="62" x2="12" y2="68" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
+            <line x1="40" y1="62" x2="48" y2="68" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
+            {/* Small sparks */}
+            <circle cx="15" cy="48" r="2" className="fill-yellow-300 dark:fill-yellow-200" />
+            <circle cx="45" cy="48" r="2" className="fill-yellow-300 dark:fill-yellow-200" />
+            <circle cx="22" cy="42" r="1.5" className="fill-orange-400 dark:fill-orange-300" />
+            <circle cx="38" cy="42" r="1.5" className="fill-orange-400 dark:fill-orange-300" />
           </g>
         </svg>
       </div>
