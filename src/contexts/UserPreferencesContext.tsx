@@ -36,6 +36,15 @@ export const AVAILABLE_TABS: TabDefinition[] = [
   { id: 'projects', label: 'Projects', icon: 'FolderKanban', description: 'Plan and track home improvement projects' },
 ];
 
+export interface BlossomServer {
+  url: string;
+  enabled: boolean;
+}
+
+export const DEFAULT_BLOSSOM_SERVERS: BlossomServer[] = [
+  { url: 'https://blossom.primal.net/', enabled: true },
+];
+
 export interface UserPreferences {
   // Tab preferences
   activeTabs: TabId[];
@@ -51,6 +60,8 @@ export interface UserPreferences {
   customVehicleTypes: string[];
   // Hidden default vehicle types
   hiddenDefaultVehicleTypes: string[];
+  // Blossom media servers
+  blossomServers: BlossomServer[];
   // Version for future migrations
   version: number;
 }
@@ -64,6 +75,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   hiddenDefaultRooms: [],
   customVehicleTypes: [],
   hiddenDefaultVehicleTypes: [],
+  blossomServers: DEFAULT_BLOSSOM_SERVERS,
   version: 1,
 };
 
@@ -92,6 +104,12 @@ interface UserPreferencesContextType {
   removeCustomVehicleType: (type: string) => void;
   hideDefaultVehicleType: (type: string) => void;
   restoreDefaultVehicleType: (type: string) => void;
+  // Blossom server actions
+  addBlossomServer: (url: string) => void;
+  removeBlossomServer: (url: string) => void;
+  toggleBlossomServer: (url: string) => void;
+  reorderBlossomServers: (servers: BlossomServer[]) => void;
+  getEnabledBlossomServers: () => string[];
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | null>(null);
@@ -376,6 +394,60 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  // Blossom server actions
+  const normalizeBlossomUrl = (url: string): string => {
+    let normalized = url.trim();
+    // Ensure https:// prefix
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+      normalized = `https://${normalized}`;
+    }
+    // Ensure trailing slash
+    if (!normalized.endsWith('/')) {
+      normalized = `${normalized}/`;
+    }
+    return normalized;
+  };
+
+  const addBlossomServer = useCallback((url: string) => {
+    const normalized = normalizeBlossomUrl(url);
+    updatePreferences((prev) => {
+      const currentServers = prev.blossomServers || DEFAULT_BLOSSOM_SERVERS;
+      if (currentServers.some(s => s.url === normalized)) return prev;
+      return {
+        ...prev,
+        blossomServers: [...currentServers, { url: normalized, enabled: true }],
+      };
+    });
+  }, [updatePreferences]);
+
+  const removeBlossomServer = useCallback((url: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      blossomServers: (prev.blossomServers || DEFAULT_BLOSSOM_SERVERS).filter(s => s.url !== url),
+    }));
+  }, [updatePreferences]);
+
+  const toggleBlossomServer = useCallback((url: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      blossomServers: (prev.blossomServers || DEFAULT_BLOSSOM_SERVERS).map(s =>
+        s.url === url ? { ...s, enabled: !s.enabled } : s
+      ),
+    }));
+  }, [updatePreferences]);
+
+  const reorderBlossomServers = useCallback((servers: BlossomServer[]) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      blossomServers: servers,
+    }));
+  }, [updatePreferences]);
+
+  const getEnabledBlossomServers = useCallback((): string[] => {
+    const servers = localPreferences.blossomServers || DEFAULT_BLOSSOM_SERVERS;
+    return servers.filter(s => s.enabled).map(s => s.url);
+  }, [localPreferences.blossomServers]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -395,6 +467,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     hiddenDefaultRooms: localPreferences.hiddenDefaultRooms || [],
     customVehicleTypes: localPreferences.customVehicleTypes || [],
     hiddenDefaultVehicleTypes: localPreferences.hiddenDefaultVehicleTypes || [],
+    blossomServers: localPreferences.blossomServers || DEFAULT_BLOSSOM_SERVERS,
     version: localPreferences.version || 1,
   };
 
@@ -421,6 +494,11 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         removeCustomVehicleType,
         hideDefaultVehicleType,
         restoreDefaultVehicleType,
+        addBlossomServer,
+        removeBlossomServer,
+        toggleBlossomServer,
+        reorderBlossomServers,
+        getEnabledBlossomServers,
       }}
     >
       {children}

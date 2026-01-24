@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car, Shield, HelpCircle } from 'lucide-react';
+import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car, Shield, HelpCircle, Cloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -42,9 +42,15 @@ const Index = () => {
   // Dialog states
   const [roomManagementOpen, setRoomManagementOpen] = useState(false);
   const [relayManagementOpen, setRelayManagementOpen] = useState(false);
+  const [relayManagementDefaultTab, setRelayManagementDefaultTab] = useState<'relays' | 'media'>('relays');
   const [vehicleTypeManagementOpen, setVehicleTypeManagementOpen] = useState(false);
   const [encryptionSettingsOpen, setEncryptionSettingsOpen] = useState(false);
   const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
+
+  const openRelayManagement = (tab: 'relays' | 'media' = 'relays') => {
+    setRelayManagementDefaultTab(tab);
+    setRelayManagementOpen(true);
+  };
 
   const handleNavigateToTab = (tabId: TabId) => {
     setActiveTab(tabId);
@@ -115,10 +121,14 @@ const Index = () => {
                       Data Encryption
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Relay Settings</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setRelayManagementOpen(true)}>
+                    <DropdownMenuLabel>Server Settings</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => openRelayManagement('relays')}>
                       <Wifi className="h-4 w-4 mr-2" />
                       Manage Relays
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openRelayManagement('media')}>
+                      <Cloud className="h-4 w-4 mr-2" />
+                      Media Servers
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Help</DropdownMenuLabel>
@@ -267,6 +277,7 @@ const Index = () => {
       <RelayManagementDialog
         isOpen={relayManagementOpen}
         onClose={() => setRelayManagementOpen(false)}
+        defaultTab={relayManagementDefaultTab}
       />
 
       <AddTabDialog
