@@ -188,15 +188,47 @@
   }
 }
 
+/* Slower wiggle for dashboard cards (70% slower = 1s duration instead of 0.3s) */
+@keyframes wiggle-slow {
+  0%, 100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+
 .animate-wiggle {
   animation: wiggle 0.3s ease-in-out infinite;
   transform-origin: center center;
 }
 
-/* Dashboard card wiggle - explicitly centered transform origin */
+/* Dashboard card wiggle - 70% slower (1s instead of 0.3s) */
 .animate-wiggle-card {
-  animation: wiggle 0.3s ease-in-out infinite;
+  animation: wiggle-slow 1s ease-in-out infinite;
   transform-origin: center center;
+}
+
+/* Dashboard card being dragged */
+.dashboard-card-dragging {
+  position: fixed !important;
+  z-index: 9999 !important;
+  pointer-events: none !important;
+  cursor: grabbing !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  animation: none !important;
+}
+
+/* Dashboard card placeholder (ghost) */
+.dashboard-card-placeholder {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Drop target indicator */
+.dashboard-card-drop-target {
+  outline: 2px dashed hsl(var(--primary));
+  outline-offset: 4px;
 }
 
 /* Stagger the animation for different tabs/cards */

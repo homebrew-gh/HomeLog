@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Home, 
   Package, 
@@ -61,7 +61,21 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [draggedCard, setDraggedCard] = useState<TabId | null>(null);
   const [dragOverCard, setDragOverCard] = useState<TabId | null>(null);
-  const dragCounter = useRef(0);
+  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [draggedCardSize, setDraggedCardSize] = useState<{ width: number; height: number } | null>(null);
+  const cardRefs = useRef<Map<TabId, HTMLDivElement>>(new Map());
+  
+  // Generate random animation delays for each card (persist across renders)
+  const [animationDelays] = useState<Map<TabId, number>>(() => {
+    const delays = new Map<TabId, number>();
+    const allTabs: TabId[] = ['home', 'appliances', 'maintenance', 'vehicles', 'subscriptions', 'warranties', 'contractors', 'projects'];
+    allTabs.forEach(tab => {
+      // Random delay between 0 and 300ms
+      delays.set(tab, Math.random() * 300);
+    });
+    return delays;
+  });
 
   const hasActiveTabs = preferences.activeTabs.length > 0;
   
@@ -193,60 +207,109 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     });
   }, [contractors]);
 
-  // Drag and drop handlers for dashboard card reordering
-  const handleDragStart = (e: React.DragEvent, tabId: TabId) => {
+  // Mouse-based drag and drop handlers for smooth card reordering
+  const handleMouseDown = useCallback((e: React.MouseEvent, tabId: TabId) => {
     if (!isEditMode) return;
+    
+    const cardElement = cardRefs.current.get(tabId);
+    if (!cardElement) return;
+    
+    const rect = cardElement.getBoundingClientRect();
+    
+    // Calculate offset from mouse to card's top-left corner
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+    
+    // Store the card's size for the floating element
+    setDraggedCardSize({
+      width: rect.width,
+      height: rect.height
+    });
+    
     setDraggedCard(tabId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', tabId);
-  };
+    setDragPosition({ x: e.clientX, y: e.clientY });
+    
+    // Prevent text selection during drag
+    e.preventDefault();
+  }, [isEditMode]);
 
-  const handleDragEnd = () => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!draggedCard) return;
+    
+    setDragPosition({ x: e.clientX, y: e.clientY });
+    
+    // Find which card we're hovering over
+    let foundTarget: TabId | null = null;
+    cardRefs.current.forEach((element, tabId) => {
+      if (tabId === draggedCard) return;
+      
+      const rect = element.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      // Check if mouse is within the card bounds
+      if (
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom
+      ) {
+        foundTarget = tabId;
+      }
+    });
+    
+    setDragOverCard(foundTarget);
+  }, [draggedCard]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!draggedCard) return;
+    
+    // If we're over a drop target, perform the swap
+    if (dragOverCard && draggedCard !== dragOverCard) {
+      const currentOrder = [...dashboardCards];
+      const draggedIndex = currentOrder.indexOf(draggedCard);
+      const targetIndex = currentOrder.indexOf(dragOverCard);
+
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        // Remove dragged item and insert at target position
+        currentOrder.splice(draggedIndex, 1);
+        currentOrder.splice(targetIndex, 0, draggedCard);
+        reorderDashboardCards(currentOrder);
+      }
+    }
+    
+    // Reset drag state
     setDraggedCard(null);
     setDragOverCard(null);
-    dragCounter.current = 0;
-  };
+    setDragPosition(null);
+    setDraggedCardSize(null);
+  }, [draggedCard, dragOverCard, dashboardCards, reorderDashboardCards]);
 
-  const handleDragEnter = (e: React.DragEvent, tabId: TabId) => {
-    e.preventDefault();
-    if (tabId === draggedCard || !isEditMode) return;
-    dragCounter.current++;
-    setDragOverCard(tabId);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    dragCounter.current--;
-    if (dragCounter.current === 0) {
-      setDragOverCard(null);
+  // Add and remove global mouse event listeners
+  useEffect(() => {
+    if (draggedCard) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      // Prevent text selection while dragging
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'grabbing';
     }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [draggedCard, handleMouseMove, handleMouseUp]);
+
+  // Get animation delay for a specific card
+  const getAnimationDelay = (tabId: TabId): string => {
+    const delay = animationDelays.get(tabId) ?? 0;
+    return `${delay}ms`;
   };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e: React.DragEvent, targetTabId: TabId) => {
-    e.preventDefault();
-    if (!draggedCard || draggedCard === targetTabId || !isEditMode) return;
-
-    const currentOrder = [...dashboardCards];
-    const draggedIndex = currentOrder.indexOf(draggedCard);
-    const targetIndex = currentOrder.indexOf(targetTabId);
-
-    if (draggedIndex === -1 || targetIndex === -1) return;
-
-    // Remove dragged item and insert at target position
-    currentOrder.splice(draggedIndex, 1);
-    currentOrder.splice(targetIndex, 0, draggedCard);
-
-    reorderDashboardCards(currentOrder);
-    handleDragEnd();
-  };
-
-  // All dashboard cards wiggle in sync with the same animation
-  const cardWiggleClass = 'animate-wiggle-card';
 
   return (
     <section className="space-y-6">
@@ -426,27 +489,26 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
             // Wrapper for drag-drop functionality
             const DraggableWrapper = ({ children, fullWidth = false }: { children: React.ReactNode; fullWidth?: boolean }) => (
               <div
+                ref={(el) => {
+                  if (el) {
+                    cardRefs.current.set(tabId, el);
+                  } else {
+                    cardRefs.current.delete(tabId);
+                  }
+                }}
                 className={cn(
                   "relative",
                   fullWidth && "md:col-span-2",
-                  isDragging && "opacity-50",
-                  isEditMode && cardWiggleClass
+                  isDragging && "dashboard-card-placeholder",
+                  isDragOver && "dashboard-card-drop-target",
+                  isEditMode && !isDragging && "animate-wiggle-card cursor-grab"
                 )}
-                draggable={isEditMode}
-                onDragStart={(e) => handleDragStart(e, tabId)}
-                onDragEnd={handleDragEnd}
-                onDragEnter={(e) => handleDragEnter(e, tabId)}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, tabId)}
+                style={isEditMode && !isDragging ? { animationDelay: getAnimationDelay(tabId) } : undefined}
+                onMouseDown={(e) => handleMouseDown(e, tabId)}
               >
-                {/* Drop indicator */}
-                {isDragOver && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-sky-500 rounded-full -translate-x-2" />
-                )}
                 {/* Drag handle overlay in edit mode */}
                 {isEditMode && (
-                  <div className="absolute top-2 right-2 z-10 p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900 cursor-grab active:cursor-grabbing">
+                  <div className="absolute top-2 right-2 z-10 p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900">
                     <GripVertical className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                   </div>
                 )}
@@ -772,6 +834,39 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
               </DraggableWrapper>
             );
           })}
+        </div>
+      )}
+
+      {/* Floating dragged card that follows cursor */}
+      {draggedCard && dragPosition && draggedCardSize && (
+        <div
+          className="dashboard-card-dragging rounded-xl bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 overflow-hidden"
+          style={{
+            left: dragPosition.x - dragOffset.x,
+            top: dragPosition.y - dragOffset.y,
+            width: draggedCardSize.width,
+            height: draggedCardSize.height,
+          }}
+        >
+          {/* Clone of the card content */}
+          <div className="p-4 h-full flex flex-col">
+            <div className="flex items-center gap-2 mb-2">
+              {(() => {
+                const IconComponent = TAB_ICONS[draggedCard];
+                return (
+                  <>
+                    <IconComponent className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">
+                      {getTabDefinition(draggedCard)?.label || draggedCard.charAt(0).toUpperCase() + draggedCard.slice(1)}
+                    </span>
+                  </>
+                );
+              })()}
+            </div>
+            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+              <GripVertical className="h-6 w-6 opacity-50" />
+            </div>
+          </div>
         </div>
       )}
     </section>
