@@ -2,24 +2,18 @@ import { useEffect } from 'react';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppContext } from '@/hooks/useAppContext';
-import { useAmberLogin } from '@/hooks/useAmberLogin';
 
 /**
- * NostrSync - Syncs user's Nostr data and handles pending auth callbacks
+ * NostrSync - Syncs user's Nostr data
  *
  * This component runs globally to sync various Nostr data when the user logs in.
  * Currently syncs:
  * - NIP-65 relay list (kind 10002)
- * - Pending Amber (NIP-55) login callbacks from browser redirects
  */
 export function NostrSync() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { config, updateConfig } = useAppContext();
-  
-  // This hook auto-checks for pending Amber callbacks on mount
-  // which handles the case where Amber returned to the browser instead of the PWA
-  useAmberLogin();
 
   useEffect(() => {
     if (!user) return;

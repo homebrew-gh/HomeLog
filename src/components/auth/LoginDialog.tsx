@@ -2,7 +2,7 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, AlertTriangle, ChevronDown, Smartphone } from 'lucide-react';
+import { Upload, AlertTriangle, ChevronDown, ExternalLink, QrCode, Shield, Info, Camera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLoginActions } from '@/hooks/useLoginActions';
-import { useAmberLogin } from '@/hooks/useAmberLogin';
 import { DialogTitle } from '@radix-ui/react-dialog';
 
 interface LoginDialogProps {
@@ -37,11 +36,14 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
     bunker?: string;
     file?: string;
     extension?: string;
-    amber?: string;
+    qr?: string;
   }>({});
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('bunker');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const login = useLoginActions();
-  const amberLogin = useAmberLogin();
 
   // Reset all state when dialog opens/closes
   useEffect(() => {
@@ -52,12 +54,106 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
       setNsec('');
       setBunkerUri('');
       setErrors({});
+      setShowQrScanner(false);
+      setActiveTab('bunker');
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    } else {
+      // Clean up camera when dialog closes
+      stopQrScanner();
     }
   }, [isOpen]);
+
+  // Clean up camera on unmount
+  useEffect(() => {
+    return () => {
+      stopQrScanner();
+    };
+  }, []);
+
+  const stopQrScanner = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setShowQrScanner(false);
+  };
+
+  const startQrScanner = async () => {
+    setErrors(prev => ({ ...prev, qr: undefined }));
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      
+      streamRef.current = stream;
+      setShowQrScanner(true);
+      
+      // Wait for video element to be available
+      setTimeout(() => {
+        if (videoRef.current && streamRef.current) {
+          videoRef.current.srcObject = streamRef.current;
+          videoRef.current.play();
+          scanQrCode();
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Failed to access camera:', error);
+      setErrors(prev => ({
+        ...prev,
+        qr: 'Could not access camera. Please check permissions or enter the bunker URI manually.'
+      }));
+    }
+  };
+
+  const scanQrCode = () => {
+    if (!videoRef.current || !streamRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+
+    const checkForQR = async () => {
+      if (!streamRef.current || !context) return;
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        try {
+          // Use BarcodeDetector if available (Chrome, Edge)
+          if ('BarcodeDetector' in window) {
+            const barcodeDetector = new (window as unknown as { BarcodeDetector: new (options: { formats: string[] }) => { detect: (source: HTMLCanvasElement) => Promise<{ rawValue: string }[]> } }).BarcodeDetector({
+              formats: ['qr_code']
+            });
+            const barcodes = await barcodeDetector.detect(canvas);
+            
+            if (barcodes.length > 0) {
+              const value = barcodes[0].rawValue;
+              if (validateBunkerUri(value)) {
+                setBunkerUri(value);
+                stopQrScanner();
+                return;
+              }
+            }
+          }
+        } catch {
+          // BarcodeDetector not supported or failed, continue scanning
+        }
+      }
+
+      // Continue scanning
+      if (streamRef.current) {
+        requestAnimationFrame(checkForQR);
+      }
+    };
+
+    checkForQR();
+  };
 
   const handleExtensionLogin = async () => {
     setIsLoading(true);
@@ -72,34 +168,12 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
       onClose();
     } catch (e: unknown) {
       const error = e as Error;
-      console.error('Bunker login failed:', error);
-      console.error('Nsec login failed:', error);
       console.error('Extension login failed:', error);
       setErrors(prev => ({
         ...prev,
         extension: error instanceof Error ? error.message : 'Extension login failed'
       }));
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAmberLogin = () => {
-    setIsLoading(true);
-    setErrors(prev => ({ ...prev, amber: undefined }));
-
-    try {
-      // This will redirect to the Amber app
-      amberLogin.initiateLogin();
-      // Note: The page will redirect, so we don't need to handle success here
-      // The callback page will process the response
-    } catch (e: unknown) {
-      const error = e as Error;
-      console.error('Amber login failed:', error);
-      setErrors(prev => ({
-        ...prev,
-        amber: error instanceof Error ? error.message : 'Failed to open Amber'
-      }));
       setIsLoading(false);
     }
   };
@@ -157,7 +231,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
     } catch {
       setErrors(prev => ({
         ...prev,
-        bunker: 'Failed to connect to bunker. Please check the URI.'
+        bunker: 'Failed to connect to bunker. Please check the URI and try again.'
       }));
     } finally {
       setIsLoading(false);
@@ -193,103 +267,96 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
     reader.readAsText(file);
   };
 
+  const openNsecApp = () => {
+    window.open('https://nsec.app', '_blank', 'noopener,noreferrer');
+  };
+
   const hasExtension = 'nostr' in window;
-  const hasAmber = amberLogin.isAvailable();
-  const hasPrimaryLogin = hasExtension || hasAmber;
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
 
-  const renderTabs = () => (
-    <Tabs defaultValue="key" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 bg-muted/80 rounded-lg mb-4">
-        <TabsTrigger value="key" className="flex items-center gap-2">
-          <span>Secret Key</span>
-        </TabsTrigger>
-        <TabsTrigger value="bunker" className="flex items-center gap-2">
-          <span>Remote Signer</span>
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value='key' className='space-y-4'>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          handleKeyLogin();
-        }} className='space-y-4'>
-          <div className='space-y-2'>
-            <Input
-              id='nsec'
-              type="password"
-              value={nsec}
-              onChange={(e) => {
-                setNsec(e.target.value);
-                if (errors.nsec) setErrors(prev => ({ ...prev, nsec: undefined }));
-              }}
-              className={`rounded-lg ${
-                errors.nsec ? 'border-red-500 focus-visible:ring-red-500' : ''
-              }`}
-              placeholder='nsec1...'
-              autoComplete="off"
-            />
-            {errors.nsec && (
-              <p className="text-sm text-red-500">{errors.nsec}</p>
-            )}
+  const renderBunkerTab = () => (
+    <div className="space-y-4">
+      {/* nsec.app Quick Setup */}
+      <div className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+            <Shield className="h-5 w-5 text-primary" />
           </div>
-
-          <div className="flex space-x-2">
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-sm">Recommended: nsec.app</h4>
+            <p className="text-xs text-muted-foreground mt-1">
+              A secure web-based key manager. Your keys never leave your device.
+            </p>
             <Button
-              type="submit"
-              size="lg"
-              disabled={isLoading || !nsec.trim()}
-              className="flex-1"
-            >
-              {isLoading ? 'Verifying...' : 'Log in'}
-            </Button>
-
-            <input
-              type="file"
-              accept=".txt"
-              className="hidden"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-            />
-            <Button
-              type="button"
               variant="outline"
-              size="lg"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading || isFileLoading}
-              className="px-3"
+              size="sm"
+              className="mt-3 h-8 text-xs"
+              onClick={openNsecApp}
             >
-              <Upload className="w-4 h-4" />
+              <ExternalLink className="h-3 w-3 mr-1.5" />
+              Open nsec.app
             </Button>
           </div>
+        </div>
+      </div>
 
-          {errors.file && (
-            <p className="text-sm text-red-500 text-center">{errors.file}</p>
-          )}
-        </form>
-      </TabsContent>
-
-      <TabsContent value='bunker' className='space-y-4'>
+      {/* QR Scanner */}
+      {showQrScanner ? (
+        <div className="relative rounded-lg overflow-hidden bg-black aspect-square">
+          <video
+            ref={videoRef}
+            className="w-full h-full object-cover"
+            playsInline
+            muted
+          />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-48 h-48 border-2 border-white/50 rounded-lg" />
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="absolute top-2 right-2"
+            onClick={stopQrScanner}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <p className="absolute bottom-2 left-0 right-0 text-center text-xs text-white/80">
+            Point camera at bunker QR code
+          </p>
+        </div>
+      ) : (
         <form onSubmit={(e) => {
           e.preventDefault();
           handleBunkerLogin();
-        }} className='space-y-4'>
+        }} className='space-y-3'>
           <div className='space-y-2'>
-            <Input
-              id='bunkerUri'
-              value={bunkerUri}
-              onChange={(e) => {
-                setBunkerUri(e.target.value);
-                if (errors.bunker) setErrors(prev => ({ ...prev, bunker: undefined }));
-              }}
-              className={`rounded-lg border-gray-300 dark:border-gray-700 focus-visible:ring-primary ${
-                errors.bunker ? 'border-red-500' : ''
-              }`}
-              placeholder='bunker://'
-              autoComplete="off"
-            />
+            <div className="flex gap-2">
+              <Input
+                id='bunkerUri'
+                value={bunkerUri}
+                onChange={(e) => {
+                  setBunkerUri(e.target.value);
+                  if (errors.bunker) setErrors(prev => ({ ...prev, bunker: undefined }));
+                }}
+                className={`flex-1 rounded-lg ${errors.bunker ? 'border-red-500' : ''}`}
+                placeholder='bunker://...'
+                autoComplete="off"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={startQrScanner}
+                title="Scan QR Code"
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+            </div>
             {errors.bunker && (
               <p className="text-sm text-red-500">{errors.bunker}</p>
+            )}
+            {errors.qr && (
+              <p className="text-sm text-amber-600">{errors.qr}</p>
             )}
           </div>
 
@@ -299,74 +366,149 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
             className='w-full'
             disabled={isLoading || !bunkerUri.trim()}
           >
-            {isLoading ? 'Connecting...' : 'Log in'}
+            {isLoading ? 'Connecting...' : 'Connect'}
           </Button>
         </form>
+      )}
+
+      {/* What is a bunker? */}
+      <a
+        href="https://nostrlogin.org"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Info className="h-3.5 w-3.5" />
+        <span>What is a remote signer (bunker)?</span>
+        <ExternalLink className="h-3 w-3" />
+      </a>
+    </div>
+  );
+
+  const renderKeyTab = () => (
+    <form onSubmit={(e) => {
+      e.preventDefault();
+      handleKeyLogin();
+    }} className='space-y-4'>
+      <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+        <p className="text-xs text-amber-800 dark:text-amber-200">
+          <strong>Not recommended:</strong> Entering your secret key directly is less secure. Consider using a remote signer instead.
+        </p>
+      </div>
+
+      <div className='space-y-2'>
+        <Input
+          id='nsec'
+          type="password"
+          value={nsec}
+          onChange={(e) => {
+            setNsec(e.target.value);
+            if (errors.nsec) setErrors(prev => ({ ...prev, nsec: undefined }));
+          }}
+          className={`rounded-lg ${
+            errors.nsec ? 'border-red-500 focus-visible:ring-red-500' : ''
+          }`}
+          placeholder='nsec1...'
+          autoComplete="off"
+        />
+        {errors.nsec && (
+          <p className="text-sm text-red-500">{errors.nsec}</p>
+        )}
+      </div>
+
+      <div className="flex space-x-2">
+        <Button
+          type="submit"
+          size="lg"
+          disabled={isLoading || !nsec.trim()}
+          className="flex-1"
+        >
+          {isLoading ? 'Verifying...' : 'Log in'}
+        </Button>
+
+        <input
+          type="file"
+          accept=".txt"
+          className="hidden"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading || isFileLoading}
+          className="px-3"
+          title="Upload key file"
+        >
+          <Upload className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {errors.file && (
+        <p className="text-sm text-red-500 text-center">{errors.file}</p>
+      )}
+    </form>
+  );
+
+  const renderTabs = () => (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-2 bg-muted/80 rounded-lg mb-4">
+        <TabsTrigger value="bunker" className="flex items-center gap-2">
+          <QrCode className="h-3.5 w-3.5" />
+          <span>Remote Signer</span>
+        </TabsTrigger>
+        <TabsTrigger value="key" className="flex items-center gap-2">
+          <span>Secret Key</span>
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value='bunker'>
+        {renderBunkerTab()}
+      </TabsContent>
+
+      <TabsContent value='key'>
+        {renderKeyTab()}
       </TabsContent>
     </Tabs>
   );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-sm max-h-[90dvh] p-0 gap-6 overflow-hidden rounded-2xl overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90dvh] p-0 gap-6 overflow-hidden rounded-2xl overflow-y-auto">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle className="text-lg font-semibold leading-none tracking-tight text-center">
             Log in
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex size-40 text-8xl bg-primary/10 rounded-full items-center justify-center justify-self-center">
-          🔑
+        <div className="flex size-32 text-6xl bg-primary/10 rounded-full items-center justify-center justify-self-center">
+          <Shield className="h-14 w-14 text-primary" />
         </div>
 
         <div className='px-6 pb-6 space-y-4 overflow-y-auto'>
-          {/* Primary Login Options - Extension or Amber */}
-          {hasPrimaryLogin && (
+          {/* Extension Login - shown if extension is available */}
+          {hasExtension && (
             <div className="space-y-3">
-              {/* Extension Login Button - shown if extension is available */}
-              {hasExtension && (
-                <>
-                  {errors.extension && (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>{errors.extension}</AlertDescription>
-                    </Alert>
-                  )}
-                  <Button
-                    className="w-full h-12 px-9"
-                    onClick={handleExtensionLogin}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Logging in...' : 'Log in with Extension'}
-                  </Button>
-                </>
+              {errors.extension && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{errors.extension}</AlertDescription>
+                </Alert>
               )}
-
-              {/* Amber Login Button - shown on Android devices */}
-              {hasAmber && (
-                <>
-                  {errors.amber && (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>{errors.amber}</AlertDescription>
-                    </Alert>
-                  )}
-                  <Button
-                    className="w-full h-12 px-9"
-                    onClick={handleAmberLogin}
-                    disabled={isLoading}
-                    variant={hasExtension ? "outline" : "default"}
-                  >
-                    <Smartphone className="w-4 h-4 mr-2" />
-                    {isLoading ? 'Opening Amber...' : 'Log in with Amber'}
-                  </Button>
-                </>
-              )}
+              <Button
+                className="w-full h-12 px-9"
+                onClick={handleExtensionLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Logging in...' : 'Log in with Extension'}
+              </Button>
             </div>
           )}
 
-          {/* Tabs - wrapped in collapsible if primary login is available, otherwise shown directly */}
-          {hasPrimaryLogin ? (
+          {/* Tabs - wrapped in collapsible if extension is available, otherwise shown directly */}
+          {hasExtension ? (
             <Collapsible className="space-y-4" open={isMoreOptionsOpen} onOpenChange={setIsMoreOptionsOpen}>
               <CollapsibleTrigger asChild>
                 <button className="w-full flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
