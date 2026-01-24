@@ -55,7 +55,8 @@ export function useMaintenanceCompletions() {
     queryFn: async (c) => {
       if (!user?.pubkey) return [];
       
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      // Longer timeout for mobile/PWA mode where network might be slower
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
       
       // Query both completion events and deletion events
       const events = await nostr.query(

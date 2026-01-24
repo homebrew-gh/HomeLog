@@ -17,10 +17,10 @@ export function useLoggedInAccounts() {
   const { data: authors = [], isLoading, isFetched } = useQuery({
     queryKey: ['nostr', 'logins', logins.map((l) => l.id).join(';')],
     queryFn: async ({ signal }) => {
-      // Longer timeout for PWA mode where network might be slower
+      // Longer timeout for mobile/PWA mode where network might be slower
       const events = await nostr.query(
         [{ kinds: [0], authors: logins.map((l) => l.pubkey) }],
-        { signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]) },
+        { signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]) },
       );
 
       return logins.map(({ id, pubkey }): Account => {

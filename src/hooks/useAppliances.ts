@@ -107,8 +107,8 @@ export function useAppliances() {
 
       console.log('[useAppliances] Fetching appliances for pubkey:', user.pubkey);
 
-      // Longer timeout for PWA mode where network might be slower
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(10000)]);
+      // Longer timeout for mobile/PWA mode where network might be slower
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
 
       // Query both appliance events and deletion events in one request
       let events;

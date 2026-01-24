@@ -29,7 +29,8 @@ export function useHomeLogFriends() {
     queryFn: async (c) => {
       if (!user?.pubkey) return [];
       
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      // Longer timeout for mobile/PWA mode where network might be slower
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
       
       const events = await nostr.query([{
         kinds: [3],
@@ -56,7 +57,7 @@ export function useHomeLogFriends() {
     queryFn: async (c) => {
       if (follows.length === 0) return [];
 
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(10000)]);
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
 
       // Query for HomeLog events from follows
       // We look for events with the HomeLog client tag

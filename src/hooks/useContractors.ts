@@ -124,8 +124,8 @@ export function useContractors() {
     queryFn: async (c) => {
       if (!user?.pubkey) return [];
 
-      // Longer timeout for PWA mode where network might be slower
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(10000)]);
+      // Longer timeout for mobile/PWA mode where network might be slower
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
 
       // Query both contractor events and deletion events in one request
       const events = await nostr.query(

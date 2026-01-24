@@ -163,8 +163,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     queryFn: async (c) => {
       if (!user?.pubkey) return null;
 
-      // Longer timeout for PWA mode where network might be slower
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(10000)]);
+      // Longer timeout for mobile/PWA mode where network might be slower
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
 
       const events = await nostr.query(
         [
