@@ -394,16 +394,16 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
 
   return (
     <section className="space-y-6 relative">
-      {/* Floating Reorder/Done Button - fixed in right margin */}
+      {/* Floating Reorder/Done Button - fixed in right margin near top */}
       {hasActiveTabs && activeWidgets.length > 1 && (
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsEditMode(!isEditMode)}
           className={cn(
-            "fixed right-4 top-1/2 -translate-y-1/2 z-40 gap-1.5 px-3 py-2 h-auto rounded-lg transition-all duration-200 shadow-lg",
+            "fixed right-4 top-32 z-40 gap-1.5 px-3 py-2 h-auto rounded-lg shadow-lg",
             isEditMode
-              ? "bg-sky-600 text-white hover:bg-sky-700 animate-pulse"
+              ? "bg-rose-600 text-white hover:bg-rose-700 border border-rose-700"
               : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700"
           )}
         >
