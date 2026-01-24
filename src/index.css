@@ -179,25 +179,25 @@
 }
 
 /* iPhone-style wiggle animation for edit mode - classic iOS home screen effect */
-/* Two alternating keyframe sets with off-center transform origins */
+/* Two alternating keyframe sets with subtle rotation angles */
 @keyframes ios-wiggle-1 {
   0% {
-    transform: rotate(-1deg);
+    transform: rotate(-0.5deg);
     animation-timing-function: ease-in;
   }
   50% {
-    transform: rotate(1.5deg);
+    transform: rotate(0.75deg);
     animation-timing-function: ease-out;
   }
 }
 
 @keyframes ios-wiggle-2 {
   0% {
-    transform: rotate(1deg);
+    transform: rotate(0.5deg);
     animation-timing-function: ease-in;
   }
   50% {
-    transform: rotate(-1.5deg);
+    transform: rotate(-0.75deg);
     animation-timing-function: ease-out;
   }
 }
@@ -205,21 +205,21 @@
 /* Basic wiggle for other elements (like tab navigation) */
 .animate-wiggle {
   animation: ios-wiggle-1 0.3s ease-in-out infinite;
-  transform-origin: 50% 10%;
+  transform-origin: 50% 30%;
 }
 
-/* Dashboard card wiggle - iOS style with off-center rotation */
+/* Dashboard card wiggle - iOS style with contained rotation */
 /* Even cards use wiggle-1, odd cards use wiggle-2 (set via nth-child or inline) */
 .animate-wiggle-card-even {
   animation: ios-wiggle-1 infinite;
   animation-direction: normal;
-  transform-origin: 50% 10%;
+  transform-origin: 50% 40%;
 }
 
 .animate-wiggle-card-odd {
   animation: ios-wiggle-2 infinite;
   animation-direction: alternate;
-  transform-origin: 30% 5%;
+  transform-origin: 45% 35%;
 }
 
 /* Dashboard card being dragged */
