@@ -13,7 +13,8 @@ import {
   Lock,
   HelpCircle,
   ExternalLink,
-  Database
+  Database,
+  Users
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,25 @@ const EVENT_KINDS = [
       'Purchase information',
     ],
     encrypted: true,
+  },
+  {
+    kind: 37003,
+    name: 'Contractor/Service Provider',
+    category: 'Custom (Addressable)',
+    icon: Users,
+    color: 'sky',
+    description: 'Stores information about contractors and service providers including contact details, business credentials, ratings, and date-stamped invoices.',
+    dataStored: [
+      'Business/contractor name',
+      'Service type (plumber, electrician, etc.)',
+      'Contact info (phone, email, website)',
+      'Address',
+      'License and insurance info',
+      'Rating (1-5 stars)',
+      'Invoices with date, amount, description',
+      'Notes',
+    ],
+    encrypted: false,
   },
   {
     kind: 30229,
@@ -109,12 +129,14 @@ const EVENT_KINDS = [
     category: 'Standard (Addressable)',
     icon: Settings,
     color: 'slate',
-    description: 'Stores your Home Log preferences including active tabs, view modes, custom rooms, and custom vehicle types. Synced across devices.',
+    description: 'Stores your Home Log preferences including active tabs, view modes, custom rooms, vehicle types, and contractor service types. Synced across devices.',
     dataStored: [
       'Active tabs configuration',
       'View mode preferences',
       'Custom room names',
       'Custom vehicle types',
+      'Custom contractor service types',
+      'Blossom media server configuration',
     ],
     encrypted: false,
   },
@@ -156,7 +178,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Can other Nostr apps read my Home Log data?',
-    answer: 'The custom event kinds (32627, 32628, 30229, 9413) are specific to Home Log and documented in our NIP specification. Other apps could theoretically read this data if they implement support for these kinds, but encrypted data can only be decrypted by you. Standard kinds like relay lists (10002) are interoperable with other Nostr clients.',
+    answer: 'The custom event kinds (32627, 32628, 37003, 30229, 9413) are specific to Home Log and documented in our NIP specification. Other apps could theoretically read this data if they implement support for these kinds, but encrypted data can only be decrypted by you. Standard kinds like relay lists (10002) are interoperable with other Nostr clients.',
   },
   {
     question: 'How do I back up my data?',
