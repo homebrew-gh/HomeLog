@@ -5,6 +5,12 @@ import { useCurrentUser } from "./useCurrentUser";
 
 import type { NostrEvent } from "@nostrify/nostrify";
 
+// HomeLog client identifier for NIP-89 client tag
+// This allows other clients to identify events created by HomeLog
+// and enables discovery of HomeLog users among follows
+const HOMELOG_CLIENT_NAME = "Home Log";
+const HOMELOG_CLIENT_URL = "https://homelog.shakespeare.wtf";
+
 export function useNostrPublish(): UseMutationResult<NostrEvent> {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
@@ -14,9 +20,11 @@ export function useNostrPublish(): UseMutationResult<NostrEvent> {
       if (user) {
         const tags = t.tags ?? [];
 
-        // Add the client tag if it doesn't exist
-        if (location.protocol === "https:" && !tags.some(([name]) => name === "client")) {
-          tags.push(["client", location.hostname]);
+        // Add the HomeLog client tag if it doesn't exist (NIP-89)
+        // Format: ["client", "<app-name>", "<app-url>"]
+        // This enables discovery of HomeLog users among follows
+        if (!tags.some(([name]) => name === "client")) {
+          tags.push(["client", HOMELOG_CLIENT_NAME, HOMELOG_CLIENT_URL]);
         }
 
         const event = await user.signer.signEvent({
@@ -40,3 +48,6 @@ export function useNostrPublish(): UseMutationResult<NostrEvent> {
     },
   });
 }
+
+// Export constants for use in other parts of the app (e.g., discovery)
+export { HOMELOG_CLIENT_NAME, HOMELOG_CLIENT_URL };

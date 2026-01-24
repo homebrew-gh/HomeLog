@@ -16,12 +16,15 @@ import {
   ChevronRight,
   GripVertical,
   Pencil,
-  Check
+  Check,
+  UserCheck
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
@@ -30,6 +33,9 @@ import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calcula
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useHomeLogFriends } from '@/hooks/useHomeLogFriends';
+import { useAuthor } from '@/hooks/useAuthor';
+import { genUserName } from '@/lib/genUserName';
 import type { MaintenanceSchedule } from '@/lib/types';
 
 const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
@@ -93,6 +99,9 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const { data: completions = [] } = useMaintenanceCompletions();
   const applianceMaintenance = useApplianceMaintenance();
   const vehicleMaintenance = useVehicleMaintenance();
+  
+  // Discover friends using HomeLog
+  const { friends: homeLogFriends, isLoading: isLoadingFriends } = useHomeLogFriends();
 
   // Edit mode for reordering dashboard cards
   const [isEditMode, setIsEditMode] = useState(false);
@@ -886,6 +895,14 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
         </div>
       )}
 
+      {/* Friends using HomeLog */}
+      {hasActiveTabs && (
+        <FriendsUsingHomeLog 
+          friends={homeLogFriends} 
+          isLoading={isLoadingFriends} 
+        />
+      )}
+
       {/* Floating dragged widget that follows cursor */}
       {draggedWidget && dragPosition && draggedWidgetSize && (
         <div
@@ -972,4 +989,107 @@ function WidgetCard({ title, icon: Icon, onClick, isLoading, badge, clickable = 
   );
 }
 
+// Component to display a single friend's avatar with tooltip
+function FriendAvatar({ pubkey }: { pubkey: string }) {
+  const author = useAuthor(pubkey);
+  const metadata = author.data?.metadata;
+  
+  const displayName = metadata?.name || metadata?.display_name || genUserName(pubkey);
+  const picture = metadata?.picture;
+  const shortPubkey = pubkey.slice(0, 8) + '...';
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="relative">
+            <Avatar className="h-10 w-10 border-2 border-white dark:border-slate-800 shadow-sm hover:scale-110 transition-transform cursor-pointer">
+              {picture ? (
+                <AvatarImage src={picture} alt={displayName} />
+              ) : null}
+              <AvatarFallback className="bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 text-xs">
+                {displayName.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="font-medium">{displayName}</p>
+          <p className="text-xs text-muted-foreground">{shortPubkey}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
+// Friends using HomeLog section
+interface FriendsUsingHomeLogProps {
+  friends: { pubkey: string; eventCount: number }[];
+  isLoading: boolean;
+}
+
+function FriendsUsingHomeLog({ friends, isLoading }: FriendsUsingHomeLogProps) {
+  if (isLoading) {
+    return (
+      <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <UserCheck className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            <span>Friends Using Home Log</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (friends.length === 0) {
+    return (
+      <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <UserCheck className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            <span>Friends Using Home Log</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            None of your follows are using Home Log yet. Share it with friends!
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <UserCheck className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+          <span>Friends Using Home Log</span>
+          <Badge variant="secondary" className="text-xs">
+            {friends.length}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-1">
+          {friends.slice(0, 12).map((friend) => (
+            <FriendAvatar key={friend.pubkey} pubkey={friend.pubkey} />
+          ))}
+          {friends.length > 12 && (
+            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 text-xs font-medium">
+              +{friends.length - 12}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
