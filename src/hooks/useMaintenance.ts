@@ -1,10 +1,12 @@
 import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 import { MAINTENANCE_KIND, APPLIANCE_KIND, VEHICLE_KIND, type MaintenanceSchedule } from '@/lib/types';
+import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 
 // Helper to get tag value
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
@@ -115,53 +117,104 @@ function getDeletedVehicleIds(deletionEvents: NostrEvent[], pubkey: string): Set
   return deletedIds;
 }
 
+// Parse events into maintenance schedules
+function parseEventsToMaintenance(events: NostrEvent[], pubkey: string): MaintenanceSchedule[] {
+  // Separate maintenance events from deletion events
+  const maintenanceEvents = events.filter(e => e.kind === MAINTENANCE_KIND);
+  const deletionEvents = events.filter(e => e.kind === 5);
+
+  // Get the set of deleted maintenance IDs, appliance IDs, and vehicle IDs
+  const deletedMaintenanceIds = getDeletedMaintenanceIds(deletionEvents, pubkey);
+  const deletedApplianceIds = getDeletedApplianceIds(deletionEvents, pubkey);
+  const deletedVehicleIds = getDeletedVehicleIds(deletionEvents, pubkey);
+
+  const schedules: MaintenanceSchedule[] = [];
+  for (const event of maintenanceEvents) {
+    const schedule = parseMaintenance(event);
+    if (!schedule || deletedMaintenanceIds.has(schedule.id)) continue;
+    
+    // Check if the linked appliance or vehicle has been deleted
+    if (schedule.applianceId && deletedApplianceIds.has(schedule.applianceId)) continue;
+    if (schedule.vehicleId && deletedVehicleIds.has(schedule.vehicleId)) continue;
+    
+    schedules.push(schedule);
+  }
+
+  // Sort by creation date (newest first)
+  return schedules.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 export function useMaintenance() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const queryClient = useQueryClient();
+  const isSyncing = useRef(false);
 
-  return useQuery({
+  // Main query - loads from cache first
+  const query = useQuery({
     queryKey: ['maintenance', user?.pubkey],
-    queryFn: async (c) => {
+    queryFn: async () => {
       if (!user?.pubkey) return [];
 
-      // Longer timeout for mobile/PWA mode where network might be slower
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
+      console.log('[useMaintenance] Loading from cache for pubkey:', user.pubkey);
 
-      // Query both maintenance events and deletion events in one request
-      const events = await nostr.query(
-        [
-          { kinds: [MAINTENANCE_KIND], authors: [user.pubkey] },
-          { kinds: [5], authors: [user.pubkey] },
-        ],
-        { signal }
-      );
-
-      // Separate maintenance events from deletion events
-      const maintenanceEvents = events.filter(e => e.kind === MAINTENANCE_KIND);
-      const deletionEvents = events.filter(e => e.kind === 5);
-
-      // Get the set of deleted maintenance IDs, appliance IDs, and vehicle IDs
-      const deletedMaintenanceIds = getDeletedMaintenanceIds(deletionEvents, user.pubkey);
-      const deletedApplianceIds = getDeletedApplianceIds(deletionEvents, user.pubkey);
-      const deletedVehicleIds = getDeletedVehicleIds(deletionEvents, user.pubkey);
-
-      const schedules: MaintenanceSchedule[] = [];
-      for (const event of maintenanceEvents) {
-        const schedule = parseMaintenance(event);
-        if (!schedule || deletedMaintenanceIds.has(schedule.id)) continue;
-        
-        // Check if the linked appliance or vehicle has been deleted
-        if (schedule.applianceId && deletedApplianceIds.has(schedule.applianceId)) continue;
-        if (schedule.vehicleId && deletedVehicleIds.has(schedule.vehicleId)) continue;
-        
-        schedules.push(schedule);
+      // Load from cache first (instant)
+      const cachedEvents = await getCachedEvents([MAINTENANCE_KIND, 5], user.pubkey);
+      
+      if (cachedEvents.length > 0) {
+        console.log('[useMaintenance] Found cached events:', cachedEvents.length);
+        const maintenance = parseEventsToMaintenance(cachedEvents, user.pubkey);
+        return maintenance;
       }
 
-      // Sort by creation date (newest first)
-      return schedules.sort((a, b) => b.createdAt - a.createdAt);
+      console.log('[useMaintenance] No cache, waiting for relay sync...');
+      return [];
     },
     enabled: !!user?.pubkey,
+    staleTime: Infinity,
   });
+
+  // Background sync with relays
+  useEffect(() => {
+    if (!user?.pubkey || isSyncing.current) return;
+
+    const syncWithRelays = async () => {
+      isSyncing.current = true;
+      console.log('[useMaintenance] Starting background relay sync...');
+
+      try {
+        const signal = AbortSignal.timeout(15000);
+        
+        const events = await nostr.query(
+          [
+            { kinds: [MAINTENANCE_KIND], authors: [user.pubkey] },
+            { kinds: [5], authors: [user.pubkey] },
+          ],
+          { signal }
+        );
+
+        console.log('[useMaintenance] Relay sync received events:', events.length);
+
+        if (events.length > 0) {
+          await cacheEvents(events);
+        }
+
+        const maintenance = parseEventsToMaintenance(events, user.pubkey);
+        queryClient.setQueryData(['maintenance', user.pubkey], maintenance);
+        
+        console.log('[useMaintenance] Background sync complete, schedules:', maintenance.length);
+      } catch (error) {
+        console.error('[useMaintenance] Background sync failed:', error);
+      } finally {
+        isSyncing.current = false;
+      }
+    };
+
+    const timer = setTimeout(syncWithRelays, 100);
+    return () => clearTimeout(timer);
+  }, [user?.pubkey, nostr, queryClient]);
+
+  return query;
 }
 
 export function useMaintenanceByAppliance(applianceId: string | undefined) {
@@ -217,11 +270,15 @@ export function useMaintenanceActions() {
     if (data.partNumber) tags.push(['part_number', data.partNumber]);
     if (data.mileageInterval) tags.push(['mileage_interval', data.mileageInterval.toString()]);
 
-    await publishEvent({
+    const event = await publishEvent({
       kind: MAINTENANCE_KIND,
       content: '',
       tags,
     });
+
+    if (event) {
+      await cacheEvents([event]);
+    }
 
     await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
 
@@ -251,11 +308,15 @@ export function useMaintenanceActions() {
     if (data.partNumber) tags.push(['part_number', data.partNumber]);
     if (data.mileageInterval) tags.push(['mileage_interval', data.mileageInterval.toString()]);
 
-    await publishEvent({
+    const event = await publishEvent({
       kind: MAINTENANCE_KIND,
       content: '',
       tags,
     });
+
+    if (event) {
+      await cacheEvents([event]);
+    }
 
     await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
   };
@@ -263,13 +324,18 @@ export function useMaintenanceActions() {
   const deleteMaintenance = async (id: string) => {
     if (!user) throw new Error('Must be logged in');
 
-    await publishEvent({
+    const event = await publishEvent({
       kind: 5,
       content: 'Deleted maintenance schedule',
       tags: [
         ['a', `${MAINTENANCE_KIND}:${user.pubkey}:${id}`],
       ],
     });
+
+    if (event) {
+      await cacheEvents([event]);
+      await deleteCachedEventByAddress(MAINTENANCE_KIND, user.pubkey, id);
+    }
 
     // Small delay to allow the deletion event to propagate to relays
     await new Promise(resolve => setTimeout(resolve, 500));

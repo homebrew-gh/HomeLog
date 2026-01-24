@@ -1,12 +1,14 @@
 import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { VEHICLE_KIND, type Vehicle } from '@/lib/types';
+import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -109,65 +111,122 @@ function getDeletedVehicleIds(deletionEvents: NostrEvent[], pubkey: string): Set
   return deletedIds;
 }
 
+// Parse events into vehicles
+async function parseEventsToVehicles(
+  events: NostrEvent[],
+  pubkey: string,
+  decryptForCategory: <T>(content: string) => Promise<T>
+): Promise<Vehicle[]> {
+  // Separate vehicle events from deletion events
+  const vehicleEvents = events.filter(e => e.kind === VEHICLE_KIND);
+  const deletionEvents = events.filter(e => e.kind === 5);
+
+  // Get the set of deleted vehicle IDs
+  const deletedIds = getDeletedVehicleIds(deletionEvents, pubkey);
+
+  const vehicles: Vehicle[] = [];
+  
+  for (const event of vehicleEvents) {
+    const id = getTagValue(event, 'd');
+    if (!id || deletedIds.has(id)) continue;
+
+    // Check if content is encrypted
+    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
+      // Decrypt and parse
+      const vehicle = await parseVehicleEncrypted(
+        event,
+        (content) => decryptForCategory<VehicleData>(content)
+      );
+      if (vehicle) {
+        vehicles.push(vehicle);
+      }
+    } else {
+      // Parse plaintext from tags
+      const vehicle = parseVehiclePlaintext(event);
+      if (vehicle) {
+        vehicles.push(vehicle);
+      }
+    }
+  }
+
+  // Sort by creation date (newest first)
+  return vehicles.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 export function useVehicles() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
+  const queryClient = useQueryClient();
+  const isSyncing = useRef(false);
 
-  return useQuery({
+  // Main query - loads from cache first, then syncs with relays in background
+  const query = useQuery({
     queryKey: ['vehicles', user?.pubkey],
-    queryFn: async (c) => {
-      if (!user?.pubkey) return [];
-
-      // Longer timeout for mobile/PWA mode where network might be slower
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
-
-      // Query both vehicle events and deletion events in one request
-      const events = await nostr.query(
-        [
-          { kinds: [VEHICLE_KIND], authors: [user.pubkey] },
-          { kinds: [5], authors: [user.pubkey] },
-        ],
-        { signal }
-      );
-
-      // Separate vehicle events from deletion events
-      const vehicleEvents = events.filter(e => e.kind === VEHICLE_KIND);
-      const deletionEvents = events.filter(e => e.kind === 5);
-
-      // Get the set of deleted vehicle IDs
-      const deletedIds = getDeletedVehicleIds(deletionEvents, user.pubkey);
-
-      const vehicles: Vehicle[] = [];
-      
-      for (const event of vehicleEvents) {
-        const id = getTagValue(event, 'd');
-        if (!id || deletedIds.has(id)) continue;
-
-        // Check if content is encrypted
-        if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-          // Decrypt and parse
-          const vehicle = await parseVehicleEncrypted(
-            event,
-            (content) => decryptForCategory<VehicleData>(content)
-          );
-          if (vehicle) {
-            vehicles.push(vehicle);
-          }
-        } else {
-          // Parse plaintext from tags
-          const vehicle = parseVehiclePlaintext(event);
-          if (vehicle) {
-            vehicles.push(vehicle);
-          }
-        }
+    queryFn: async () => {
+      if (!user?.pubkey) {
+        return [];
       }
 
-      // Sort by creation date (newest first)
-      return vehicles.sort((a, b) => b.createdAt - a.createdAt);
+      console.log('[useVehicles] Loading from cache for pubkey:', user.pubkey);
+
+      // Load from cache first (instant)
+      const cachedEvents = await getCachedEvents([VEHICLE_KIND, 5], user.pubkey);
+      
+      if (cachedEvents.length > 0) {
+        console.log('[useVehicles] Found cached events:', cachedEvents.length);
+        const vehicles = await parseEventsToVehicles(cachedEvents, user.pubkey, decryptForCategory);
+        return vehicles;
+      }
+
+      console.log('[useVehicles] No cache, waiting for relay sync...');
+      return [];
     },
     enabled: !!user?.pubkey,
+    staleTime: Infinity,
   });
+
+  // Background sync with relays
+  useEffect(() => {
+    if (!user?.pubkey || isSyncing.current) return;
+
+    const syncWithRelays = async () => {
+      isSyncing.current = true;
+      console.log('[useVehicles] Starting background relay sync...');
+
+      try {
+        const signal = AbortSignal.timeout(15000);
+        
+        const events = await nostr.query(
+          [
+            { kinds: [VEHICLE_KIND], authors: [user.pubkey] },
+            { kinds: [5], authors: [user.pubkey] },
+          ],
+          { signal }
+        );
+
+        console.log('[useVehicles] Relay sync received events:', events.length);
+
+        if (events.length > 0) {
+          await cacheEvents(events);
+        }
+
+        const vehicles = await parseEventsToVehicles(events, user.pubkey, decryptForCategory);
+        queryClient.setQueryData(['vehicles', user.pubkey], vehicles);
+        
+        console.log('[useVehicles] Background sync complete, vehicles:', vehicles.length);
+      } catch (error) {
+        console.error('[useVehicles] Background sync failed:', error);
+      } finally {
+        isSyncing.current = false;
+      }
+    };
+
+    const timer = setTimeout(syncWithRelays, 100);
+    return () => clearTimeout(timer);
+  }, [user?.pubkey, nostr, queryClient, decryptForCategory]);
+
+  return query;
 }
 
 export function useVehicleById(id: string | undefined) {
@@ -235,11 +294,15 @@ export function useVehicleActions() {
       }
     }
 
-    await publishEvent({
+    const event = await publishEvent({
       kind: VEHICLE_KIND,
       content,
       tags,
     });
+
+    if (event) {
+      await cacheEvents([event]);
+    }
 
     await queryClient.invalidateQueries({ queryKey: ['vehicles'] });
 
@@ -298,11 +361,15 @@ export function useVehicleActions() {
       }
     }
 
-    await publishEvent({
+    const event = await publishEvent({
       kind: VEHICLE_KIND,
       content,
       tags,
     });
+
+    if (event) {
+      await cacheEvents([event]);
+    }
 
     await queryClient.invalidateQueries({ queryKey: ['vehicles'] });
   };
@@ -311,13 +378,18 @@ export function useVehicleActions() {
     if (!user) throw new Error('Must be logged in');
 
     // Publish a deletion request (kind 5)
-    await publishEvent({
+    const event = await publishEvent({
       kind: 5,
       content: 'Deleted vehicle',
       tags: [
         ['a', `${VEHICLE_KIND}:${user.pubkey}:${id}`],
       ],
     });
+
+    if (event) {
+      await cacheEvents([event]);
+      await deleteCachedEventByAddress(VEHICLE_KIND, user.pubkey, id);
+    }
 
     // Small delay to allow the deletion event to propagate to relays
     await new Promise(resolve => setTimeout(resolve, 500));

@@ -1,12 +1,14 @@
 import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { CONTRACTOR_KIND, type Contractor, type Invoice } from '@/lib/types';
+import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -14,14 +16,6 @@ const ENCRYPTED_MARKER = 'nip44:';
 // Helper to get tag value
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
   return event.tags.find(([name]) => name === tagName)?.[1];
-}
-
-// Helper to get all tag values (for arrays)
-function getTagValues(event: NostrEvent, tagName: string): string[] {
-  return event.tags
-    .filter(([name]) => name === tagName)
-    .map(tag => tag[1])
-    .filter(Boolean);
 }
 
 // Helper to parse invoice tags
@@ -114,65 +108,120 @@ function getDeletedContractorIds(deletionEvents: NostrEvent[], pubkey: string): 
   return deletedIds;
 }
 
+// Parse events into contractors
+async function parseEventsToContractors(
+  events: NostrEvent[],
+  pubkey: string,
+  decryptForCategory: <T>(content: string) => Promise<T>
+): Promise<Contractor[]> {
+  // Separate contractor events from deletion events
+  const contractorEvents = events.filter(e => e.kind === CONTRACTOR_KIND);
+  const deletionEvents = events.filter(e => e.kind === 5);
+
+  // Get the set of deleted contractor IDs
+  const deletedIds = getDeletedContractorIds(deletionEvents, pubkey);
+
+  const contractors: Contractor[] = [];
+  
+  for (const event of contractorEvents) {
+    const id = getTagValue(event, 'd');
+    if (!id || deletedIds.has(id)) continue;
+
+    // Check if content is encrypted
+    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
+      // Decrypt and parse
+      const contractor = await parseContractorEncrypted(
+        event,
+        (content) => decryptForCategory<ContractorData>(content)
+      );
+      if (contractor) {
+        contractors.push(contractor);
+      }
+    } else {
+      // Parse plaintext from tags
+      const contractor = parseContractorPlaintext(event);
+      if (contractor) {
+        contractors.push(contractor);
+      }
+    }
+  }
+
+  // Sort by creation date (newest first)
+  return contractors.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 export function useContractors() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
+  const queryClient = useQueryClient();
+  const isSyncing = useRef(false);
 
-  return useQuery({
+  // Main query - loads from cache first
+  const query = useQuery({
     queryKey: ['contractors', user?.pubkey],
-    queryFn: async (c) => {
+    queryFn: async () => {
       if (!user?.pubkey) return [];
 
-      // Longer timeout for mobile/PWA mode where network might be slower
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
+      console.log('[useContractors] Loading from cache for pubkey:', user.pubkey);
 
-      // Query both contractor events and deletion events in one request
-      const events = await nostr.query(
-        [
-          { kinds: [CONTRACTOR_KIND], authors: [user.pubkey] },
-          { kinds: [5], authors: [user.pubkey] },
-        ],
-        { signal }
-      );
-
-      // Separate contractor events from deletion events
-      const contractorEvents = events.filter(e => e.kind === CONTRACTOR_KIND);
-      const deletionEvents = events.filter(e => e.kind === 5);
-
-      // Get the set of deleted contractor IDs
-      const deletedIds = getDeletedContractorIds(deletionEvents, user.pubkey);
-
-      const contractors: Contractor[] = [];
+      // Load from cache first (instant)
+      const cachedEvents = await getCachedEvents([CONTRACTOR_KIND, 5], user.pubkey);
       
-      for (const event of contractorEvents) {
-        const id = getTagValue(event, 'd');
-        if (!id || deletedIds.has(id)) continue;
-
-        // Check if content is encrypted
-        if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-          // Decrypt and parse
-          const contractor = await parseContractorEncrypted(
-            event,
-            (content) => decryptForCategory<ContractorData>(content)
-          );
-          if (contractor) {
-            contractors.push(contractor);
-          }
-        } else {
-          // Parse plaintext from tags
-          const contractor = parseContractorPlaintext(event);
-          if (contractor) {
-            contractors.push(contractor);
-          }
-        }
+      if (cachedEvents.length > 0) {
+        console.log('[useContractors] Found cached events:', cachedEvents.length);
+        const contractors = await parseEventsToContractors(cachedEvents, user.pubkey, decryptForCategory);
+        return contractors;
       }
 
-      // Sort by creation date (newest first)
-      return contractors.sort((a, b) => b.createdAt - a.createdAt);
+      console.log('[useContractors] No cache, waiting for relay sync...');
+      return [];
     },
     enabled: !!user?.pubkey,
+    staleTime: Infinity,
   });
+
+  // Background sync with relays
+  useEffect(() => {
+    if (!user?.pubkey || isSyncing.current) return;
+
+    const syncWithRelays = async () => {
+      isSyncing.current = true;
+      console.log('[useContractors] Starting background relay sync...');
+
+      try {
+        const signal = AbortSignal.timeout(15000);
+        
+        const events = await nostr.query(
+          [
+            { kinds: [CONTRACTOR_KIND], authors: [user.pubkey] },
+            { kinds: [5], authors: [user.pubkey] },
+          ],
+          { signal }
+        );
+
+        console.log('[useContractors] Relay sync received events:', events.length);
+
+        if (events.length > 0) {
+          await cacheEvents(events);
+        }
+
+        const contractors = await parseEventsToContractors(events, user.pubkey, decryptForCategory);
+        queryClient.setQueryData(['contractors', user.pubkey], contractors);
+        
+        console.log('[useContractors] Background sync complete, contractors:', contractors.length);
+      } catch (error) {
+        console.error('[useContractors] Background sync failed:', error);
+      } finally {
+        isSyncing.current = false;
+      }
+    };
+
+    const timer = setTimeout(syncWithRelays, 100);
+    return () => clearTimeout(timer);
+  }, [user?.pubkey, nostr, queryClient, decryptForCategory]);
+
+  return query;
 }
 
 export function useContractorById(id: string | undefined) {
@@ -233,11 +282,15 @@ export function useContractorActions() {
       }
     }
 
-    await publishEvent({
+    const event = await publishEvent({
       kind: CONTRACTOR_KIND,
       content,
       tags,
     });
+
+    if (event) {
+      await cacheEvents([event]);
+    }
 
     await queryClient.invalidateQueries({ queryKey: ['contractors'] });
 
@@ -289,11 +342,15 @@ export function useContractorActions() {
       }
     }
 
-    await publishEvent({
+    const event = await publishEvent({
       kind: CONTRACTOR_KIND,
       content,
       tags,
     });
+
+    if (event) {
+      await cacheEvents([event]);
+    }
 
     await queryClient.invalidateQueries({ queryKey: ['contractors'] });
   };
@@ -302,13 +359,18 @@ export function useContractorActions() {
     if (!user) throw new Error('Must be logged in');
 
     // Publish a deletion request (kind 5)
-    await publishEvent({
+    const event = await publishEvent({
       kind: 5,
       content: 'Deleted contractor',
       tags: [
         ['a', `${CONTRACTOR_KIND}:${user.pubkey}:${id}`],
       ],
     });
+
+    if (event) {
+      await cacheEvents([event]);
+      await deleteCachedEventByAddress(CONTRACTOR_KIND, user.pubkey, id);
+    }
 
     // Small delay to allow the deletion event to propagate to relays
     await new Promise(resolve => setTimeout(resolve, 500));

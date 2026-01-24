@@ -1,12 +1,14 @@
 import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { APPLIANCE_KIND, type Appliance } from '@/lib/types';
+import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -92,81 +94,129 @@ function getDeletedApplianceIds(deletionEvents: NostrEvent[], pubkey: string): S
   return deletedIds;
 }
 
+// Parse events into appliances
+async function parseEventsToAppliances(
+  events: NostrEvent[],
+  pubkey: string,
+  decryptForCategory: <T>(content: string) => Promise<T>
+): Promise<Appliance[]> {
+  // Separate appliance events from deletion events
+  const applianceEvents = events.filter(e => e.kind === APPLIANCE_KIND);
+  const deletionEvents = events.filter(e => e.kind === 5);
+
+  // Get the set of deleted appliance IDs
+  const deletedIds = getDeletedApplianceIds(deletionEvents, pubkey);
+
+  const appliances: Appliance[] = [];
+  
+  for (const event of applianceEvents) {
+    const id = getTagValue(event, 'd');
+    if (!id || deletedIds.has(id)) continue;
+
+    // Check if content is encrypted
+    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
+      // Decrypt and parse
+      const appliance = await parseApplianceEncrypted(
+        event,
+        (content) => decryptForCategory<ApplianceData>(content)
+      );
+      if (appliance) {
+        appliances.push(appliance);
+      }
+    } else {
+      // Parse plaintext from tags
+      const appliance = parseAppliancePlaintext(event);
+      if (appliance) {
+        appliances.push(appliance);
+      }
+    }
+  }
+
+  // Sort by creation date (newest first)
+  return appliances.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 export function useAppliances() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
+  const queryClient = useQueryClient();
+  const isSyncing = useRef(false);
 
-  return useQuery({
+  // Main query - loads from cache first, then syncs with relays in background
+  const query = useQuery({
     queryKey: ['appliances', user?.pubkey],
-    queryFn: async (c) => {
+    queryFn: async () => {
       if (!user?.pubkey) {
-        console.log('[useAppliances] No user pubkey, returning empty array');
         return [];
       }
 
-      console.log('[useAppliances] Fetching appliances for pubkey:', user.pubkey);
+      console.log('[useAppliances] Loading from cache for pubkey:', user.pubkey);
 
-      // Longer timeout for mobile/PWA mode where network might be slower
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
+      // Load from cache first (instant)
+      const cachedEvents = await getCachedEvents([APPLIANCE_KIND, 5], user.pubkey);
+      
+      if (cachedEvents.length > 0) {
+        console.log('[useAppliances] Found cached events:', cachedEvents.length);
+        const appliances = await parseEventsToAppliances(cachedEvents, user.pubkey, decryptForCategory);
+        return appliances;
+      }
 
-      // Query both appliance events and deletion events in one request
-      let events;
+      console.log('[useAppliances] No cache, waiting for relay sync...');
+      // If no cache, return empty and let the background sync populate data
+      return [];
+    },
+    enabled: !!user?.pubkey,
+    staleTime: Infinity, // Don't auto-refetch, we handle sync manually
+  });
+
+  // Background sync with relays
+  useEffect(() => {
+    if (!user?.pubkey || isSyncing.current) return;
+
+    const syncWithRelays = async () => {
+      isSyncing.current = true;
+      console.log('[useAppliances] Starting background relay sync...');
+
       try {
-        events = await nostr.query(
+        const signal = AbortSignal.timeout(15000);
+        
+        const events = await nostr.query(
           [
             { kinds: [APPLIANCE_KIND], authors: [user.pubkey] },
             { kinds: [5], authors: [user.pubkey] },
           ],
           { signal }
         );
-        console.log('[useAppliances] Received events:', events.length);
-      } catch (error) {
-        console.error('[useAppliances] Query failed:', error);
-        throw error;
-      }
 
-      // Separate appliance events from deletion events
-      const applianceEvents = events.filter(e => e.kind === APPLIANCE_KIND);
-      const deletionEvents = events.filter(e => e.kind === 5);
+        console.log('[useAppliances] Relay sync received events:', events.length);
 
-      console.log('[useAppliances] Appliance events:', applianceEvents.length, 'Deletion events:', deletionEvents.length);
-
-      // Get the set of deleted appliance IDs
-      const deletedIds = getDeletedApplianceIds(deletionEvents, user.pubkey);
-
-      const appliances: Appliance[] = [];
-      
-      for (const event of applianceEvents) {
-        const id = getTagValue(event, 'd');
-        if (!id || deletedIds.has(id)) continue;
-
-        // Check if content is encrypted
-        if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-          // Decrypt and parse
-          const appliance = await parseApplianceEncrypted(
-            event,
-            (content) => decryptForCategory<ApplianceData>(content)
-          );
-          if (appliance) {
-            appliances.push(appliance);
-          }
-        } else {
-          // Parse plaintext from tags
-          const appliance = parseAppliancePlaintext(event);
-          if (appliance) {
-            appliances.push(appliance);
-          }
+        // Cache the events for next time
+        if (events.length > 0) {
+          await cacheEvents(events);
         }
+
+        // Parse and update the query data
+        const appliances = await parseEventsToAppliances(events, user.pubkey, decryptForCategory);
+        
+        // Update the query cache with fresh data
+        queryClient.setQueryData(['appliances', user.pubkey], appliances);
+        
+        console.log('[useAppliances] Background sync complete, appliances:', appliances.length);
+      } catch (error) {
+        console.error('[useAppliances] Background sync failed:', error);
+        // Don't throw - we still have cached data
+      } finally {
+        isSyncing.current = false;
       }
+    };
 
-      console.log('[useAppliances] Parsed appliances:', appliances.length);
+    // Start sync after a short delay to prioritize cache loading
+    const timer = setTimeout(syncWithRelays, 100);
+    return () => clearTimeout(timer);
+  }, [user?.pubkey, nostr, queryClient, decryptForCategory]);
 
-      // Sort by creation date (newest first)
-      return appliances.sort((a, b) => b.createdAt - a.createdAt);
-    },
-    enabled: !!user?.pubkey,
-  });
+  return query;
 }
 
 export function useApplianceById(id: string | undefined) {
@@ -216,11 +266,16 @@ export function useApplianceActions() {
       if (data.manualUrl) tags.push(['manual_url', data.manualUrl]);
     }
 
-    await publishEvent({
+    const event = await publishEvent({
       kind: APPLIANCE_KIND,
       content,
       tags,
     });
+
+    // Cache the new event immediately
+    if (event) {
+      await cacheEvents([event]);
+    }
 
     // Invalidate the query to refresh the list
     await queryClient.invalidateQueries({ queryKey: ['appliances'] });
@@ -262,11 +317,16 @@ export function useApplianceActions() {
       if (data.manualUrl) tags.push(['manual_url', data.manualUrl]);
     }
 
-    await publishEvent({
+    const event = await publishEvent({
       kind: APPLIANCE_KIND,
       content,
       tags,
     });
+
+    // Cache the updated event immediately
+    if (event) {
+      await cacheEvents([event]);
+    }
 
     await queryClient.invalidateQueries({ queryKey: ['appliances'] });
   };
@@ -275,13 +335,19 @@ export function useApplianceActions() {
     if (!user) throw new Error('Must be logged in');
 
     // Publish a deletion request (kind 5)
-    await publishEvent({
+    const event = await publishEvent({
       kind: 5,
       content: 'Deleted appliance',
       tags: [
         ['a', `${APPLIANCE_KIND}:${user.pubkey}:${id}`],
       ],
     });
+
+    // Cache the deletion event and remove the appliance from cache
+    if (event) {
+      await cacheEvents([event]);
+      await deleteCachedEventByAddress(APPLIANCE_KIND, user.pubkey, id);
+    }
 
     // Small delay to allow the deletion event to propagate to relays
     await new Promise(resolve => setTimeout(resolve, 500));
