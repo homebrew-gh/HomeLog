@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car, Shield, HelpCircle, Cloud } from 'lucide-react';
@@ -29,6 +29,9 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
 import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
 
+// Minimum loading time in milliseconds to ensure smooth UX and allow data to load
+const MIN_LOADING_TIME_MS = 3000;
+
 const Index = () => {
   useSeoMeta({
     title: 'Home Log - Home Ownership Management',
@@ -39,8 +42,59 @@ const Index = () => {
   const { isProfileLoading } = useLoggedInAccounts();
   const { preferences, setActiveTab, isLoading: isPreferencesLoading } = useTabPreferences();
 
-  // Combined loading state - show loading animation until both profile AND preferences are fully loaded
-  const isDataLoading = isProfileLoading || (!!user && isPreferencesLoading);
+  // Track minimum loading time
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const loadingStartTime = useRef<number | null>(null);
+
+  // Start timer when user logs in and loading begins
+  useEffect(() => {
+    if (user && (isProfileLoading || isPreferencesLoading)) {
+      // Only set start time if we haven't already
+      if (loadingStartTime.current === null) {
+        loadingStartTime.current = Date.now();
+        setMinTimeElapsed(false);
+      }
+    }
+  }, [user, isProfileLoading, isPreferencesLoading]);
+
+  // Check if minimum time has elapsed once data loading completes
+  useEffect(() => {
+    if (user && !isProfileLoading && !isPreferencesLoading && loadingStartTime.current !== null) {
+      const elapsed = Date.now() - loadingStartTime.current;
+      const remaining = MIN_LOADING_TIME_MS - elapsed;
+      
+      if (remaining <= 0) {
+        // Minimum time already elapsed
+        setMinTimeElapsed(true);
+        loadingStartTime.current = null;
+      } else {
+        // Wait for remaining time
+        const timer = setTimeout(() => {
+          setMinTimeElapsed(true);
+          loadingStartTime.current = null;
+        }, remaining);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user, isProfileLoading, isPreferencesLoading]);
+
+  // Reset state when user logs out
+  useEffect(() => {
+    if (!user) {
+      loadingStartTime.current = null;
+      setMinTimeElapsed(false);
+    }
+  }, [user]);
+
+  // Combined loading state:
+  // - Show loading if profile or preferences are still loading from relay
+  // - Also show loading until minimum time has elapsed (for smooth UX)
+  const isDataLoading = user && (
+    isProfileLoading || 
+    isPreferencesLoading || 
+    (!minTimeElapsed && loadingStartTime.current !== null)
+  );
 
   // Dialog states
   const [roomManagementOpen, setRoomManagementOpen] = useState(false);
@@ -178,8 +232,8 @@ const Index = () => {
           // Loading profile and preferences from relay
           <LoadingAnimation 
             size="md"
-            message={isProfileLoading ? "Loading your profile..." : "Loading your preferences..."}
-            subMessage="Fetching your data from the relay"
+            message={isProfileLoading ? "Loading your profile..." : isPreferencesLoading ? "Loading your preferences..." : "Preparing your dashboard..."}
+            subMessage="Fetching your data from Nostr relays"
           />
         ) : !user ? (
           // Not logged in - Welcome screen
