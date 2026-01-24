@@ -42,22 +42,22 @@ export function LoadingAnimation({
         >
           {/* Wood Board */}
           <rect 
-            x="20" 
+            x="10" 
             y="78" 
-            width="60" 
+            width="50" 
             height="12" 
             rx="2"
             className="fill-amber-600 dark:fill-amber-700"
           />
           {/* Wood grain lines */}
-          <line x1="25" y1="82" x2="75" y2="82" className="stroke-amber-800/30 dark:stroke-amber-900/40" strokeWidth="0.5" />
-          <line x1="25" y1="86" x2="75" y2="86" className="stroke-amber-800/30 dark:stroke-amber-900/40" strokeWidth="0.5" />
+          <line x1="15" y1="82" x2="55" y2="82" className="stroke-amber-800/30 dark:stroke-amber-900/40" strokeWidth="0.5" />
+          <line x1="15" y1="86" x2="55" y2="86" className="stroke-amber-800/30 dark:stroke-amber-900/40" strokeWidth="0.5" />
           
-          {/* Nail (stationary, gets "driven" in) */}
+          {/* Nail (stationary, gets "driven" in) - positioned on left side of board */}
           <g className="animate-nail-drive">
             {/* Nail head */}
             <ellipse 
-              cx="50" 
+              cx="35" 
               cy="64" 
               rx="5" 
               ry="2"
@@ -65,7 +65,7 @@ export function LoadingAnimation({
             />
             {/* Nail body */}
             <rect 
-              x="48" 
+              x="33" 
               y="64" 
               width="4" 
               height="16" 
@@ -73,51 +73,52 @@ export function LoadingAnimation({
             />
             {/* Nail tip */}
             <polygon 
-              points="48,80 52,80 50,85" 
+              points="33,80 37,80 35,85" 
               className="fill-slate-400 dark:fill-slate-500"
             />
           </g>
           
-          {/* Hammer (animated) - pivots from end of handle */}
-          <g className="origin-[50px_15px] animate-hammer-swing">
-            {/* Hammer handle - vertical, above the head */}
+          {/* Hammer (animated) - on right side, pivots from top-right corner of handle */}
+          {/* Pivot point is at (85, 20), hammer swings from vertical down 90 degrees to hit nail */}
+          <g className="origin-[85px_20px] animate-hammer-swing">
+            {/* Hammer handle - extends from pivot point */}
             <rect 
-              x="47" 
-              y="15" 
+              x="82" 
+              y="20" 
               width="6" 
-              height="32" 
+              height="40" 
               rx="2"
               className="fill-amber-800 dark:fill-amber-900"
             />
             {/* Handle grip lines */}
-            <line x1="48" y1="20" x2="52" y2="20" className="stroke-amber-950/30" strokeWidth="0.5" />
-            <line x1="48" y1="24" x2="52" y2="24" className="stroke-amber-950/30" strokeWidth="0.5" />
-            <line x1="48" y1="28" x2="52" y2="28" className="stroke-amber-950/30" strokeWidth="0.5" />
+            <line x1="83" y1="25" x2="87" y2="25" className="stroke-amber-950/30" strokeWidth="0.5" />
+            <line x1="83" y1="30" x2="87" y2="30" className="stroke-amber-950/30" strokeWidth="0.5" />
+            <line x1="83" y1="35" x2="87" y2="35" className="stroke-amber-950/30" strokeWidth="0.5" />
             
-            {/* Hammer head - at bottom of handle */}
+            {/* Hammer head - at bottom of handle, extends to the left (toward nail) */}
             <rect 
-              x="38" 
-              y="45" 
-              width="24" 
+              x="62" 
+              y="57" 
+              width="26" 
               height="10" 
               rx="2"
               className="fill-sky-600 dark:fill-sky-500"
             />
             {/* Hammer head highlight */}
             <rect 
-              x="38" 
-              y="45" 
-              width="24" 
+              x="62" 
+              y="57" 
+              width="26" 
               height="3" 
               rx="1"
               className="fill-sky-400/50 dark:fill-sky-400/30"
             />
-            {/* Hammer face (striking surface) - bottom of head */}
+            {/* Hammer face (striking surface) - left side of head */}
             <rect 
-              x="44" 
-              y="53" 
-              width="12" 
-              height="4" 
+              x="58" 
+              y="59" 
+              width="6" 
+              height="6" 
               rx="1"
               className="fill-sky-700 dark:fill-sky-600"
             />
@@ -125,15 +126,15 @@ export function LoadingAnimation({
           
           {/* Impact effect (appears on hit) - centered on nail head */}
           <g className="animate-impact-flash">
-            <circle cx="50" cy="64" r="10" className="fill-amber-400/50 dark:fill-amber-300/30" />
+            <circle cx="35" cy="64" r="10" className="fill-amber-400/50 dark:fill-amber-300/30" />
             {/* Impact lines - radiating outward */}
-            <line x1="38" y1="60" x2="32" y2="55" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
-            <line x1="62" y1="60" x2="68" y2="55" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
-            <line x1="36" y1="68" x2="28" y2="72" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
-            <line x1="64" y1="68" x2="72" y2="72" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
+            <line x1="23" y1="60" x2="17" y2="55" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
+            <line x1="47" y1="60" x2="53" y2="55" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
+            <line x1="21" y1="68" x2="13" y2="72" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
+            <line x1="49" y1="68" x2="57" y2="72" className="stroke-amber-500 dark:stroke-amber-400" strokeWidth="2" strokeLinecap="round" />
             {/* Extra spark lines */}
-            <line x1="40" y1="56" x2="38" y2="50" className="stroke-yellow-400 dark:stroke-yellow-300" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="60" y1="56" x2="62" y2="50" className="stroke-yellow-400 dark:stroke-yellow-300" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="25" y1="56" x2="23" y2="50" className="stroke-yellow-400 dark:stroke-yellow-300" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="45" y1="56" x2="47" y2="50" className="stroke-yellow-400 dark:stroke-yellow-300" strokeWidth="1.5" strokeLinecap="round" />
           </g>
         </svg>
       </div>

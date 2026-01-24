@@ -203,21 +203,25 @@
 .animate-wiggle-7 { animation-delay: 360ms; }
 
 /* Hammer and nail loading animation */
+/* Hammer swings from vertical (0deg) down through 90deg arc to strike nail on the left */
 @keyframes hammer-swing {
   0%, 100% {
-    transform: rotate(-35deg);
+    transform: rotate(0deg); /* Vertical position - cocked back */
   }
-  20% {
-    transform: rotate(-40deg);
+  15% {
+    transform: rotate(5deg); /* Slight wind-up */
   }
   40% {
-    transform: rotate(8deg);
+    transform: rotate(-85deg); /* Swing down toward nail */
   }
   45%, 55% {
-    transform: rotate(0deg);
+    transform: rotate(-90deg); /* Impact position - horizontal, striking nail */
   }
   70% {
-    transform: rotate(-35deg);
+    transform: rotate(-45deg); /* Recoil/lift back up */
+  }
+  85% {
+    transform: rotate(-10deg); /* Continue back up */
   }
 }
 
