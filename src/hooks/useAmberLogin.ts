@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNostrLogin } from '@nostrify/react/login';
 import { NLogin } from '@nostrify/react/login';
 import type { NostrSigner } from '@nostrify/nostrify';
@@ -16,6 +16,12 @@ import {
  * Storage key for the Amber signer pubkey
  */
 const AMBER_PUBKEY_KEY = 'nostr_amber_pubkey';
+
+/**
+ * Storage keys for handling browser-to-PWA callback transfer
+ */
+const AMBER_CALLBACK_PUBKEY_KEY = 'amber_callback_pubkey';
+const AMBER_CALLBACK_TIMESTAMP_KEY = 'amber_callback_timestamp';
 
 /**
  * Create a NIP-55 Android signer that communicates via nostrsigner: URIs
@@ -150,11 +156,53 @@ export function useAmberLogin() {
     localStorage.removeItem(AMBER_PUBKEY_KEY);
   }, []);
 
+  /**
+   * Check for pending callback from browser redirect
+   * This handles the case where Amber returns to the browser instead of the PWA
+   */
+  const checkPendingCallback = useCallback(async () => {
+    const pendingPubkey = localStorage.getItem(AMBER_CALLBACK_PUBKEY_KEY);
+    const pendingTimestamp = localStorage.getItem(AMBER_CALLBACK_TIMESTAMP_KEY);
+    
+    if (!pendingPubkey || !pendingTimestamp) {
+      return false;
+    }
+    
+    // Check if the callback is still valid (within 5 minutes)
+    const timestamp = parseInt(pendingTimestamp, 10);
+    if (Date.now() - timestamp > 5 * 60 * 1000) {
+      // Expired, clean up
+      localStorage.removeItem(AMBER_CALLBACK_PUBKEY_KEY);
+      localStorage.removeItem(AMBER_CALLBACK_TIMESTAMP_KEY);
+      return false;
+    }
+    
+    // Clean up immediately to prevent double-processing
+    localStorage.removeItem(AMBER_CALLBACK_PUBKEY_KEY);
+    localStorage.removeItem(AMBER_CALLBACK_TIMESTAMP_KEY);
+    
+    console.log('[Amber] Found pending callback pubkey from browser redirect:', pendingPubkey);
+    
+    try {
+      await processLoginCallback(pendingPubkey);
+      return true;
+    } catch (error) {
+      console.error('[Amber] Failed to process pending callback:', error);
+      return false;
+    }
+  }, [processLoginCallback]);
+
+  // Auto-check for pending callbacks when the hook is used
+  useEffect(() => {
+    checkPendingCallback();
+  }, [checkPendingCallback]);
+
   return {
     isAvailable,
     initiateLogin,
     processLoginCallback,
     getStoredPubkey,
     clearStoredSession,
+    checkPendingCallback,
   };
 }

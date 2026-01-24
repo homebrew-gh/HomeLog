@@ -2,6 +2,7 @@
   "name": "Home Log",
   "short_name": "Home Log",
   "description": "Manage your home appliances, vehicles, and maintenance schedules with Nostr",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -12,6 +13,9 @@
   "lang": "en",
   "dir": "ltr",
   "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
   "icons": [
     {
       "src": "/icon.svg",

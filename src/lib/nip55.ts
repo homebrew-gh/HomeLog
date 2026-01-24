@@ -6,6 +6,20 @@
  */
 
 /**
+ * Get the app name from the manifest or document title
+ * This is used to help Amber identify the calling app
+ */
+function getAppName(): string {
+  // Try to get from document title first (most reliable)
+  if (document.title) {
+    return document.title;
+  }
+  
+  // Fallback to a generic name
+  return 'Home Log';
+}
+
+/**
  * Check if the current device is running Android
  */
 export function isAndroid(): boolean {
@@ -16,6 +30,9 @@ export function isAndroid(): boolean {
 /**
  * Generate a callback URL for the current page
  * The signer will redirect back to this URL with the result
+ * 
+ * IMPORTANT: The callback URL must be a complete, valid URL that Amber
+ * can use to identify the app and redirect back after signing.
  */
 export function getCallbackUrl(path: string = '/signer-callback'): string {
   const baseUrl = window.location.origin;
@@ -25,16 +42,38 @@ export function getCallbackUrl(path: string = '/signer-callback'): string {
 /**
  * Build a nostrsigner: URL for getting the public key
  * This initiates the login flow with an Android signer
+ * 
+ * According to NIP-55 for web applications:
+ * - callbackUrl: The URL where Amber will redirect with the result
+ * - The result (pubkey) will be appended as a query parameter
+ * 
+ * IMPORTANT: The NIP-55 spec shows the callback URL should end with "?event="
+ * Amber will append the result directly to this URL string.
+ * We must encode the callback URL properly but NOT double-encode it.
  */
 export function buildGetPublicKeyUrl(callbackUrl: string): string {
-  const params = new URLSearchParams({
-    compressionType: 'none',
-    returnType: 'signature',
-    type: 'get_public_key',
-    callbackUrl: callbackUrl + '?event=',
-  });
+  // Build the callback URL with the event parameter placeholder
+  // Amber will append the pubkey result directly after "?event="
+  // Example: https://example.com/signer-callback?event={pubkey}
+  const fullCallbackUrl = `${callbackUrl}?event=`;
   
-  return `nostrsigner:?${params.toString()}`;
+  // According to NIP-55, the format for web apps should be:
+  // nostrsigner:?compressionType=none&returnType=signature&type=get_public_key&callbackUrl=https://example.com/?event=
+  //
+  // The callback URL needs to be URL-encoded when used as a query parameter
+  const encodedCallbackUrl = encodeURIComponent(fullCallbackUrl);
+  
+  // Build the URL manually to ensure proper formatting
+  // This matches the NIP-55 example exactly
+  const url = `nostrsigner:?compressionType=none&returnType=signature&type=get_public_key&callbackUrl=${encodedCallbackUrl}`;
+  
+  console.log('[NIP-55] Built get_public_key URL:', url);
+  console.log('[NIP-55] Callback URL (raw):', fullCallbackUrl);
+  console.log('[NIP-55] Callback URL (encoded):', encodedCallbackUrl);
+  console.log('[NIP-55] App origin:', window.location.origin);
+  console.log('[NIP-55] App name:', getAppName());
+  
+  return url;
 }
 
 /**
