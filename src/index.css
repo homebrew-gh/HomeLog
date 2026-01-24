@@ -193,7 +193,13 @@
   transform-origin: center center;
 }
 
-/* Stagger the animation for different tabs */
+/* Dashboard card wiggle - explicitly centered transform origin */
+.animate-wiggle-card {
+  animation: wiggle 0.3s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* Stagger the animation for different tabs/cards */
 .animate-wiggle-1 { animation-delay: 0ms; }
 .animate-wiggle-2 { animation-delay: 60ms; }
 .animate-wiggle-3 { animation-delay: 120ms; }
