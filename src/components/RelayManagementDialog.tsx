@@ -157,31 +157,36 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                   <Separator className="my-3" />
                   
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Private Blossom Services:
+                    Recommended Services:
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-500 mb-2">
-                    These paid services offer private storage for your files:
+                    These paid services offer storage for your files:
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    <a 
-                      href="https://satellite.earth" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline"
-                    >
-                      Satellite.earth
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                    <span className="text-slate-300 dark:text-slate-600">•</span>
-                    <a 
-                      href="https://nostr.build" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline"
-                    >
-                      nostr.build (paid plans)
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <a 
+                        href="https://nostr.build" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline font-medium"
+                      >
+                        nostr.build
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                      <span className="text-xs text-slate-500">- Use URL: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">https://nostr.build/</code></span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <a 
+                        href="https://satellite.earth" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline font-medium"
+                      >
+                        Satellite.earth
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                      <span className="text-xs text-slate-500">- Use URL: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">https://cdn.satellite.earth/</code></span>
+                    </div>
                   </div>
                   
                   <Separator className="my-3" />
