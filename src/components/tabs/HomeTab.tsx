@@ -29,6 +29,7 @@ import { useContractors } from '@/hooks/useContractors';
 import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import type { MaintenanceSchedule } from '@/lib/types';
 
 const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
@@ -42,13 +43,49 @@ const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
   projects: FolderKanban,
 };
 
+// Widget types for dashboard - each active tab can have one or more widgets
+type WidgetId = 
+  | 'appliances'
+  | 'vehicles' 
+  | 'contractors'
+  | 'home-maintenance'
+  | 'vehicle-maintenance'
+  | 'subscriptions'
+  | 'warranties'
+  | 'projects';
+
+// Widget configuration - defines size and which tab it belongs to
+interface WidgetConfig {
+  id: WidgetId;
+  tabId: TabId;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  // Widget size: 1 = single column, 2 = double column (full width on md+)
+  colSpan: 1 | 2;
+}
+
+const WIDGET_CONFIGS: WidgetConfig[] = [
+  { id: 'appliances', tabId: 'appliances', label: 'Appliances', icon: Package, colSpan: 1 },
+  { id: 'vehicles', tabId: 'vehicles', label: 'Vehicles', icon: Car, colSpan: 1 },
+  { id: 'contractors', tabId: 'contractors', label: 'Contractors & Services', icon: Users, colSpan: 1 },
+  { id: 'home-maintenance', tabId: 'maintenance', label: 'Home Maintenance', icon: Home, colSpan: 1 },
+  { id: 'vehicle-maintenance', tabId: 'maintenance', label: 'Vehicle Maintenance', icon: Car, colSpan: 1 },
+  { id: 'subscriptions', tabId: 'subscriptions', label: 'Subscriptions', icon: CreditCard, colSpan: 1 },
+  { id: 'warranties', tabId: 'warranties', label: 'Warranties', icon: Shield, colSpan: 1 },
+  { id: 'projects', tabId: 'projects', label: 'Projects', icon: FolderKanban, colSpan: 1 },
+];
+
+const getWidgetConfig = (widgetId: WidgetId): WidgetConfig | undefined => {
+  return WIDGET_CONFIGS.find(w => w.id === widgetId);
+};
+
 interface HomeTabProps {
   onNavigateToTab: (tabId: TabId, scrollTarget?: string) => void;
   onAddTab: () => void;
 }
 
 export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
-  const { preferences, getDashboardCardOrder, reorderDashboardCards, getTabDefinition } = useTabPreferences();
+  const { preferences } = useTabPreferences();
   const { data: appliances = [], isLoading: isLoadingAppliances } = useAppliances();
   const { data: vehicles = [], isLoading: isLoadingVehicles } = useVehicles();
   const { data: contractors = [], isLoading: isLoadingContractors } = useContractors();
@@ -59,22 +96,25 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
 
   // Edit mode for reordering dashboard cards
   const [isEditMode, setIsEditMode] = useState(false);
-  const [draggedCard, setDraggedCard] = useState<TabId | null>(null);
-  const [dragOverCard, setDragOverCard] = useState<TabId | null>(null);
+  const [draggedWidget, setDraggedWidget] = useState<WidgetId | null>(null);
+  const [dragOverWidget, setDragOverWidget] = useState<WidgetId | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [draggedCardSize, setDraggedCardSize] = useState<{ width: number; height: number } | null>(null);
-  const cardRefs = useRef<Map<TabId, HTMLDivElement>>(new Map());
+  const [draggedWidgetSize, setDraggedWidgetSize] = useState<{ width: number; height: number } | null>(null);
+  const widgetRefs = useRef<Map<WidgetId, HTMLDivElement>>(new Map());
   
-  // Generate random animation parameters for each card (persist across renders)
+  // Widget order state - stored separately from tab order
+  const [widgetOrder, setWidgetOrder] = useLocalStorage<WidgetId[]>('homelog-widget-order', []);
+  
+  // Generate random animation parameters for each widget (persist across renders)
   // This creates the iOS-style "fake randomness" effect
-  const [animationParams] = useState<Map<TabId, { delay: number; duration: number }>>(() => {
-    const params = new Map<TabId, { delay: number; duration: number }>();
-    const allTabs: TabId[] = ['home', 'appliances', 'maintenance', 'vehicles', 'subscriptions', 'warranties', 'contractors', 'projects'];
-    allTabs.forEach(tab => {
+  const [animationParams] = useState<Map<WidgetId, { delay: number; duration: number }>>(() => {
+    const params = new Map<WidgetId, { delay: number; duration: number }>();
+    const allWidgets: WidgetId[] = ['appliances', 'vehicles', 'contractors', 'home-maintenance', 'vehicle-maintenance', 'subscriptions', 'warranties', 'projects'];
+    allWidgets.forEach(widget => {
       // Random negative delay (-0.05s to -0.75s) to offset animation start
       // Random duration (0.22s to 0.33s) for slight speed variation
-      params.set(tab, {
+      params.set(widget, {
         delay: -(Math.random() * 0.7 + 0.05), // -0.05s to -0.75s
         duration: Math.random() * 0.11 + 0.22, // 0.22s to 0.33s
       });
@@ -83,9 +123,6 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   });
 
   const hasActiveTabs = preferences.activeTabs.length > 0;
-  
-  // Get the ordered list of cards for the dashboard
-  const dashboardCards = getDashboardCardOrder();
 
   // Get unique rooms from appliances
   const usedRooms = useMemo(() => {
@@ -212,28 +249,52 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     });
   }, [contractors]);
 
-  // Mouse-based drag and drop handlers for smooth card reordering
-  const handleMouseDown = useCallback((e: React.MouseEvent, tabId: TabId) => {
+  // Get ordered list of active widgets based on active tabs
+  const activeWidgets = useMemo((): WidgetId[] => {
+    // Get all widgets for active tabs
+    const widgetsFromTabs: WidgetId[] = [];
+    preferences.activeTabs.forEach(tabId => {
+      if (tabId === 'maintenance') {
+        // Maintenance tab has two widgets
+        widgetsFromTabs.push('home-maintenance', 'vehicle-maintenance');
+      } else {
+        widgetsFromTabs.push(tabId as WidgetId);
+      }
+    });
+    
+    // If we have a stored order, use it but filter to only active widgets
+    if (widgetOrder.length > 0) {
+      const orderedWidgets = widgetOrder.filter(w => widgetsFromTabs.includes(w));
+      // Add any new widgets not in the stored order
+      const missingWidgets = widgetsFromTabs.filter(w => !widgetOrder.includes(w));
+      return [...orderedWidgets, ...missingWidgets];
+    }
+    
+    return widgetsFromTabs;
+  }, [preferences.activeTabs, widgetOrder]);
+
+  // Mouse-based drag and drop handlers for smooth widget reordering
+  const handleMouseDown = useCallback((e: React.MouseEvent, widgetId: WidgetId) => {
     if (!isEditMode) return;
     
-    const cardElement = cardRefs.current.get(tabId);
-    if (!cardElement) return;
+    const widgetElement = widgetRefs.current.get(widgetId);
+    if (!widgetElement) return;
     
-    const rect = cardElement.getBoundingClientRect();
+    const rect = widgetElement.getBoundingClientRect();
     
-    // Calculate offset from mouse to card's top-left corner
+    // Calculate offset from mouse to widget's top-left corner
     setDragOffset({
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
     });
     
-    // Store the card's size for the floating element
-    setDraggedCardSize({
+    // Store the widget's size for the floating element
+    setDraggedWidgetSize({
       width: rect.width,
       height: rect.height
     });
     
-    setDraggedCard(tabId);
+    setDraggedWidget(widgetId);
     setDragPosition({ x: e.clientX, y: e.clientY });
     
     // Prevent text selection during drag
@@ -241,60 +302,58 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   }, [isEditMode]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!draggedCard) return;
+    if (!draggedWidget) return;
     
     setDragPosition({ x: e.clientX, y: e.clientY });
     
-    // Find which card we're hovering over
-    let foundTarget: TabId | null = null;
-    cardRefs.current.forEach((element, tabId) => {
-      if (tabId === draggedCard) return;
+    // Find which widget we're hovering over
+    let foundTarget: WidgetId | null = null;
+    widgetRefs.current.forEach((element, widgetId) => {
+      if (widgetId === draggedWidget) return;
       
       const rect = element.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
       
-      // Check if mouse is within the card bounds
+      // Check if mouse is within the widget bounds
       if (
         e.clientX >= rect.left &&
         e.clientX <= rect.right &&
         e.clientY >= rect.top &&
         e.clientY <= rect.bottom
       ) {
-        foundTarget = tabId;
+        foundTarget = widgetId;
       }
     });
     
-    setDragOverCard(foundTarget);
-  }, [draggedCard]);
+    setDragOverWidget(foundTarget);
+  }, [draggedWidget]);
 
   const handleMouseUp = useCallback(() => {
-    if (!draggedCard) return;
+    if (!draggedWidget) return;
     
     // If we're over a drop target, perform the swap
-    if (dragOverCard && draggedCard !== dragOverCard) {
-      const currentOrder = [...dashboardCards];
-      const draggedIndex = currentOrder.indexOf(draggedCard);
-      const targetIndex = currentOrder.indexOf(dragOverCard);
+    if (dragOverWidget && draggedWidget !== dragOverWidget) {
+      const currentOrder = [...activeWidgets];
+      const draggedIndex = currentOrder.indexOf(draggedWidget);
+      const targetIndex = currentOrder.indexOf(dragOverWidget);
 
       if (draggedIndex !== -1 && targetIndex !== -1) {
         // Remove dragged item and insert at target position
         currentOrder.splice(draggedIndex, 1);
-        currentOrder.splice(targetIndex, 0, draggedCard);
-        reorderDashboardCards(currentOrder);
+        currentOrder.splice(targetIndex, 0, draggedWidget);
+        setWidgetOrder(currentOrder);
       }
     }
     
     // Reset drag state
-    setDraggedCard(null);
-    setDragOverCard(null);
+    setDraggedWidget(null);
+    setDragOverWidget(null);
     setDragPosition(null);
-    setDraggedCardSize(null);
-  }, [draggedCard, dragOverCard, dashboardCards, reorderDashboardCards]);
+    setDraggedWidgetSize(null);
+  }, [draggedWidget, dragOverWidget, activeWidgets, setWidgetOrder]);
 
   // Add and remove global mouse event listeners
   useEffect(() => {
-    if (draggedCard) {
+    if (draggedWidget) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       // Prevent text selection while dragging
@@ -308,18 +367,18 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
     };
-  }, [draggedCard, handleMouseMove, handleMouseUp]);
+  }, [draggedWidget, handleMouseMove, handleMouseUp]);
 
-  // Get animation styles for a specific card (iOS-style random parameters)
-  const getAnimationStyle = (tabId: TabId, index: number): React.CSSProperties => {
-    const params = animationParams.get(tabId) ?? { delay: -0.3, duration: 0.25 };
+  // Get animation styles for a specific widget (iOS-style random parameters)
+  const getAnimationStyle = (widgetId: WidgetId): React.CSSProperties => {
+    const params = animationParams.get(widgetId) ?? { delay: -0.3, duration: 0.25 };
     return {
       animationDelay: `${params.delay}s`,
       animationDuration: `${params.duration}s`,
     };
   };
   
-  // Get the appropriate wiggle class based on card index (alternating even/odd)
+  // Get the appropriate wiggle class based on widget index (alternating even/odd)
   const getWiggleClass = (index: number): string => {
     return index % 2 === 0 ? 'animate-wiggle-card-even' : 'animate-wiggle-card-odd';
   };
@@ -339,7 +398,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
           </p>
         </div>
         <div className="flex-1 flex justify-end">
-          {hasActiveTabs && dashboardCards.length > 1 && (
+          {hasActiveTabs && activeWidgets.length > 1 && (
             <Button
               variant="ghost"
               size="sm"
@@ -491,34 +550,328 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
         </div>
       )}
 
-      {/* Section summaries for each active tab */}
+      {/* Dashboard widgets - uniform grid of draggable cards */}
       {hasActiveTabs && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {dashboardCards.map((tabId, index) => {
-            const IconComponent = TAB_ICONS[tabId];
-            const isDragging = draggedCard === tabId;
-            const isDragOver = dragOverCard === tabId;
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+          {activeWidgets.map((widgetId, index) => {
+            const config = getWidgetConfig(widgetId);
+            if (!config) return null;
             
-            // Wrapper for drag-drop functionality
-            const DraggableWrapper = ({ children, fullWidth = false }: { children: React.ReactNode; fullWidth?: boolean }) => (
+            const isDragging = draggedWidget === widgetId;
+            const isDragOver = dragOverWidget === widgetId;
+            
+            // Render widget content based on type
+            const renderWidgetContent = () => {
+              switch (widgetId) {
+                case 'appliances':
+                  return (
+                    <WidgetCard
+                      title="Appliances"
+                      icon={Package}
+                      onClick={() => !isEditMode && onNavigateToTab('appliances')}
+                      isLoading={isLoadingAppliances}
+                      clickable={!isEditMode}
+                    >
+                      {appliances.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No appliances tracked yet</p>
+                      ) : usedRooms.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No rooms assigned yet</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {usedRooms.map(room => {
+                            const count = appliances.filter(a => a.room === room).length;
+                            return (
+                              <button
+                                key={room}
+                                onClick={(e) => {
+                                  if (isEditMode) {
+                                    e.stopPropagation();
+                                    return;
+                                  }
+                                  e.stopPropagation();
+                                  onNavigateToTab('appliances', `room-${room}`);
+                                }}
+                                disabled={isEditMode}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 transition-colors",
+                                  !isEditMode && "hover:bg-sky-200 dark:hover:bg-sky-800/50"
+                                )}
+                              >
+                                <Home className="h-3.5 w-3.5" />
+                                {room}
+                                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-sky-200/50 dark:bg-sky-800/50">
+                                  {count}
+                                </Badge>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </WidgetCard>
+                  );
+                  
+                case 'vehicles':
+                  return (
+                    <WidgetCard
+                      title="Vehicles"
+                      icon={Car}
+                      onClick={() => !isEditMode && onNavigateToTab('vehicles')}
+                      isLoading={isLoadingVehicles}
+                      clickable={!isEditMode}
+                    >
+                      {vehicles.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No vehicles tracked yet</p>
+                      ) : usedVehicleTypes.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No vehicle types assigned yet</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {usedVehicleTypes.map(type => {
+                            const count = vehicles.filter(v => v.vehicleType === type).length;
+                            return (
+                              <button
+                                key={type}
+                                onClick={(e) => {
+                                  if (isEditMode) {
+                                    e.stopPropagation();
+                                    return;
+                                  }
+                                  e.stopPropagation();
+                                  onNavigateToTab('vehicles', `type-${type}`);
+                                }}
+                                disabled={isEditMode}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 transition-colors",
+                                  !isEditMode && "hover:bg-sky-200 dark:hover:bg-sky-800/50"
+                                )}
+                              >
+                                <Car className="h-3.5 w-3.5" />
+                                {type}
+                                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-sky-200/50 dark:bg-sky-800/50">
+                                  {count}
+                                </Badge>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </WidgetCard>
+                  );
+                  
+                case 'contractors':
+                  return (
+                    <WidgetCard
+                      title="Contractors & Services"
+                      icon={Users}
+                      onClick={() => !isEditMode && onNavigateToTab('contractors')}
+                      isLoading={isLoadingContractors}
+                      clickable={!isEditMode}
+                    >
+                      {contractors.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No contractors added yet</p>
+                      ) : usedContractorTypes.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No service types assigned yet</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {usedContractorTypes.slice(0, 6).map(type => {
+                            const count = contractors.filter(c => c.serviceType === type).length;
+                            return (
+                              <button
+                                key={type}
+                                onClick={(e) => {
+                                  if (isEditMode) {
+                                    e.stopPropagation();
+                                    return;
+                                  }
+                                  e.stopPropagation();
+                                  onNavigateToTab('contractors', `type-${type}`);
+                                }}
+                                disabled={isEditMode}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 transition-colors",
+                                  !isEditMode && "hover:bg-sky-200 dark:hover:bg-sky-800/50"
+                                )}
+                              >
+                                <Users className="h-3.5 w-3.5" />
+                                {type}
+                                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-sky-200/50 dark:bg-sky-800/50">
+                                  {count}
+                                </Badge>
+                              </button>
+                            );
+                          })}
+                          {usedContractorTypes.length > 6 && (
+                            <span className="text-sm text-muted-foreground self-center">
+                              +{usedContractorTypes.length - 6} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </WidgetCard>
+                  );
+                  
+                case 'home-maintenance':
+                  return (
+                    <WidgetCard
+                      title="Home Maintenance"
+                      icon={Home}
+                      onClick={() => !isEditMode && onNavigateToTab('maintenance', 'home-maintenance')}
+                      isLoading={isLoadingMaintenance}
+                      clickable={!isEditMode}
+                      badge={upcomingHomeMaintenance.filter(m => m.isOverdue).length > 0 ? {
+                        text: `${upcomingHomeMaintenance.filter(m => m.isOverdue).length} overdue`,
+                        variant: 'destructive' as const,
+                      } : undefined}
+                    >
+                      {upcomingHomeMaintenance.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No home maintenance tasks</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {upcomingHomeMaintenance.slice(0, 3).map(({ maint, dueDate, isOverdue: itemOverdue, isDueSoon: itemDueSoon, appliance }) => (
+                            <div
+                              key={maint.id}
+                              className={cn(
+                                "flex items-center justify-between text-sm p-2 rounded-lg",
+                                itemOverdue 
+                                  ? 'bg-red-50 dark:bg-red-900/30' 
+                                  : itemDueSoon 
+                                    ? 'bg-amber-50 dark:bg-amber-900/30' 
+                                    : 'bg-slate-50 dark:bg-slate-700/30'
+                              )}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
+                                  {maint.description}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                  {appliance?.model || 'Unknown'}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0 ml-2">
+                                <p className={cn(
+                                  "text-xs font-medium",
+                                  itemOverdue
+                                    ? 'text-red-600 dark:text-red-400'
+                                    : itemDueSoon
+                                      ? 'text-amber-600 dark:text-amber-400'
+                                      : 'text-slate-600 dark:text-slate-300'
+                                )}>
+                                  {formatDueDate(dueDate)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          {upcomingHomeMaintenance.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center">
+                              +{upcomingHomeMaintenance.length - 3} more tasks
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </WidgetCard>
+                  );
+                  
+                case 'vehicle-maintenance':
+                  return (
+                    <WidgetCard
+                      title="Vehicle Maintenance"
+                      icon={Car}
+                      onClick={() => !isEditMode && onNavigateToTab('maintenance', 'vehicle-maintenance')}
+                      isLoading={isLoadingMaintenance || isLoadingVehicles}
+                      clickable={!isEditMode}
+                      badge={upcomingVehicleMaintenance.filter(m => m.isOverdue).length > 0 ? {
+                        text: `${upcomingVehicleMaintenance.filter(m => m.isOverdue).length} overdue`,
+                        variant: 'destructive' as const,
+                      } : undefined}
+                    >
+                      {upcomingVehicleMaintenance.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No vehicle maintenance tasks</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {upcomingVehicleMaintenance.slice(0, 3).map(({ maint, dueDate, isOverdue: vehOverdue, isDueSoon: vehDueSoon, vehicle }) => (
+                            <div
+                              key={maint.id}
+                              className={cn(
+                                "flex items-center justify-between text-sm p-2 rounded-lg",
+                                vehOverdue 
+                                  ? 'bg-red-50 dark:bg-red-900/30' 
+                                  : vehDueSoon 
+                                    ? 'bg-amber-50 dark:bg-amber-900/30' 
+                                    : 'bg-slate-50 dark:bg-slate-700/30'
+                              )}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
+                                  {maint.description}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                  {vehicle?.name || 'Unknown'}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0 ml-2">
+                                <p className={cn(
+                                  "text-xs font-medium",
+                                  vehOverdue
+                                    ? 'text-red-600 dark:text-red-400'
+                                    : vehDueSoon
+                                      ? 'text-amber-600 dark:text-amber-400'
+                                      : 'text-slate-600 dark:text-slate-300'
+                                )}>
+                                  {formatDueDate(dueDate)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          {upcomingVehicleMaintenance.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center">
+                              +{upcomingVehicleMaintenance.length - 3} more tasks
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </WidgetCard>
+                  );
+                  
+                // Coming soon widgets
+                case 'subscriptions':
+                case 'warranties':
+                case 'projects':
+                  return (
+                    <WidgetCard
+                      title={config.label}
+                      icon={config.icon}
+                      onClick={() => !isEditMode && onNavigateToTab(config.tabId)}
+                      clickable={!isEditMode}
+                    >
+                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                        <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+                      </div>
+                    </WidgetCard>
+                  );
+                  
+                default:
+                  return null;
+              }
+            };
+            
+            return (
               <div
+                key={widgetId}
                 ref={(el) => {
                   if (el) {
-                    cardRefs.current.set(tabId, el);
+                    widgetRefs.current.set(widgetId, el);
                   } else {
-                    cardRefs.current.delete(tabId);
+                    widgetRefs.current.delete(widgetId);
                   }
                 }}
                 className={cn(
                   "relative",
-                  fullWidth && "md:col-span-2",
                   isDragging && "dashboard-card-placeholder",
                   isDragOver && "dashboard-card-drop-target",
                   isEditMode && !isDragging && getWiggleClass(index),
                   isEditMode && !isDragging && "cursor-grab"
                 )}
-                style={isEditMode && !isDragging ? getAnimationStyle(tabId, index) : undefined}
-                onMouseDown={(e) => handleMouseDown(e, tabId)}
+                style={isEditMode && !isDragging ? getAnimationStyle(widgetId) : undefined}
+                onMouseDown={(e) => handleMouseDown(e, widgetId)}
               >
                 {/* Drag handle overlay in edit mode */}
                 {isEditMode && (
@@ -526,352 +879,36 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                     <GripVertical className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                   </div>
                 )}
-                {children}
+                {renderWidgetContent()}
               </div>
-            );
-            
-            if (tabId === 'appliances') {
-              return (
-                <DraggableWrapper key={tabId}>
-                  <SummaryCard
-                    title="Appliances"
-                    icon={IconComponent}
-                    onClick={() => !isEditMode && onNavigateToTab(tabId)}
-                    isLoading={isLoadingAppliances}
-                    clickable={!isEditMode}
-                  >
-                    {appliances.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No appliances tracked yet</p>
-                    ) : usedRooms.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No rooms assigned yet</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {usedRooms.map(room => {
-                          const count = appliances.filter(a => a.room === room).length;
-                          return (
-                            <button
-                              key={room}
-                              onClick={(e) => {
-                                if (isEditMode) {
-                                  e.stopPropagation();
-                                  return;
-                                }
-                                onNavigateToTab('appliances', `room-${room}`);
-                              }}
-                              disabled={isEditMode}
-                              className={cn(
-                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 transition-colors",
-                                !isEditMode && "hover:bg-sky-200 dark:hover:bg-sky-800/50"
-                              )}
-                            >
-                              <Home className="h-3.5 w-3.5" />
-                              {room}
-                              <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-sky-200/50 dark:bg-sky-800/50">
-                                {count}
-                              </Badge>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </SummaryCard>
-                </DraggableWrapper>
-              );
-            }
-
-            if (tabId === 'vehicles') {
-              return (
-                <DraggableWrapper key={tabId}>
-                  <SummaryCard
-                    title="Vehicles"
-                    icon={IconComponent}
-                    onClick={() => !isEditMode && onNavigateToTab(tabId)}
-                    isLoading={isLoadingVehicles}
-                    clickable={!isEditMode}
-                  >
-                    {vehicles.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No vehicles tracked yet</p>
-                    ) : usedVehicleTypes.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No vehicle types assigned yet</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {usedVehicleTypes.map(type => {
-                          const count = vehicles.filter(v => v.vehicleType === type).length;
-                          return (
-                            <button
-                              key={type}
-                              onClick={(e) => {
-                                if (isEditMode) {
-                                  e.stopPropagation();
-                                  return;
-                                }
-                                onNavigateToTab('vehicles', `type-${type}`);
-                              }}
-                              disabled={isEditMode}
-                              className={cn(
-                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 transition-colors",
-                                !isEditMode && "hover:bg-sky-200 dark:hover:bg-sky-800/50"
-                              )}
-                            >
-                              <Car className="h-3.5 w-3.5" />
-                              {type}
-                              <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-sky-200/50 dark:bg-sky-800/50">
-                                {count}
-                              </Badge>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </SummaryCard>
-                </DraggableWrapper>
-              );
-            }
-
-            if (tabId === 'contractors') {
-              return (
-                <DraggableWrapper key={tabId}>
-                  <SummaryCard
-                    title="Contractors & Services"
-                    icon={IconComponent}
-                    onClick={() => !isEditMode && onNavigateToTab(tabId)}
-                    isLoading={isLoadingContractors}
-                    clickable={!isEditMode}
-                  >
-                    {contractors.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No contractors added yet</p>
-                    ) : usedContractorTypes.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No service types assigned yet</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {usedContractorTypes.slice(0, 6).map(type => {
-                          const count = contractors.filter(c => c.serviceType === type).length;
-                          return (
-                            <button
-                              key={type}
-                              onClick={(e) => {
-                                if (isEditMode) {
-                                  e.stopPropagation();
-                                  return;
-                                }
-                                onNavigateToTab('contractors', `type-${type}`);
-                              }}
-                              disabled={isEditMode}
-                              className={cn(
-                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 transition-colors",
-                                !isEditMode && "hover:bg-sky-200 dark:hover:bg-sky-800/50"
-                              )}
-                            >
-                              <Users className="h-3.5 w-3.5" />
-                              {type}
-                              <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-sky-200/50 dark:bg-sky-800/50">
-                                {count}
-                              </Badge>
-                            </button>
-                          );
-                        })}
-                        {usedContractorTypes.length > 6 && (
-                          <span className="text-sm text-muted-foreground self-center">
-                            +{usedContractorTypes.length - 6} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </SummaryCard>
-                </DraggableWrapper>
-              );
-            }
-
-            if (tabId === 'maintenance') {
-              return (
-                <DraggableWrapper key={tabId} fullWidth>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {/* Home Maintenance Card */}
-                    <Card 
-                      className={cn(
-                        "bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 transition-shadow group",
-                        !isEditMode && "cursor-pointer hover:shadow-md"
-                      )}
-                      onClick={() => !isEditMode && onNavigateToTab('maintenance', 'home-maintenance')}
-                    >
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center justify-between text-base">
-                          <div className="flex items-center gap-2">
-                            <Home className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-                            <span>Home Maintenance</span>
-                            {upcomingHomeMaintenance.filter(m => m.isOverdue).length > 0 && (
-                              <Badge variant="destructive" className="text-xs">
-                                {upcomingHomeMaintenance.filter(m => m.isOverdue).length} overdue
-                              </Badge>
-                            )}
-                          </div>
-                          {!isEditMode && (
-                            <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors" />
-                          )}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {isLoadingMaintenance ? (
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-3/4" />
-                          </div>
-                        ) : upcomingHomeMaintenance.length === 0 ? (
-                          <p className="text-muted-foreground text-sm">No home maintenance tasks</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {upcomingHomeMaintenance.map(({ maint, dueDate, isOverdue: itemOverdue, isDueSoon: itemDueSoon, appliance }) => (
-                              <div
-                                key={maint.id}
-                                className={`flex items-center justify-between text-sm p-2 rounded-lg ${
-                                  itemOverdue 
-                                    ? 'bg-red-50 dark:bg-red-900/30' 
-                                    : itemDueSoon 
-                                      ? 'bg-amber-50 dark:bg-amber-900/30' 
-                                      : 'bg-slate-50 dark:bg-slate-700/30'
-                                }`}
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
-                                    {maint.description}
-                                  </p>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                    {appliance?.model || 'Unknown'}
-                                  </p>
-                                </div>
-                                <div className="text-right shrink-0 ml-2">
-                                  <p className={`text-xs font-medium ${
-                                    itemOverdue
-                                      ? 'text-red-600 dark:text-red-400'
-                                      : itemDueSoon
-                                        ? 'text-amber-600 dark:text-amber-400'
-                                        : 'text-slate-600 dark:text-slate-300'
-                                  }`}>
-                                    {formatDueDate(dueDate)}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                    {/* Vehicle Maintenance Card */}
-                    <Card 
-                      className={cn(
-                        "bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 transition-shadow group",
-                        !isEditMode && "cursor-pointer hover:shadow-md"
-                      )}
-                      onClick={() => !isEditMode && onNavigateToTab('maintenance', 'vehicle-maintenance')}
-                    >
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center justify-between text-base">
-                          <div className="flex items-center gap-2">
-                            <Car className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-                            <span>Vehicle Maintenance</span>
-                            {upcomingVehicleMaintenance.filter(m => m.isOverdue).length > 0 && (
-                              <Badge variant="destructive" className="text-xs">
-                                {upcomingVehicleMaintenance.filter(m => m.isOverdue).length} overdue
-                              </Badge>
-                            )}
-                          </div>
-                          {!isEditMode && (
-                            <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors" />
-                          )}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {isLoadingMaintenance || isLoadingVehicles ? (
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-3/4" />
-                          </div>
-                        ) : upcomingVehicleMaintenance.length === 0 ? (
-                          <p className="text-muted-foreground text-sm">No vehicle maintenance tasks</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {upcomingVehicleMaintenance.map(({ maint, dueDate, isOverdue: vehOverdue, isDueSoon: vehDueSoon, vehicle }) => (
-                              <div
-                                key={maint.id}
-                                className={`flex items-center justify-between text-sm p-2 rounded-lg ${
-                                  vehOverdue 
-                                    ? 'bg-red-50 dark:bg-red-900/30' 
-                                    : vehDueSoon 
-                                      ? 'bg-amber-50 dark:bg-amber-900/30' 
-                                      : 'bg-slate-50 dark:bg-slate-700/30'
-                                }`}
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
-                                    {maint.description}
-                                  </p>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                    {vehicle?.name || 'Unknown'}
-                                  </p>
-                                </div>
-                                <div className="text-right shrink-0 ml-2">
-                                  <p className={`text-xs font-medium ${
-                                    vehOverdue
-                                      ? 'text-red-600 dark:text-red-400'
-                                      : vehDueSoon
-                                        ? 'text-amber-600 dark:text-amber-400'
-                                        : 'text-slate-600 dark:text-slate-300'
-                                  }`}>
-                                    {formatDueDate(dueDate)}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
-                </DraggableWrapper>
-              );
-            }
-
-            // Coming soon tabs (subscriptions, warranties, projects)
-            return (
-              <DraggableWrapper key={tabId}>
-                <SummaryCard
-                  title={tabId.charAt(0).toUpperCase() + tabId.slice(1)}
-                  icon={IconComponent}
-                  onClick={() => !isEditMode && onNavigateToTab(tabId)}
-                  clickable={!isEditMode}
-                >
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                    <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
-                  </div>
-                </SummaryCard>
-              </DraggableWrapper>
             );
           })}
         </div>
       )}
 
-      {/* Floating dragged card that follows cursor */}
-      {draggedCard && dragPosition && draggedCardSize && (
+      {/* Floating dragged widget that follows cursor */}
+      {draggedWidget && dragPosition && draggedWidgetSize && (
         <div
           className="dashboard-card-dragging rounded-xl bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 overflow-hidden"
           style={{
             left: dragPosition.x - dragOffset.x,
             top: dragPosition.y - dragOffset.y,
-            width: draggedCardSize.width,
-            height: draggedCardSize.height,
+            width: draggedWidgetSize.width,
+            height: draggedWidgetSize.height,
           }}
         >
-          {/* Clone of the card content */}
+          {/* Clone of the widget content */}
           <div className="p-4 h-full flex flex-col">
             <div className="flex items-center gap-2 mb-2">
               {(() => {
-                const IconComponent = TAB_ICONS[draggedCard];
+                const config = getWidgetConfig(draggedWidget);
+                if (!config) return null;
+                const IconComponent = config.icon;
                 return (
                   <>
                     <IconComponent className="h-5 w-5 text-sky-600 dark:text-sky-400" />
                     <span className="font-semibold text-slate-800 dark:text-slate-100">
-                      {getTabDefinition(draggedCard)?.label || draggedCard.charAt(0).toUpperCase() + draggedCard.slice(1)}
+                      {config.label}
                     </span>
                   </>
                 );
@@ -887,7 +924,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   );
 }
 
-interface SummaryCardProps {
+interface WidgetCardProps {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   onClick: () => void;
@@ -897,7 +934,7 @@ interface SummaryCardProps {
   children: React.ReactNode;
 }
 
-function SummaryCard({ title, icon: Icon, onClick, isLoading, badge, clickable = true, children }: SummaryCardProps) {
+function WidgetCard({ title, icon: Icon, onClick, isLoading, badge, clickable = true, children }: WidgetCardProps) {
   return (
     <Card 
       className={`bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 transition-shadow ${
