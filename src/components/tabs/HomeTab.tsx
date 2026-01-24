@@ -413,10 +413,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
               <span className="text-sm font-medium">Done</span>
             </>
           ) : (
-            <>
-              <Pencil className="h-4 w-4" />
-              <span className="text-sm font-medium hidden sm:inline">Reorder</span>
-            </>
+            <Pencil className="h-4 w-4" />
           )}
         </Button>
       )}
