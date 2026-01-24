@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, X, Cloud, RefreshCw, GripVertical, Power } from 'lucide-react';
+import { Plus, X, Cloud, RefreshCw, GripVertical, Lock, Globe, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserPreferences, DEFAULT_BLOSSOM_SERVERS, type BlossomServer } from '@/contexts/UserPreferencesContext';
 import { useToast } from '@/hooks/useToast';
 
@@ -34,6 +38,8 @@ export function BlossomServerManager() {
     addBlossomServer,
     removeBlossomServer,
     toggleBlossomServer,
+    toggleBlossomServerPrivate,
+    hasPrivateBlossomServer,
   } = useUserPreferences();
   const { toast } = useToast();
 
@@ -43,6 +49,7 @@ export function BlossomServerManager() {
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const servers = preferences.blossomServers || DEFAULT_BLOSSOM_SERVERS;
+  const hasPrivateServer = hasPrivateBlossomServer();
 
   // Check connectivity for a single server
   const checkServer = useCallback(async (url: string) => {
@@ -142,7 +149,7 @@ export function BlossomServerManager() {
     
     toast({
       title: 'Server added',
-      description: 'Blossom server has been added to your list.',
+      description: 'Blossom server has been added to your list. Mark it as "Private" if you want to use it for sensitive uploads.',
     });
   };
 
@@ -179,6 +186,17 @@ export function BlossomServerManager() {
     toggleBlossomServer(url);
   };
 
+  const handleTogglePrivate = (url: string) => {
+    toggleBlossomServerPrivate(url);
+    const server = servers.find(s => s.url === url);
+    if (server && !server.isPrivate) {
+      toast({
+        title: 'Server marked as private',
+        description: 'This server will now be used for sensitive file uploads.',
+      });
+    }
+  };
+
   const renderServerUrl = (url: string): string => {
     try {
       const parsed = new URL(url);
@@ -207,13 +225,32 @@ export function BlossomServerManager() {
   };
 
   const enabledCount = servers.filter(s => s.enabled).length;
+  const privateCount = servers.filter(s => s.enabled && s.isPrivate).length;
+
+  // Sort servers with private ones first
+  const sortedServers = [...servers].sort((a, b) => {
+    if (a.isPrivate && !b.isPrivate) return -1;
+    if (!a.isPrivate && b.isPrivate) return 1;
+    return 0;
+  });
 
   return (
     <div className="space-y-4">
+      {/* Warning if no private server configured */}
+      {!hasPrivateServer && (
+        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
+          <Lock className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+            <strong>No private server configured.</strong> File uploads are disabled to protect your privacy. Add a private Blossom server or mark an existing server as "Private" to enable uploads for receipts and documents.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header with refresh button */}
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
-          {enabledCount} of {servers.length} servers enabled
+          {enabledCount} server{enabledCount !== 1 ? 's' : ''} enabled
+          {privateCount > 0 && ` (${privateCount} private)`}
         </span>
         <Button
           variant="ghost"
@@ -229,7 +266,7 @@ export function BlossomServerManager() {
 
       {/* Server List */}
       <div className="space-y-2">
-        {servers.map((server) => {
+        {sortedServers.map((server) => {
           const status = serverStatuses[server.url] || 'unknown';
           const statusInfo = getStatusInfo(status);
           
@@ -237,14 +274,13 @@ export function BlossomServerManager() {
             <div
               key={server.url}
               className={`flex items-center gap-3 p-3 rounded-md border ${
-                server.enabled
-                  ? 'bg-muted/20'
-                  : 'bg-muted/10 opacity-60'
+                server.isPrivate
+                  ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30'
+                  : server.enabled
+                    ? 'bg-muted/20'
+                    : 'bg-muted/10 opacity-60'
               }`}
             >
-              {/* Drag Handle (for future drag-and-drop reordering) */}
-              <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0 cursor-grab" />
-
               {/* Status Indicator */}
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -255,29 +291,81 @@ export function BlossomServerManager() {
                 </TooltipContent>
               </Tooltip>
 
-              <Cloud className="h-4 w-4 shrink-0 text-muted-foreground" />
+              {server.isPrivate ? (
+                <Lock className="h-4 w-4 shrink-0 text-amber-600" />
+              ) : (
+                <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+              )}
               
-              <div className="flex-1 min-w-0">
-                <span className={`font-mono text-sm truncate block ${!server.enabled ? 'line-through' : ''}`} title={server.url}>
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <span className={`font-mono text-sm truncate ${!server.enabled ? 'line-through' : ''}`} title={server.url}>
                   {renderServerUrl(server.url)}
                 </span>
+                {server.isPrivate && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 shrink-0">
+                    <Lock className="h-2.5 w-2.5 mr-0.5" />
+                    Private
+                  </Badge>
+                )}
+                {!server.isPrivate && server.enabled && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground shrink-0">
+                    <Globe className="h-2.5 w-2.5 mr-0.5" />
+                    Public
+                  </Badge>
+                )}
               </div>
 
-              {/* Enable/Disable Toggle */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Switch
-                      checked={server.enabled}
-                      onCheckedChange={() => handleToggleServer(server.url)}
-                      className="data-[state=checked]:bg-green-500 scale-75"
-                    />
+              {/* Settings Popover */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-5 text-muted-foreground hover:text-foreground shrink-0"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64" align="end">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`enabled-${server.url}`} className="text-sm cursor-pointer">
+                        Enabled
+                      </Label>
+                      <Switch
+                        id={`enabled-${server.url}`}
+                        checked={server.enabled}
+                        onCheckedChange={() => handleToggleServer(server.url)}
+                        className="data-[state=checked]:bg-green-500 scale-75"
+                      />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor={`private-${server.url}`} className="text-sm cursor-pointer flex items-center gap-1">
+                          <Lock className="h-3 w-3" />
+                          Private Server
+                        </Label>
+                        <p className="text-[10px] text-muted-foreground">
+                          Trusted for sensitive uploads
+                        </p>
+                      </div>
+                      <Switch
+                        id={`private-${server.url}`}
+                        checked={server.isPrivate}
+                        onCheckedChange={() => handleTogglePrivate(server.url)}
+                        className="data-[state=checked]:bg-amber-500 scale-75"
+                      />
+                    </div>
+                    
+                    <p className="text-[10px] text-muted-foreground border-t pt-2">
+                      Only mark servers as "Private" if you control them or trust them with sensitive data like receipts and documents.
+                    </p>
                   </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  {server.enabled ? 'Enabled - click to disable' : 'Disabled - click to enable'}
-                </TooltipContent>
-              </Tooltip>
+                </PopoverContent>
+              </Popover>
 
               {/* Remove Button */}
               <Button

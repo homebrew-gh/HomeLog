@@ -39,10 +39,13 @@ export const AVAILABLE_TABS: TabDefinition[] = [
 export interface BlossomServer {
   url: string;
   enabled: boolean;
+  /** Whether this server is trusted for sensitive/private uploads (receipts, documents, etc.) */
+  isPrivate: boolean;
 }
 
+// Default server is public - users must configure a private server for sensitive uploads
 export const DEFAULT_BLOSSOM_SERVERS: BlossomServer[] = [
-  { url: 'https://blossom.primal.net/', enabled: true },
+  { url: 'https://blossom.primal.net/', enabled: true, isPrivate: false },
 ];
 
 export interface UserPreferences {
@@ -105,11 +108,14 @@ interface UserPreferencesContextType {
   hideDefaultVehicleType: (type: string) => void;
   restoreDefaultVehicleType: (type: string) => void;
   // Blossom server actions
-  addBlossomServer: (url: string) => void;
+  addBlossomServer: (url: string, isPrivate?: boolean) => void;
   removeBlossomServer: (url: string) => void;
   toggleBlossomServer: (url: string) => void;
+  toggleBlossomServerPrivate: (url: string) => void;
   reorderBlossomServers: (servers: BlossomServer[]) => void;
   getEnabledBlossomServers: () => string[];
+  getPrivateBlossomServers: () => string[];
+  hasPrivateBlossomServer: () => boolean;
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | null>(null);
@@ -408,14 +414,14 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     return normalized;
   };
 
-  const addBlossomServer = useCallback((url: string) => {
+  const addBlossomServer = useCallback((url: string, isPrivate: boolean = false) => {
     const normalized = normalizeBlossomUrl(url);
     updatePreferences((prev) => {
       const currentServers = prev.blossomServers || DEFAULT_BLOSSOM_SERVERS;
       if (currentServers.some(s => s.url === normalized)) return prev;
       return {
         ...prev,
-        blossomServers: [...currentServers, { url: normalized, enabled: true }],
+        blossomServers: [...currentServers, { url: normalized, enabled: true, isPrivate }],
       };
     });
   }, [updatePreferences]);
@@ -436,6 +442,15 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  const toggleBlossomServerPrivate = useCallback((url: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      blossomServers: (prev.blossomServers || DEFAULT_BLOSSOM_SERVERS).map(s =>
+        s.url === url ? { ...s, isPrivate: !s.isPrivate } : s
+      ),
+    }));
+  }, [updatePreferences]);
+
   const reorderBlossomServers = useCallback((servers: BlossomServer[]) => {
     updatePreferences((prev) => ({
       ...prev,
@@ -448,6 +463,16 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     return servers.filter(s => s.enabled).map(s => s.url);
   }, [localPreferences.blossomServers]);
 
+  const getPrivateBlossomServers = useCallback((): string[] => {
+    const servers = localPreferences.blossomServers || DEFAULT_BLOSSOM_SERVERS;
+    return servers.filter(s => s.enabled && s.isPrivate).map(s => s.url);
+  }, [localPreferences.blossomServers]);
+
+  const hasPrivateBlossomServer = useCallback((): boolean => {
+    const servers = localPreferences.blossomServers || DEFAULT_BLOSSOM_SERVERS;
+    return servers.some(s => s.enabled && s.isPrivate);
+  }, [localPreferences.blossomServers]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -458,6 +483,12 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Normalize preferences to ensure all fields have default values
+  // Also migrate old blossom servers that don't have isPrivate flag
+  const normalizedBlossomServers = (localPreferences.blossomServers || DEFAULT_BLOSSOM_SERVERS).map(s => ({
+    ...s,
+    isPrivate: s.isPrivate ?? false, // Default to false for servers without the flag
+  }));
+
   const normalizedPreferences: UserPreferences = {
     activeTabs: localPreferences.activeTabs || [],
     activeTab: localPreferences.activeTab || 'home',
@@ -467,7 +498,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     hiddenDefaultRooms: localPreferences.hiddenDefaultRooms || [],
     customVehicleTypes: localPreferences.customVehicleTypes || [],
     hiddenDefaultVehicleTypes: localPreferences.hiddenDefaultVehicleTypes || [],
-    blossomServers: localPreferences.blossomServers || DEFAULT_BLOSSOM_SERVERS,
+    blossomServers: normalizedBlossomServers,
     version: localPreferences.version || 1,
   };
 
@@ -497,8 +528,11 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         addBlossomServer,
         removeBlossomServer,
         toggleBlossomServer,
+        toggleBlossomServerPrivate,
         reorderBlossomServers,
         getEnabledBlossomServers,
+        getPrivateBlossomServers,
+        hasPrivateBlossomServer,
       }}
     >
       {children}

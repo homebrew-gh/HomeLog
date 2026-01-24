@@ -137,24 +137,30 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                   </AlertDescription>
                 </Alert>
 
+                {/* Public vs Private Warning */}
+                <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
+                  <Lock className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+                    <strong>Privacy Notice:</strong> Home Log stores sensitive data like receipts, warranty documents, and appliance manuals. To protect your privacy, file uploads are only allowed to servers you've marked as "Private". Public Blossom servers (like Primal's free tier) store files openly and should not be used for sensitive documents.
+                  </AlertDescription>
+                </Alert>
+
                 <div className="rounded-lg border border-dashed border-sky-300 dark:border-sky-700 bg-sky-50/50 dark:bg-sky-950/30 p-4 space-y-3">
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Key Features:
+                    Public vs Private Servers:
                   </p>
                   <ul className="text-sm text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1.5">
-                    <li><strong>Decentralized storage:</strong> Your media isn't controlled by any single company</li>
-                    <li><strong>Content-addressed:</strong> Files are identified by their hash, ensuring integrity</li>
-                    <li><strong>Signed uploads:</strong> Only you can upload to your account using your Nostr keys</li>
-                    <li><strong>Multiple servers:</strong> Files can be mirrored across servers for redundancy</li>
+                    <li><strong>Public servers:</strong> Anyone can view uploaded files. Good for sharing photos publicly, but NOT for receipts or documents.</li>
+                    <li><strong>Private servers:</strong> Only you can access your files. Use these for sensitive uploads like receipts, warranties, and documents.</li>
                   </ul>
                   
                   <Separator className="my-3" />
                   
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Hosted Blossom Services:
+                    Private Blossom Services:
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-500 mb-2">
-                    These services offer paid Blossom hosting with various storage tiers:
+                    These paid services offer private storage for your files:
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <a 
@@ -173,17 +179,7 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline"
                     >
-                      nostr.build
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                    <span className="text-slate-300 dark:text-slate-600">•</span>
-                    <a 
-                      href="https://blossom.primal.net" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline"
-                    >
-                      Primal (free tier)
+                      nostr.build (paid plans)
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
@@ -191,10 +187,10 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                   <Separator className="my-3" />
                   
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Self-Hosted Options:
+                    Self-Hosted Options (Most Private):
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-500 mb-2">
-                    Run your own Blossom server for full control:
+                    Run your own Blossom server for full control over your data:
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <a 
@@ -217,6 +213,17 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
+
+                  <Separator className="my-3" />
+
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    How to Enable File Uploads:
+                  </p>
+                  <ol className="text-sm text-slate-600 dark:text-slate-400 list-decimal list-inside space-y-1.5">
+                    <li>Add a Blossom server URL below (or use an existing one)</li>
+                    <li>Click the settings icon on the server</li>
+                    <li>Enable "Private Server" for servers you trust with sensitive data</li>
+                  </ol>
                 </div>
               </CollapsibleContent>
             </Collapsible>
