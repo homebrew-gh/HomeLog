@@ -1,5 +1,7 @@
 import { useAppliances } from './useAppliances';
 import { useMaintenance } from './useMaintenance';
+import { useVehicles } from './useVehicles';
+import { useContractors } from './useContractors';
 import type { TabId } from '@/contexts/TabPreferencesContext';
 
 export interface TabDataInfo {
@@ -15,6 +17,8 @@ export interface TabDataInfo {
 export function useTabData(tabId: TabId): TabDataInfo {
   const { data: appliances = [] } = useAppliances();
   const { data: maintenance = [] } = useMaintenance();
+  const { data: vehicles = [] } = useVehicles();
+  const { data: contractors = [] } = useContractors();
 
   switch (tabId) {
     case 'appliances':
@@ -33,15 +37,23 @@ export function useTabData(tabId: TabId): TabDataInfo {
         itemNamePlural: 'maintenance schedules',
       };
 
-    // These tabs don't have data yet (coming soon)
     case 'vehicles':
       return {
-        hasData: false,
-        count: 0,
+        hasData: vehicles.length > 0,
+        count: vehicles.length,
         itemName: 'vehicle',
         itemNamePlural: 'vehicles',
       };
 
+    case 'contractors':
+      return {
+        hasData: contractors.length > 0,
+        count: contractors.length,
+        itemName: 'contractor',
+        itemNamePlural: 'contractors',
+      };
+
+    // These tabs don't have data yet (coming soon)
     case 'subscriptions':
       return {
         hasData: false,
@@ -56,14 +68,6 @@ export function useTabData(tabId: TabId): TabDataInfo {
         count: 0,
         itemName: 'warranty',
         itemNamePlural: 'warranties',
-      };
-
-    case 'contractors':
-      return {
-        hasData: false,
-        count: 0,
-        itemName: 'contractor',
-        itemNamePlural: 'contractors',
       };
 
     case 'projects':
@@ -90,6 +94,8 @@ export function useTabData(tabId: TabId): TabDataInfo {
 export function useAllTabsData(tabIds: TabId[]): Record<TabId, TabDataInfo> {
   const { data: appliances = [] } = useAppliances();
   const { data: maintenance = [] } = useMaintenance();
+  const { data: vehicles = [] } = useVehicles();
+  const { data: contractors = [] } = useContractors();
 
   const result: Record<string, TabDataInfo> = {};
 
@@ -110,6 +116,24 @@ export function useAllTabsData(tabIds: TabId[]): Record<TabId, TabDataInfo> {
           count: maintenance.length,
           itemName: 'maintenance schedule',
           itemNamePlural: 'maintenance schedules',
+        };
+        break;
+
+      case 'vehicles':
+        result[tabId] = {
+          hasData: vehicles.length > 0,
+          count: vehicles.length,
+          itemName: 'vehicle',
+          itemNamePlural: 'vehicles',
+        };
+        break;
+
+      case 'contractors':
+        result[tabId] = {
+          hasData: contractors.length > 0,
+          count: contractors.length,
+          itemName: 'contractor',
+          itemNamePlural: 'contractors',
         };
         break;
 
