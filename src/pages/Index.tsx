@@ -37,7 +37,10 @@ const Index = () => {
 
   const { user } = useCurrentUser();
   const { isProfileLoading } = useLoggedInAccounts();
-  const { preferences, setActiveTab } = useTabPreferences();
+  const { preferences, setActiveTab, isLoading: isPreferencesLoading } = useTabPreferences();
+
+  // Combined loading state - show loading animation until both profile AND preferences are fully loaded
+  const isDataLoading = isProfileLoading || (!!user && isPreferencesLoading);
 
   // Dialog states
   const [roomManagementOpen, setRoomManagementOpen] = useState(false);
@@ -105,7 +108,7 @@ const Index = () => {
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             {/* Left - Menu & Logo */}
             <div className="flex items-center gap-3">
-              {user && !isProfileLoading && (
+              {user && !isDataLoading && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full">
@@ -163,19 +166,19 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Tab Navigation - Only shown when logged in and profile is loaded */}
-        {user && !isProfileLoading && (
+        {/* Tab Navigation - Only shown when logged in and all data is loaded */}
+        {user && !isDataLoading && (
           <TabNavigation onAddTabClick={() => setAddTabDialogOpen(true)} />
         )}
       </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {isProfileLoading ? (
-          // Loading profile from relay
+        {isDataLoading ? (
+          // Loading profile and preferences from relay
           <LoadingAnimation 
             size="md"
-            message="Loading your profile..."
+            message={isProfileLoading ? "Loading your profile..." : "Loading your preferences..."}
             subMessage="Fetching your data from the relay"
           />
         ) : !user ? (
