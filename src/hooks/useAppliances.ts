@@ -100,23 +100,37 @@ export function useAppliances() {
   return useQuery({
     queryKey: ['appliances', user?.pubkey],
     queryFn: async (c) => {
-      if (!user?.pubkey) return [];
+      if (!user?.pubkey) {
+        console.log('[useAppliances] No user pubkey, returning empty array');
+        return [];
+      }
+
+      console.log('[useAppliances] Fetching appliances for pubkey:', user.pubkey);
 
       // Longer timeout for PWA mode where network might be slower
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(10000)]);
 
       // Query both appliance events and deletion events in one request
-      const events = await nostr.query(
-        [
-          { kinds: [APPLIANCE_KIND], authors: [user.pubkey] },
-          { kinds: [5], authors: [user.pubkey] },
-        ],
-        { signal }
-      );
+      let events;
+      try {
+        events = await nostr.query(
+          [
+            { kinds: [APPLIANCE_KIND], authors: [user.pubkey] },
+            { kinds: [5], authors: [user.pubkey] },
+          ],
+          { signal }
+        );
+        console.log('[useAppliances] Received events:', events.length);
+      } catch (error) {
+        console.error('[useAppliances] Query failed:', error);
+        throw error;
+      }
 
       // Separate appliance events from deletion events
       const applianceEvents = events.filter(e => e.kind === APPLIANCE_KIND);
       const deletionEvents = events.filter(e => e.kind === 5);
+
+      console.log('[useAppliances] Appliance events:', applianceEvents.length, 'Deletion events:', deletionEvents.length);
 
       // Get the set of deleted appliance IDs
       const deletedIds = getDeletedApplianceIds(deletionEvents, user.pubkey);
@@ -145,6 +159,8 @@ export function useAppliances() {
           }
         }
       }
+
+      console.log('[useAppliances] Parsed appliances:', appliances.length);
 
       // Sort by creation date (newest first)
       return appliances.sort((a, b) => b.createdAt - a.createdAt);

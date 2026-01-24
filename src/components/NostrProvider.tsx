@@ -28,8 +28,11 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
 
   // Initialize NPool only once
   if (!pool.current) {
+    console.log('[NostrProvider] Initializing NPool with relays:', relayMetadata.current.relays);
+    
     pool.current = new NPool({
       open(url: string) {
+        console.log('[NostrProvider] Opening relay connection:', url);
         return new NRelay1(url);
       },
       reqRouter(filters: NostrFilter[]) {
@@ -39,6 +42,8 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
         const readRelays = relayMetadata.current.relays
           .filter(r => r.read)
           .map(r => r.url);
+
+        console.log('[NostrProvider] Routing query to read relays:', readRelays);
 
         for (const url of readRelays) {
           routes.set(url, filters);
@@ -53,6 +58,8 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
           .map(r => r.url);
 
         const allRelays = new Set<string>(writeRelays);
+
+        console.log('[NostrProvider] Routing event to write relays:', [...allRelays]);
 
         return [...allRelays];
       },

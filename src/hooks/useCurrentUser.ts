@@ -25,12 +25,15 @@ export function useCurrentUser() {
   const users = useMemo(() => {
     const users: NUser[] = [];
 
+    console.log('[useCurrentUser] Processing logins:', logins.length);
+
     for (const login of logins) {
       try {
         const user = loginToUser(login);
         users.push(user);
+        console.log('[useCurrentUser] Processed login:', login.type, 'pubkey:', user.pubkey);
       } catch (error) {
-        console.warn('Skipped invalid login', login.id, error);
+        console.warn('[useCurrentUser] Skipped invalid login', login.id, error);
       }
     }
 
@@ -39,6 +42,8 @@ export function useCurrentUser() {
 
   const user = users[0] as NUser | undefined;
   const author = useAuthor(user?.pubkey);
+
+  console.log('[useCurrentUser] Current user:', user?.pubkey ?? 'none');
 
   return {
     user,
