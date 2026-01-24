@@ -112,11 +112,11 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     const params = new Map<WidgetId, { delay: number; duration: number }>();
     const allWidgets: WidgetId[] = ['appliances', 'vehicles', 'contractors', 'home-maintenance', 'vehicle-maintenance', 'subscriptions', 'warranties', 'projects'];
     allWidgets.forEach(widget => {
-      // Random negative delay (-0.05s to -0.75s) to offset animation start
-      // Random duration (0.22s to 0.33s) for slight speed variation
+      // Random negative delay (-0.06s to -0.94s) to offset animation start
+      // Random duration (0.275s to 0.41s) for slight speed variation (25% slower than original)
       params.set(widget, {
-        delay: -(Math.random() * 0.7 + 0.05), // -0.05s to -0.75s
-        duration: Math.random() * 0.11 + 0.22, // 0.22s to 0.33s
+        delay: -(Math.random() * 0.88 + 0.06), // -0.06s to -0.94s
+        duration: Math.random() * 0.135 + 0.275, // 0.275s to 0.41s
       });
     });
     return params;
