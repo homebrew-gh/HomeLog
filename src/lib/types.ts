@@ -120,8 +120,66 @@ export const FUEL_TYPES = [
   { value: 'other', label: 'Other' },
 ] as const;
 
+// Contractor/Service Provider Types
+export const DEFAULT_CONTRACTOR_TYPES = [
+  'Plumber',
+  'Electrician',
+  'HVAC',
+  'Landscaping',
+  'Roofing',
+  'General Contractor',
+  'Pest Control',
+  'Cleaning Service',
+  'Pool/Spa Service',
+  'Appliance Repair',
+  'Handyman',
+  'Painting',
+  'Flooring',
+  'Tree Service',
+  'Septic/Sewer',
+  'Other',
+] as const;
+
+export type DefaultContractorType = typeof DEFAULT_CONTRACTOR_TYPES[number];
+
+export interface Invoice {
+  url: string;
+  date: string; // MM/DD/YYYY format
+  amount?: string;
+  description?: string;
+}
+
+export interface Contractor {
+  id: string;
+  serviceType: string;
+  // Basic info
+  name: string; // Company or individual name
+  contactName?: string; // Primary contact person
+  // Contact methods
+  phone?: string;
+  email?: string;
+  website?: string;
+  // Address
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  // Business details
+  licenseNumber?: string;
+  insuranceInfo?: string;
+  // Service history
+  invoices: Invoice[]; // Date-stamped invoices (uploaded PDFs/images)
+  // Rating/Notes
+  rating?: number; // 1-5 stars
+  notes?: string;
+  // Metadata
+  pubkey: string;
+  createdAt: number;
+}
+
 // Kind numbers for our custom events
 export const APPLIANCE_KIND = 32627;
 export const VEHICLE_KIND = 32628;
+export const CONTRACTOR_KIND = 37003;
 export const MAINTENANCE_KIND = 30229;
 export const MAINTENANCE_COMPLETION_KIND = 9413;

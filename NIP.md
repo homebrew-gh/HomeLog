@@ -144,6 +144,103 @@ Custom vehicle types can also be used.
 
 ---
 
+## Kind 37003: Contractor/Service Provider
+
+An addressable event representing a contractor or service provider.
+
+### Format
+
+```json
+{
+  "kind": 37003,
+  "content": "",
+  "tags": [
+    ["d", "<unique-identifier>"],
+    ["alt", "Contractor: <name>"],
+    ["name", "<business or contractor name>"],
+    ["service_type", "<service type>"],
+    ["contact_name", "<primary contact person>"],
+    ["phone", "<phone number>"],
+    ["email", "<email address>"],
+    ["website", "<website URL>"],
+    ["address", "<street address>"],
+    ["city", "<city>"],
+    ["state", "<state>"],
+    ["zip_code", "<zip code>"],
+    ["license_number", "<license number>"],
+    ["insurance_info", "<insurance details>"],
+    ["rating", "<1-5>"],
+    ["invoice", "<url>", "<date>", "<amount>", "<description>"],
+    ["notes", "<notes>"]
+  ]
+}
+```
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `d` | Yes | Unique identifier (UUID) for the contractor |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `name` | Yes | Business or contractor name |
+| `service_type` | Yes | Type of service (see Service Types below) |
+| `contact_name` | No | Primary contact person |
+| `phone` | No | Phone number |
+| `email` | No | Email address |
+| `website` | No | Website URL |
+| `address` | No | Street address |
+| `city` | No | City |
+| `state` | No | State |
+| `zip_code` | No | Zip/postal code |
+| `license_number` | No | Contractor license number |
+| `insurance_info` | No | Insurance provider and policy details |
+| `rating` | No | Rating from 1-5 stars |
+| `invoice` | No | Invoice/receipt with format: url, date (MM/DD/YYYY), amount (optional), description (optional). Can have multiple. |
+| `notes` | No | Additional notes |
+
+### Invoice Tag Format
+
+The `invoice` tag stores uploaded invoices/receipts with metadata:
+
+```
+["invoice", "<url>", "<date>", "<amount>", "<description>"]
+```
+
+- `url` (required): URL to the uploaded invoice file (PDF or image)
+- `date` (required): Date of the invoice in MM/DD/YYYY format
+- `amount` (optional): Invoice amount (e.g., "$150.00")
+- `description` (optional): Brief description of the service
+
+Multiple invoice tags can be present for a single contractor to track service history.
+
+### Service Types
+
+Standard service types include:
+- Plumber
+- Electrician
+- HVAC
+- Landscaping
+- Roofing
+- General Contractor
+- Pest Control
+- Cleaning Service
+- Pool/Spa Service
+- Appliance Repair
+- Handyman
+- Painting
+- Flooring
+- Tree Service
+- Septic/Sewer
+- Other
+
+Custom service types can also be used.
+
+### Privacy Note
+
+Invoice files are considered sensitive documents and should only be uploaded to private/trusted media servers. The application enforces this by requiring a private Blossom server to be configured before allowing invoice uploads.
+
+---
+
 ## Kind 30229: Maintenance Schedule
 
 An addressable event representing a maintenance schedule for an appliance or vehicle.

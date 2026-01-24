@@ -55,6 +55,7 @@ export interface UserPreferences {
   // View preferences
   appliancesViewMode: 'list' | 'card';
   vehiclesViewMode: 'list' | 'card';
+  contractorsViewMode: 'list' | 'card';
   // Custom rooms
   customRooms: string[];
   // Hidden default rooms (allows users to "delete" default rooms)
@@ -63,6 +64,10 @@ export interface UserPreferences {
   customVehicleTypes: string[];
   // Hidden default vehicle types
   hiddenDefaultVehicleTypes: string[];
+  // Custom contractor/service types
+  customContractorTypes: string[];
+  // Hidden default contractor types
+  hiddenDefaultContractorTypes: string[];
   // Blossom media servers
   blossomServers: BlossomServer[];
   // Version for future migrations
@@ -74,10 +79,13 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   activeTab: 'home',
   appliancesViewMode: 'card',
   vehiclesViewMode: 'card',
+  contractorsViewMode: 'card',
   customRooms: [],
   hiddenDefaultRooms: [],
   customVehicleTypes: [],
   hiddenDefaultVehicleTypes: [],
+  customContractorTypes: [],
+  hiddenDefaultContractorTypes: [],
   blossomServers: DEFAULT_BLOSSOM_SERVERS,
   version: 1,
 };
@@ -97,6 +105,7 @@ interface UserPreferencesContextType {
   // View mode actions
   setAppliancesViewMode: (mode: 'list' | 'card') => void;
   setVehiclesViewMode: (mode: 'list' | 'card') => void;
+  setContractorsViewMode: (mode: 'list' | 'card') => void;
   // Room actions
   addCustomRoom: (room: string) => void;
   removeCustomRoom: (room: string) => void;
@@ -107,6 +116,11 @@ interface UserPreferencesContextType {
   removeCustomVehicleType: (type: string) => void;
   hideDefaultVehicleType: (type: string) => void;
   restoreDefaultVehicleType: (type: string) => void;
+  // Contractor type actions
+  addCustomContractorType: (type: string) => void;
+  removeCustomContractorType: (type: string) => void;
+  hideDefaultContractorType: (type: string) => void;
+  restoreDefaultContractorType: (type: string) => void;
   // Blossom server actions
   addBlossomServer: (url: string, isPrivate?: boolean) => void;
   removeBlossomServer: (url: string) => void;
@@ -320,6 +334,13 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  const setContractorsViewMode = useCallback((mode: 'list' | 'card') => {
+    updatePreferences((prev) => ({
+      ...prev,
+      contractorsViewMode: mode,
+    }));
+  }, [updatePreferences]);
+
   // Room actions
   const addCustomRoom = useCallback((room: string) => {
     updatePreferences((prev) => {
@@ -397,6 +418,46 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     updatePreferences((prev) => ({
       ...prev,
       hiddenDefaultVehicleTypes: (prev.hiddenDefaultVehicleTypes || []).filter(t => t !== type),
+    }));
+  }, [updatePreferences]);
+
+  // Contractor type actions
+  const addCustomContractorType = useCallback((type: string) => {
+    updatePreferences((prev) => {
+      const currentCustomTypes = prev.customContractorTypes || [];
+      const currentHiddenTypes = prev.hiddenDefaultContractorTypes || [];
+      if (currentCustomTypes.includes(type)) return prev;
+      return {
+        ...prev,
+        customContractorTypes: [...currentCustomTypes, type],
+        // If adding a type that was a hidden default, remove it from hidden
+        hiddenDefaultContractorTypes: currentHiddenTypes.filter(t => t !== type),
+      };
+    });
+  }, [updatePreferences]);
+
+  const removeCustomContractorType = useCallback((type: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      customContractorTypes: (prev.customContractorTypes || []).filter(t => t !== type),
+    }));
+  }, [updatePreferences]);
+
+  const hideDefaultContractorType = useCallback((type: string) => {
+    updatePreferences((prev) => {
+      const currentHiddenTypes = prev.hiddenDefaultContractorTypes || [];
+      if (currentHiddenTypes.includes(type)) return prev;
+      return {
+        ...prev,
+        hiddenDefaultContractorTypes: [...currentHiddenTypes, type],
+      };
+    });
+  }, [updatePreferences]);
+
+  const restoreDefaultContractorType = useCallback((type: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      hiddenDefaultContractorTypes: (prev.hiddenDefaultContractorTypes || []).filter(t => t !== type),
     }));
   }, [updatePreferences]);
 
@@ -494,10 +555,13 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     activeTab: localPreferences.activeTab || 'home',
     appliancesViewMode: localPreferences.appliancesViewMode || 'card',
     vehiclesViewMode: localPreferences.vehiclesViewMode || 'card',
+    contractorsViewMode: localPreferences.contractorsViewMode || 'card',
     customRooms: localPreferences.customRooms || [],
     hiddenDefaultRooms: localPreferences.hiddenDefaultRooms || [],
     customVehicleTypes: localPreferences.customVehicleTypes || [],
     hiddenDefaultVehicleTypes: localPreferences.hiddenDefaultVehicleTypes || [],
+    customContractorTypes: localPreferences.customContractorTypes || [],
+    hiddenDefaultContractorTypes: localPreferences.hiddenDefaultContractorTypes || [],
     blossomServers: normalizedBlossomServers,
     version: localPreferences.version || 1,
   };
@@ -517,6 +581,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         getAvailableTabs,
         setAppliancesViewMode,
         setVehiclesViewMode,
+        setContractorsViewMode,
         addCustomRoom,
         removeCustomRoom,
         hideDefaultRoom,
@@ -525,6 +590,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         removeCustomVehicleType,
         hideDefaultVehicleType,
         restoreDefaultVehicleType,
+        addCustomContractorType,
+        removeCustomContractorType,
+        hideDefaultContractorType,
+        restoreDefaultContractorType,
         addBlossomServer,
         removeBlossomServer,
         toggleBlossomServer,
