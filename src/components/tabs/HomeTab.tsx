@@ -401,7 +401,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
           size="sm"
           onClick={() => setIsEditMode(!isEditMode)}
           className={cn(
-            "fixed right-4 top-32 z-40 gap-1.5 px-3 py-2 h-auto rounded-lg shadow-lg",
+            "fixed right-4 top-40 z-40 gap-1.5 px-3 py-2 h-auto rounded-lg shadow-lg",
             isEditMode
               ? "bg-rose-600 text-white hover:bg-rose-700 border border-rose-700"
               : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700"
