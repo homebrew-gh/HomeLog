@@ -142,6 +142,24 @@ export const DEFAULT_CONTRACTOR_TYPES = [
 
 export type DefaultContractorType = typeof DEFAULT_CONTRACTOR_TYPES[number];
 
+// Subscription Types
+export const DEFAULT_SUBSCRIPTION_TYPES = [
+  'Streaming',
+  'Software',
+  'Health/Wellness',
+  'Shopping',
+  'Vehicle',
+  'Food',
+  'Gaming',
+  'News/Media',
+  'Music',
+  'Home',
+  'Finance',
+  'Pet Care',
+] as const;
+
+export type DefaultSubscriptionType = typeof DEFAULT_SUBSCRIPTION_TYPES[number];
+
 export interface Invoice {
   url: string;
   date: string; // MM/DD/YYYY format

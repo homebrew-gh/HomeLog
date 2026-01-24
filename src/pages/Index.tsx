@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car, Shield, HelpCircle, Cloud } from 'lucide-react';
+import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car, Shield, HelpCircle, Cloud, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { RoomManagementDialog } from '@/components/RoomManagementDialog';
 import { RelayManagementDialog } from '@/components/RelayManagementDialog';
 import { VehicleTypeManagementDialog } from '@/components/VehicleTypeManagementDialog';
+import { SubscriptionTypeManagementDialog } from '@/components/SubscriptionTypeManagementDialog';
 import { EncryptionSettingsDialog } from '@/components/EncryptionSettingsDialog';
 import { DonateSection } from '@/components/DonateSection';
 import { TabNavigation } from '@/components/TabNavigation';
@@ -101,6 +102,7 @@ const Index = () => {
   const [relayManagementOpen, setRelayManagementOpen] = useState(false);
   const [relayManagementDefaultTab, setRelayManagementDefaultTab] = useState<'relays' | 'media'>('relays');
   const [vehicleTypeManagementOpen, setVehicleTypeManagementOpen] = useState(false);
+  const [subscriptionTypeManagementOpen, setSubscriptionTypeManagementOpen] = useState(false);
   const [encryptionSettingsOpen, setEncryptionSettingsOpen] = useState(false);
   const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
   
@@ -178,6 +180,10 @@ const Index = () => {
                     <DropdownMenuItem onClick={() => setVehicleTypeManagementOpen(true)}>
                       <Car className="h-4 w-4 mr-2" />
                       Manage Vehicle Types
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSubscriptionTypeManagementOpen(true)}>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Subscription Types
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Privacy & Security</DropdownMenuLabel>
@@ -353,6 +359,11 @@ const Index = () => {
       <VehicleTypeManagementDialog
         isOpen={vehicleTypeManagementOpen}
         onClose={() => setVehicleTypeManagementOpen(false)}
+      />
+
+      <SubscriptionTypeManagementDialog
+        isOpen={subscriptionTypeManagementOpen}
+        onClose={() => setSubscriptionTypeManagementOpen(false)}
       />
 
       <EncryptionSettingsDialog

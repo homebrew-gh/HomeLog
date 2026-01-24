@@ -70,6 +70,10 @@ export interface UserPreferences {
   customContractorTypes: string[];
   // Hidden default contractor types
   hiddenDefaultContractorTypes: string[];
+  // Custom subscription types
+  customSubscriptionTypes: string[];
+  // Hidden default subscription types
+  hiddenDefaultSubscriptionTypes: string[];
   // Blossom media servers
   blossomServers: BlossomServer[];
   // Version for future migrations
@@ -89,6 +93,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   hiddenDefaultVehicleTypes: [],
   customContractorTypes: [],
   hiddenDefaultContractorTypes: [],
+  customSubscriptionTypes: [],
+  hiddenDefaultSubscriptionTypes: [],
   blossomServers: DEFAULT_BLOSSOM_SERVERS,
   version: 1,
 };
@@ -127,6 +133,11 @@ interface UserPreferencesContextType {
   removeCustomContractorType: (type: string) => void;
   hideDefaultContractorType: (type: string) => void;
   restoreDefaultContractorType: (type: string) => void;
+  // Subscription type actions
+  addCustomSubscriptionType: (type: string) => void;
+  removeCustomSubscriptionType: (type: string) => void;
+  hideDefaultSubscriptionType: (type: string) => void;
+  restoreDefaultSubscriptionType: (type: string) => void;
   // Blossom server actions
   addBlossomServer: (url: string, isPrivate?: boolean) => void;
   removeBlossomServer: (url: string) => void;
@@ -497,6 +508,46 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  // Subscription type actions
+  const addCustomSubscriptionType = useCallback((type: string) => {
+    updatePreferences((prev) => {
+      const currentCustomTypes = prev.customSubscriptionTypes || [];
+      const currentHiddenTypes = prev.hiddenDefaultSubscriptionTypes || [];
+      if (currentCustomTypes.includes(type)) return prev;
+      return {
+        ...prev,
+        customSubscriptionTypes: [...currentCustomTypes, type],
+        // If adding a type that was a hidden default, remove it from hidden
+        hiddenDefaultSubscriptionTypes: currentHiddenTypes.filter(t => t !== type),
+      };
+    });
+  }, [updatePreferences]);
+
+  const removeCustomSubscriptionType = useCallback((type: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      customSubscriptionTypes: (prev.customSubscriptionTypes || []).filter(t => t !== type),
+    }));
+  }, [updatePreferences]);
+
+  const hideDefaultSubscriptionType = useCallback((type: string) => {
+    updatePreferences((prev) => {
+      const currentHiddenTypes = prev.hiddenDefaultSubscriptionTypes || [];
+      if (currentHiddenTypes.includes(type)) return prev;
+      return {
+        ...prev,
+        hiddenDefaultSubscriptionTypes: [...currentHiddenTypes, type],
+      };
+    });
+  }, [updatePreferences]);
+
+  const restoreDefaultSubscriptionType = useCallback((type: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      hiddenDefaultSubscriptionTypes: (prev.hiddenDefaultSubscriptionTypes || []).filter(t => t !== type),
+    }));
+  }, [updatePreferences]);
+
   // Blossom server actions
   const normalizeBlossomUrl = (url: string): string => {
     let normalized = url.trim();
@@ -599,6 +650,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     hiddenDefaultVehicleTypes: localPreferences.hiddenDefaultVehicleTypes || [],
     customContractorTypes: localPreferences.customContractorTypes || [],
     hiddenDefaultContractorTypes: localPreferences.hiddenDefaultContractorTypes || [],
+    customSubscriptionTypes: localPreferences.customSubscriptionTypes || [],
+    hiddenDefaultSubscriptionTypes: localPreferences.hiddenDefaultSubscriptionTypes || [],
     blossomServers: normalizedBlossomServers,
     version: localPreferences.version || 1,
   };
@@ -633,6 +686,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         removeCustomContractorType,
         hideDefaultContractorType,
         restoreDefaultContractorType,
+        addCustomSubscriptionType,
+        removeCustomSubscriptionType,
+        hideDefaultSubscriptionType,
+        restoreDefaultSubscriptionType,
         addBlossomServer,
         removeBlossomServer,
         toggleBlossomServer,
