@@ -393,10 +393,36 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 relative">
+      {/* Floating Reorder/Done Button - fixed in right margin */}
+      {hasActiveTabs && activeWidgets.length > 1 && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsEditMode(!isEditMode)}
+          className={cn(
+            "fixed right-4 top-1/2 -translate-y-1/2 z-40 gap-1.5 px-3 py-2 h-auto rounded-lg transition-all duration-200 shadow-lg",
+            isEditMode
+              ? "bg-sky-600 text-white hover:bg-sky-700 animate-pulse"
+              : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700"
+          )}
+        >
+          {isEditMode ? (
+            <>
+              <Check className="h-4 w-4" />
+              <span className="text-sm font-medium">Done</span>
+            </>
+          ) : (
+            <>
+              <Pencil className="h-4 w-4" />
+              <span className="text-sm font-medium hidden sm:inline">Reorder</span>
+            </>
+          )}
+        </Button>
+      )}
+
       {/* Welcome / Dashboard Header */}
-      <div className="flex items-center justify-between py-4">
-        <div className="flex-1" />
+      <div className="flex items-center justify-center py-4">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">
             <Home className="h-6 w-6 text-sky-600 dark:text-sky-400" />
@@ -405,33 +431,6 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
           <p className="text-muted-foreground mt-1">
             Overview of your home management
           </p>
-        </div>
-        <div className="flex-1 flex justify-end">
-          {hasActiveTabs && activeWidgets.length > 1 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsEditMode(!isEditMode)}
-              className={cn(
-                "gap-1.5 px-3 py-2 h-auto rounded-lg transition-all duration-200",
-                isEditMode
-                  ? "bg-sky-600 text-white hover:bg-sky-700"
-                  : "text-slate-500 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-800 hover:text-sky-600 dark:hover:text-sky-400"
-              )}
-            >
-              {isEditMode ? (
-                <>
-                  <Check className="h-4 w-4" />
-                  <span className="text-sm font-medium">Done</span>
-                </>
-              ) : (
-                <>
-                  <Pencil className="h-4 w-4" />
-                  <span className="text-sm font-medium hidden sm:inline">Reorder</span>
-                </>
-              )}
-            </Button>
-          )}
         </div>
       </div>
 
