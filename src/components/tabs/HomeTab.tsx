@@ -17,7 +17,9 @@ import {
   GripVertical,
   Pencil,
   Check,
-  UserCheck
+  UserCheck,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -282,19 +284,17 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     return widgetsFromTabs;
   }, [preferences.activeTabs, widgetOrder]);
 
-  // Mouse-based drag and drop handlers for smooth widget reordering
-  const handleMouseDown = useCallback((e: React.MouseEvent, widgetId: WidgetId) => {
-    if (!isEditMode) return;
-    
+  // Shared drag start logic for both mouse and touch
+  const startDrag = useCallback((clientX: number, clientY: number, widgetId: WidgetId) => {
     const widgetElement = widgetRefs.current.get(widgetId);
     if (!widgetElement) return;
     
     const rect = widgetElement.getBoundingClientRect();
     
-    // Calculate offset from mouse to widget's top-left corner
+    // Calculate offset from pointer to widget's top-left corner
     setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: clientX - rect.left,
+      y: clientY - rect.top
     });
     
     // Store the widget's size for the floating element
@@ -304,16 +304,14 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     });
     
     setDraggedWidget(widgetId);
-    setDragPosition({ x: e.clientX, y: e.clientY });
-    
-    // Prevent text selection during drag
-    e.preventDefault();
-  }, [isEditMode]);
+    setDragPosition({ x: clientX, y: clientY });
+  }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
+  // Shared drag move logic for both mouse and touch
+  const moveDrag = useCallback((clientX: number, clientY: number) => {
     if (!draggedWidget) return;
     
-    setDragPosition({ x: e.clientX, y: e.clientY });
+    setDragPosition({ x: clientX, y: clientY });
     
     // Find which widget we're hovering over
     let foundTarget: WidgetId | null = null;
@@ -322,12 +320,12 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       
       const rect = element.getBoundingClientRect();
       
-      // Check if mouse is within the widget bounds
+      // Check if pointer is within the widget bounds
       if (
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
       ) {
         foundTarget = widgetId;
       }
@@ -336,7 +334,8 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     setDragOverWidget(foundTarget);
   }, [draggedWidget]);
 
-  const handleMouseUp = useCallback(() => {
+  // Shared drag end logic for both mouse and touch
+  const endDrag = useCallback(() => {
     if (!draggedWidget) return;
     
     // If we're over a drop target, perform the swap
@@ -360,6 +359,50 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     setDraggedWidgetSize(null);
   }, [draggedWidget, dragOverWidget, activeWidgets, setWidgetOrder]);
 
+  // Mouse-based drag and drop handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent, widgetId: WidgetId) => {
+    if (!isEditMode) return;
+    startDrag(e.clientX, e.clientY, widgetId);
+    e.preventDefault();
+  }, [isEditMode, startDrag]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    moveDrag(e.clientX, e.clientY);
+  }, [moveDrag]);
+
+  const handleMouseUp = useCallback(() => {
+    endDrag();
+  }, [endDrag]);
+
+  // Touch-based drag and drop handlers for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent, widgetId: WidgetId) => {
+    if (!isEditMode) return;
+    
+    const touch = e.touches[0];
+    if (!touch) return;
+    
+    startDrag(touch.clientX, touch.clientY, widgetId);
+    
+    // Prevent scrolling while dragging
+    e.preventDefault();
+  }, [isEditMode, startDrag]);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!draggedWidget) return;
+    
+    const touch = e.touches[0];
+    if (!touch) return;
+    
+    moveDrag(touch.clientX, touch.clientY);
+    
+    // Prevent scrolling while dragging
+    e.preventDefault();
+  }, [draggedWidget, moveDrag]);
+
+  const handleTouchEnd = useCallback(() => {
+    endDrag();
+  }, [endDrag]);
+
   // Add and remove global mouse event listeners
   useEffect(() => {
     if (draggedWidget) {
@@ -377,6 +420,51 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       document.body.style.cursor = '';
     };
   }, [draggedWidget, handleMouseMove, handleMouseUp]);
+
+  // Add and remove global touch event listeners
+  useEffect(() => {
+    if (draggedWidget) {
+      // Use passive: false to allow preventDefault
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
+      document.addEventListener('touchcancel', handleTouchEnd);
+      // Prevent body scrolling on iOS
+      document.body.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchcancel', handleTouchEnd);
+      document.body.style.overflow = '';
+    };
+  }, [draggedWidget, handleTouchMove, handleTouchEnd]);
+
+  // Move widget up in the order (for mobile button controls)
+  const moveWidgetUp = useCallback((widgetId: WidgetId) => {
+    const currentOrder = [...activeWidgets];
+    const currentIndex = currentOrder.indexOf(widgetId);
+    
+    if (currentIndex > 0) {
+      // Swap with the previous widget
+      [currentOrder[currentIndex - 1], currentOrder[currentIndex]] = 
+        [currentOrder[currentIndex], currentOrder[currentIndex - 1]];
+      setWidgetOrder(currentOrder);
+    }
+  }, [activeWidgets, setWidgetOrder]);
+
+  // Move widget down in the order (for mobile button controls)
+  const moveWidgetDown = useCallback((widgetId: WidgetId) => {
+    const currentOrder = [...activeWidgets];
+    const currentIndex = currentOrder.indexOf(widgetId);
+    
+    if (currentIndex < currentOrder.length - 1) {
+      // Swap with the next widget
+      [currentOrder[currentIndex], currentOrder[currentIndex + 1]] = 
+        [currentOrder[currentIndex + 1], currentOrder[currentIndex]];
+      setWidgetOrder(currentOrder);
+    }
+  }, [activeWidgets, setWidgetOrder]);
 
   // Get animation styles for a specific widget (iOS-style random parameters)
   const getAnimationStyle = (widgetId: WidgetId): React.CSSProperties => {
@@ -873,15 +961,53 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                   isDragging && "dashboard-card-placeholder",
                   isDragOver && "dashboard-card-drop-target",
                   isEditMode && !isDragging && getWiggleClass(index),
-                  isEditMode && !isDragging && "cursor-grab"
+                  isEditMode && !isDragging && "cursor-grab",
+                  isEditMode && "touch-none" // Prevent default touch actions in edit mode
                 )}
                 style={isEditMode && !isDragging ? getAnimationStyle(widgetId) : undefined}
                 onMouseDown={(e) => handleMouseDown(e, widgetId)}
+                onTouchStart={(e) => handleTouchStart(e, widgetId)}
               >
-                {/* Drag handle overlay in edit mode */}
+                {/* Edit mode overlay with drag handle and up/down buttons */}
                 {isEditMode && (
-                  <div className="absolute top-2 right-2 z-10 p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900">
-                    <GripVertical className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                    {/* Up/Down buttons - more visible on mobile */}
+                    <div className="flex flex-col gap-0.5 md:hidden">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveWidgetUp(widgetId);
+                        }}
+                        disabled={index === 0}
+                        className={cn(
+                          "p-1 rounded-md transition-colors",
+                          index === 0
+                            ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600"
+                            : "bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 active:bg-sky-200 dark:active:bg-sky-800"
+                        )}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveWidgetDown(widgetId);
+                        }}
+                        disabled={index === activeWidgets.length - 1}
+                        className={cn(
+                          "p-1 rounded-md transition-colors",
+                          index === activeWidgets.length - 1
+                            ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600"
+                            : "bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 active:bg-sky-200 dark:active:bg-sky-800"
+                        )}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {/* Drag handle - always visible */}
+                    <div className="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900">
+                      <GripVertical className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                    </div>
                   </div>
                 )}
                 {renderWidgetContent()}
