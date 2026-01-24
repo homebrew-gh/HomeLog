@@ -52,6 +52,8 @@ export interface UserPreferences {
   // Tab preferences
   activeTabs: TabId[];
   activeTab: TabId;
+  // Dashboard card order (separate from tab order in navigation)
+  dashboardCardOrder: TabId[];
   // View preferences
   appliancesViewMode: 'list' | 'card';
   vehiclesViewMode: 'list' | 'card';
@@ -77,6 +79,7 @@ export interface UserPreferences {
 const DEFAULT_PREFERENCES: UserPreferences = {
   activeTabs: [],
   activeTab: 'home',
+  dashboardCardOrder: [],
   appliancesViewMode: 'card',
   vehiclesViewMode: 'card',
   contractorsViewMode: 'card',
@@ -102,6 +105,9 @@ interface UserPreferencesContextType {
   reorderTabs: (newOrder: TabId[]) => void;
   getTabDefinition: (tabId: TabId) => TabDefinition | undefined;
   getAvailableTabs: () => TabDefinition[];
+  // Dashboard card actions
+  reorderDashboardCards: (newOrder: TabId[]) => void;
+  getDashboardCardOrder: () => TabId[];
   // View mode actions
   setAppliancesViewMode: (mode: 'list' | 'card') => void;
   setVehiclesViewMode: (mode: 'list' | 'card') => void;
@@ -318,6 +324,35 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const getAvailableTabs = useCallback((): TabDefinition[] => {
     return AVAILABLE_TABS.filter(tab => !localPreferences.activeTabs.includes(tab.id));
   }, [localPreferences.activeTabs]);
+
+  // Dashboard card actions
+  const reorderDashboardCards = useCallback((newOrder: TabId[]) => {
+    const filteredOrder = newOrder.filter(id => id !== 'home');
+    updatePreferences((prev) => ({
+      ...prev,
+      dashboardCardOrder: filteredOrder,
+    }));
+  }, [updatePreferences]);
+
+  // Get the dashboard card order - returns activeTabs filtered by dashboardCardOrder if set,
+  // otherwise returns activeTabs in their default order
+  const getDashboardCardOrder = useCallback((): TabId[] => {
+    const activeTabs = localPreferences.activeTabs || [];
+    const dashboardOrder = localPreferences.dashboardCardOrder || [];
+    
+    if (dashboardOrder.length === 0) {
+      // No custom order set, use activeTabs order
+      return activeTabs;
+    }
+    
+    // Filter dashboardOrder to only include currently active tabs
+    const orderedTabs = dashboardOrder.filter(id => activeTabs.includes(id));
+    
+    // Add any active tabs not in dashboardOrder at the end
+    const missingTabs = activeTabs.filter(id => !dashboardOrder.includes(id));
+    
+    return [...orderedTabs, ...missingTabs];
+  }, [localPreferences.activeTabs, localPreferences.dashboardCardOrder]);
 
   // View mode actions
   const setAppliancesViewMode = useCallback((mode: 'list' | 'card') => {
@@ -553,6 +588,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const normalizedPreferences: UserPreferences = {
     activeTabs: localPreferences.activeTabs || [],
     activeTab: localPreferences.activeTab || 'home',
+    dashboardCardOrder: localPreferences.dashboardCardOrder || [],
     appliancesViewMode: localPreferences.appliancesViewMode || 'card',
     vehiclesViewMode: localPreferences.vehiclesViewMode || 'card',
     contractorsViewMode: localPreferences.contractorsViewMode || 'card',
@@ -579,6 +615,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         reorderTabs,
         getTabDefinition,
         getAvailableTabs,
+        reorderDashboardCards,
+        getDashboardCardOrder,
         setAppliancesViewMode,
         setVehiclesViewMode,
         setContractorsViewMode,
