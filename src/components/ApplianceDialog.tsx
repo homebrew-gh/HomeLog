@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, Image } from 'lucide-react';
+import { Plus, Upload, X, FileText, Image, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useApplianceActions } from '@/hooks/useAppliances';
 import { useCustomRooms } from '@/hooks/useCustomRooms';
-import { useUploadFile } from '@/hooks/useUploadFile';
+import { useUploadFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import type { Appliance } from '@/lib/types';
 
@@ -31,6 +32,7 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
   const { createAppliance, updateAppliance } = useApplianceActions();
   const { allRooms, addCustomRoom } = useCustomRooms();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+  const canUploadFiles = useCanUploadFiles();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddRoom, setShowAddRoom] = useState(false);
@@ -93,12 +95,23 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
           description: `${type === 'receipt' ? 'Receipt' : 'Manual'} uploaded successfully.`,
         });
       }
-    } catch {
-      toast({
-        title: 'Upload failed',
-        description: 'Failed to upload file. Please try again.',
-        variant: 'destructive',
-      });
+    } catch (error) {
+      console.error('File upload error:', error);
+      
+      if (error instanceof NoPrivateServerError) {
+        toast({
+          title: 'No private server configured',
+          description: 'Please configure a private media server in Settings > Server Settings > Media before uploading sensitive files.',
+          variant: 'destructive',
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        toast({
+          title: 'Upload failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -292,19 +305,33 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
                 ref={receiptInputRef}
                 onChange={handleReceiptUpload}
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => receiptInputRef.current?.click()}
-                disabled={isUploading}
-              >
-                {isUploading ? (
-                  <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => receiptInputRef.current?.click()}
+                      disabled={isUploading || !canUploadFiles}
+                    >
+                      {isUploading ? (
+                        <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : !canUploadFiles ? (
+                        <AlertCircle className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {!canUploadFiles 
+                    ? 'Configure a private media server in Settings to enable uploads'
+                    : 'Upload receipt image or PDF'
+                  }
+                </TooltipContent>
+              </Tooltip>
             </div>
             {formData.receiptUrl && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -340,19 +367,33 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
                 ref={manualInputRef}
                 onChange={handleManualUpload}
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => manualInputRef.current?.click()}
-                disabled={isUploading}
-              >
-                {isUploading ? (
-                  <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => manualInputRef.current?.click()}
+                      disabled={isUploading || !canUploadFiles}
+                    >
+                      {isUploading ? (
+                        <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : !canUploadFiles ? (
+                        <AlertCircle className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {!canUploadFiles 
+                    ? 'Configure a private media server in Settings to enable uploads'
+                    : 'Upload manual PDF or document'
+                  }
+                </TooltipContent>
+              </Tooltip>
             </div>
             {formData.manualUrl && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

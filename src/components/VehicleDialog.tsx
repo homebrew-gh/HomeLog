@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,9 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useVehicleActions } from '@/hooks/useVehicles';
 import { useVehicleTypes } from '@/hooks/useVehicleTypes';
-import { useUploadFile } from '@/hooks/useUploadFile';
+import { useUploadFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import { FUEL_TYPES, type Vehicle } from '@/lib/types';
 
@@ -46,6 +47,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
   const { createVehicle, updateVehicle } = useVehicleActions();
   const { allVehicleTypes, addCustomVehicleType } = useVehicleTypes();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+  const canUploadFiles = useCanUploadFiles();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddType, setShowAddType] = useState(false);
@@ -190,12 +192,23 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           description: `${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully.`,
         });
       }
-    } catch {
-      toast({
-        title: 'Upload failed',
-        description: 'Failed to upload file. Please try again.',
-        variant: 'destructive',
-      });
+    } catch (error) {
+      console.error('File upload error:', error);
+      
+      if (error instanceof NoPrivateServerError) {
+        toast({
+          title: 'No private server configured',
+          description: 'Please configure a private media server in Settings > Server Settings > Media before uploading sensitive files.',
+          variant: 'destructive',
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        toast({
+          title: 'Upload failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -640,19 +653,33 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
                     ref={warrantyInputRef}
                     onChange={handleWarrantyUpload}
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => warrantyInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    {isUploading ? (
-                      <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Upload className="h-4 w-4" />
-                    )}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => warrantyInputRef.current?.click()}
+                          disabled={isUploading || !canUploadFiles}
+                        >
+                          {isUploading ? (
+                            <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          ) : !canUploadFiles ? (
+                            <AlertCircle className="h-4 w-4 text-amber-500" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {!canUploadFiles 
+                        ? 'Configure a private media server in Settings to enable uploads'
+                        : 'Upload warranty document'
+                      }
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 {formData.warrantyUrl && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -690,19 +717,33 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
                 ref={receiptInputRef}
                 onChange={handleReceiptUpload}
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => receiptInputRef.current?.click()}
-                disabled={isUploading}
-              >
-                {isUploading ? (
-                  <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => receiptInputRef.current?.click()}
+                      disabled={isUploading || !canUploadFiles}
+                    >
+                      {isUploading ? (
+                        <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : !canUploadFiles ? (
+                        <AlertCircle className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {!canUploadFiles 
+                    ? 'Configure a private media server in Settings to enable uploads'
+                    : 'Upload receipt image or PDF'
+                  }
+                </TooltipContent>
+              </Tooltip>
             </div>
             {formData.receiptUrl && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -732,20 +773,34 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
                 ref={documentInputRef}
                 onChange={handleDocumentUpload}
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => documentInputRef.current?.click()}
-                disabled={isUploading}
-                className="w-full"
-              >
-                {isUploading ? (
-                  <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                ) : (
-                  <Upload className="h-4 w-4 mr-2" />
-                )}
-                Upload Document
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="w-full">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => documentInputRef.current?.click()}
+                      disabled={isUploading || !canUploadFiles}
+                      className="w-full"
+                    >
+                      {isUploading ? (
+                        <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                      ) : !canUploadFiles ? (
+                        <AlertCircle className="h-4 w-4 text-amber-500 mr-2" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-2" />
+                      )}
+                      Upload Document
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {!canUploadFiles 
+                    ? 'Configure a private media server in Settings to enable uploads'
+                    : 'Upload additional PDF documents'
+                  }
+                </TooltipContent>
+              </Tooltip>
             </div>
             {formData.documentsUrls.length > 0 && (
               <div className="space-y-1">
