@@ -245,26 +245,26 @@
 }
 
 /* Hammer and nail loading animation */
-/* Hammer: head on top, handle below, pivots from bottom (hand position at 80,85) */
+/* Hammer: head on top, handle below, pivots from bottom (hand position at 65,75) */
 /* Starts raised/cocked back (positive rotation), swings down-left (negative rotation) to strike */
 @keyframes hammer-swing {
   0%, 100% {
-    transform: rotate(45deg); /* Raised position - cocked back to the right */
+    transform: rotate(30deg); /* Raised position - cocked back to the right */
   }
   10% {
-    transform: rotate(50deg); /* Slight extra wind-up */
+    transform: rotate(35deg); /* Slight extra wind-up */
   }
   35% {
-    transform: rotate(-30deg); /* Swinging down and to the left */
+    transform: rotate(-20deg); /* Swinging down and to the left */
   }
   42%, 52% {
-    transform: rotate(-45deg); /* Impact! Hammer head strikes nail */
+    transform: rotate(-35deg); /* Impact! Hammer head strikes nail */
   }
-  65% {
-    transform: rotate(-20deg); /* Slight recoil after impact */
+  60% {
+    transform: rotate(-25deg); /* Slight recoil after impact */
   }
-  80% {
-    transform: rotate(20deg); /* Rising back up */
+  75% {
+    transform: rotate(10deg); /* Rising back up */
   }
 }
 
