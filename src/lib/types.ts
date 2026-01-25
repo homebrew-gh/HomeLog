@@ -68,6 +68,7 @@ export interface MaintenanceSchedule {
   id: string;
   applianceId?: string; // Optional - for appliance maintenance
   vehicleId?: string; // Optional - for vehicle maintenance
+  homeFeature?: string; // Optional - for home feature maintenance (e.g., "Chimney", "Gutters")
   description: string;
   partNumber?: string;
   frequency: number;
@@ -100,6 +101,24 @@ export const DEFAULT_ROOMS = [
 ] as const;
 
 export type DefaultRoom = typeof DEFAULT_ROOMS[number];
+
+// Home Features - exterior and structural features that need maintenance
+export const DEFAULT_HOME_FEATURES = [
+  'Chimney',
+  'Gutters',
+  'Walkway',
+  'Front Yard',
+  'Back Yard',
+  'Side Yard',
+  'Pool',
+  'Pond',
+  'Garden',
+  'Front Porch',
+  'Back Porch',
+  'Crawl Space',
+] as const;
+
+export type DefaultHomeFeature = typeof DEFAULT_HOME_FEATURES[number];
 
 export const FREQUENCY_UNITS = [
   { value: 'days', label: 'Days' },

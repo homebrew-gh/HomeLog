@@ -74,6 +74,10 @@ export interface UserPreferences {
   customSubscriptionTypes: string[];
   // Hidden default subscription types
   hiddenDefaultSubscriptionTypes: string[];
+  // Custom home features
+  customHomeFeatures: string[];
+  // Hidden default home features
+  hiddenDefaultHomeFeatures: string[];
   // Blossom media servers
   blossomServers: BlossomServer[];
   // Version for future migrations
@@ -95,6 +99,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   hiddenDefaultContractorTypes: [],
   customSubscriptionTypes: [],
   hiddenDefaultSubscriptionTypes: [],
+  customHomeFeatures: [],
+  hiddenDefaultHomeFeatures: [],
   blossomServers: DEFAULT_BLOSSOM_SERVERS,
   version: 1,
 };
@@ -138,6 +144,11 @@ interface UserPreferencesContextType {
   removeCustomSubscriptionType: (type: string) => void;
   hideDefaultSubscriptionType: (type: string) => void;
   restoreDefaultSubscriptionType: (type: string) => void;
+  // Home feature actions
+  addCustomHomeFeature: (feature: string) => void;
+  removeCustomHomeFeature: (feature: string) => void;
+  hideDefaultHomeFeature: (feature: string) => void;
+  restoreDefaultHomeFeature: (feature: string) => void;
   // Blossom server actions
   addBlossomServer: (url: string, isPrivate?: boolean) => void;
   removeBlossomServer: (url: string) => void;
@@ -548,6 +559,46 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  // Home feature actions
+  const addCustomHomeFeature = useCallback((feature: string) => {
+    updatePreferences((prev) => {
+      const currentCustomFeatures = prev.customHomeFeatures || [];
+      const currentHiddenFeatures = prev.hiddenDefaultHomeFeatures || [];
+      if (currentCustomFeatures.includes(feature)) return prev;
+      return {
+        ...prev,
+        customHomeFeatures: [...currentCustomFeatures, feature],
+        // If adding a feature that was a hidden default, remove it from hidden
+        hiddenDefaultHomeFeatures: currentHiddenFeatures.filter(f => f !== feature),
+      };
+    });
+  }, [updatePreferences]);
+
+  const removeCustomHomeFeature = useCallback((feature: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      customHomeFeatures: (prev.customHomeFeatures || []).filter(f => f !== feature),
+    }));
+  }, [updatePreferences]);
+
+  const hideDefaultHomeFeature = useCallback((feature: string) => {
+    updatePreferences((prev) => {
+      const currentHiddenFeatures = prev.hiddenDefaultHomeFeatures || [];
+      if (currentHiddenFeatures.includes(feature)) return prev;
+      return {
+        ...prev,
+        hiddenDefaultHomeFeatures: [...currentHiddenFeatures, feature],
+      };
+    });
+  }, [updatePreferences]);
+
+  const restoreDefaultHomeFeature = useCallback((feature: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      hiddenDefaultHomeFeatures: (prev.hiddenDefaultHomeFeatures || []).filter(f => f !== feature),
+    }));
+  }, [updatePreferences]);
+
   // Blossom server actions
   const normalizeBlossomUrl = (url: string): string => {
     let normalized = url.trim();
@@ -652,6 +703,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     hiddenDefaultContractorTypes: localPreferences.hiddenDefaultContractorTypes || [],
     customSubscriptionTypes: localPreferences.customSubscriptionTypes || [],
     hiddenDefaultSubscriptionTypes: localPreferences.hiddenDefaultSubscriptionTypes || [],
+    customHomeFeatures: localPreferences.customHomeFeatures || [],
+    hiddenDefaultHomeFeatures: localPreferences.hiddenDefaultHomeFeatures || [],
     blossomServers: normalizedBlossomServers,
     version: localPreferences.version || 1,
   };
@@ -690,6 +743,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         removeCustomSubscriptionType,
         hideDefaultSubscriptionType,
         restoreDefaultSubscriptionType,
+        addCustomHomeFeature,
+        removeCustomHomeFeature,
+        hideDefaultHomeFeature,
+        restoreDefaultHomeFeature,
         addBlossomServer,
         removeBlossomServer,
         toggleBlossomServer,

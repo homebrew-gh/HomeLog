@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home } from 'lucide-react';
+import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,7 +8,7 @@ import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
 import { useVehicles, useVehicleById } from '@/hooks/useVehicles';
-import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
+import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, useHomeFeatureMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
 import type { MaintenanceSchedule } from '@/lib/types';
 
@@ -117,7 +117,6 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
                   onClick={() => handleAddMaintenance('appliance')}
                   size="sm"
                   className="bg-sky-600 hover:bg-sky-700 text-white"
-                  disabled={appliances.length === 0}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add
@@ -125,11 +124,7 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
-              {appliances.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">
-                  Add an appliance first to create maintenance schedules.
-                </p>
-              ) : applianceMaintenance.length === 0 ? (
+              {applianceMaintenance.length === 0 ? (
                 <p className="text-center text-muted-foreground py-6">
                   No home maintenance schedules yet.
                 </p>
@@ -233,16 +228,31 @@ function MaintenanceItem({
   const [showHistory, setShowHistory] = useState(false);
   const appliance = useApplianceById(maintenance.applianceId);
   const completions = useCompletionsByMaintenance(maintenance.id);
+  
+  // For home feature maintenance without an appliance, use today as a baseline for due date calculations
+  // For appliance maintenance, use the appliance's purchase date
   const purchaseDate = appliance?.purchaseDate || '';
+  const hasValidPurchaseDate = !!purchaseDate;
+  
+  // For home feature-only maintenance, we calculate from now if no appliance/purchase date
+  const isHomeFeatureOnly = maintenance.homeFeature && !maintenance.applianceId;
 
   // Get the most recent completion date (completions are already sorted newest first)
   const lastCompletionDate = completions.length > 0 ? completions[0].completedDate : undefined;
 
-  const nextDueDate = calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate);
-  const overdue = purchaseDate ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
-  const dueSoon = purchaseDate ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
+  // Calculate due dates - for home feature-only without completions, use a default start date
+  const effectivePurchaseDate = hasValidPurchaseDate ? purchaseDate : (lastCompletionDate ? '' : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }));
+  
+  const nextDueDate = calculateNextDueDate(effectivePurchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate);
+  const overdue = effectivePurchaseDate ? isOverdue(effectivePurchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
+  const dueSoon = effectivePurchaseDate ? isDueSoon(effectivePurchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
 
   const hasCompletions = completions.length > 0;
+  
+  // Determine display name - appliance model, home feature, or both
+  const displayName = appliance?.model 
+    ? (maintenance.homeFeature ? `${appliance.model} - ${maintenance.homeFeature}` : appliance.model)
+    : (maintenance.homeFeature || 'Unknown Item');
 
   return (
     <div className="space-y-1">
@@ -288,12 +298,16 @@ function MaintenanceItem({
               ? 'bg-red-200 dark:bg-red-900'
               : dueSoon
                 ? 'bg-amber-200 dark:bg-amber-900'
-                : 'bg-sky-200 dark:bg-sky-900'
+                : isHomeFeatureOnly
+                  ? 'bg-green-200 dark:bg-green-900'
+                  : 'bg-sky-200 dark:bg-sky-900'
           }`}>
             {overdue ? (
               <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
             ) : dueSoon ? (
               <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            ) : isHomeFeatureOnly ? (
+              <TreePine className="h-5 w-5 text-green-600 dark:text-green-400" />
             ) : (
               <Wrench className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             )}
@@ -301,7 +315,7 @@ function MaintenanceItem({
 
           <div className="flex-1 min-w-0">
             <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
-              {appliance?.model || 'Unknown Appliance'}
+              {displayName}
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
               {maintenance.description}

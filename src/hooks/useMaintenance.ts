@@ -38,8 +38,11 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
     }
   }
 
-  // Must have either applianceId or vehicleId
-  if (!id || !description || !frequency || !frequencyUnit || (!applianceId && !vehicleId)) return null;
+  // Get home feature if present
+  const homeFeature = getTagValue(event, 'home_feature');
+
+  // Must have at least one: applianceId, vehicleId, or homeFeature
+  if (!id || !description || !frequency || !frequencyUnit || (!applianceId && !vehicleId && !homeFeature)) return null;
 
   const validUnits = ['days', 'weeks', 'months', 'years'];
   if (!validUnits.includes(frequencyUnit)) return null;
@@ -50,6 +53,7 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
     id,
     applianceId,
     vehicleId,
+    homeFeature,
     description,
     partNumber: getTagValue(event, 'part_number'),
     frequency: parseInt(frequency, 10),
@@ -229,16 +233,23 @@ export function useMaintenanceByVehicle(vehicleId: string | undefined) {
   return maintenance?.filter(m => m.vehicleId === vehicleId) || [];
 }
 
-// Get all appliance maintenance (for home maintenance tab)
+// Get all appliance maintenance (for home maintenance tab) - includes both appliance and home feature maintenance
 export function useApplianceMaintenance() {
   const { data: maintenance } = useMaintenance();
-  return maintenance?.filter(m => m.applianceId && !m.vehicleId) || [];
+  // Return maintenance that has an appliance OR homeFeature but NOT a vehicle
+  return maintenance?.filter(m => (m.applianceId || m.homeFeature) && !m.vehicleId) || [];
 }
 
 // Get all vehicle maintenance (for maintenance tab vehicle section)
 export function useVehicleMaintenance() {
   const { data: maintenance } = useMaintenance();
   return maintenance?.filter(m => m.vehicleId && !m.applianceId) || [];
+}
+
+// Get all home feature maintenance (maintenance with homeFeature but no appliance)
+export function useHomeFeatureMaintenance() {
+  const { data: maintenance } = useMaintenance();
+  return maintenance?.filter(m => m.homeFeature && !m.applianceId && !m.vehicleId) || [];
 }
 
 export function useMaintenanceActions() {
@@ -248,7 +259,9 @@ export function useMaintenanceActions() {
 
   const createMaintenance = async (data: Omit<MaintenanceSchedule, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
-    if (!data.applianceId && !data.vehicleId) throw new Error('Must have either applianceId or vehicleId');
+    if (!data.applianceId && !data.vehicleId && !data.homeFeature) {
+      throw new Error('Must have either applianceId, vehicleId, or homeFeature');
+    }
 
     const id = crypto.randomUUID();
     const tags: string[][] = [
@@ -265,6 +278,10 @@ export function useMaintenanceActions() {
     }
     if (data.vehicleId) {
       tags.push(['a', `${VEHICLE_KIND}:${user.pubkey}:${data.vehicleId}`, '', 'vehicle']);
+    }
+    // Add home feature if present
+    if (data.homeFeature) {
+      tags.push(['home_feature', data.homeFeature]);
     }
 
     if (data.partNumber) tags.push(['part_number', data.partNumber]);
@@ -287,7 +304,9 @@ export function useMaintenanceActions() {
 
   const updateMaintenance = async (id: string, data: Omit<MaintenanceSchedule, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
-    if (!data.applianceId && !data.vehicleId) throw new Error('Must have either applianceId or vehicleId');
+    if (!data.applianceId && !data.vehicleId && !data.homeFeature) {
+      throw new Error('Must have either applianceId, vehicleId, or homeFeature');
+    }
 
     const tags: string[][] = [
       ['d', id],
@@ -303,6 +322,10 @@ export function useMaintenanceActions() {
     }
     if (data.vehicleId) {
       tags.push(['a', `${VEHICLE_KIND}:${user.pubkey}:${data.vehicleId}`, '', 'vehicle']);
+    }
+    // Add home feature if present
+    if (data.homeFeature) {
+      tags.push(['home_feature', data.homeFeature]);
     }
 
     if (data.partNumber) tags.push(['part_number', data.partNumber]);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Info, Home, Car } from 'lucide-react';
+import { Calendar, Info, Home, Car, Plus, TreePine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
+import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate } from '@/hooks/useMaintenance';
 import { useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
 import { toast } from '@/hooks/useToast';
@@ -21,16 +22,23 @@ interface MaintenanceDialogProps {
   mode?: 'appliance' | 'vehicle'; // Which type of maintenance
 }
 
+// Special value for "Add custom feature" option
+const ADD_CUSTOM_FEATURE = '__add_custom__';
+
 export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApplianceId, preselectedVehicleId, mode = 'appliance' }: MaintenanceDialogProps) {
   const { data: appliances = [] } = useAppliances();
   const { data: vehicles = [] } = useVehicles();
+  const { allHomeFeatures, addCustomHomeFeature } = useCustomHomeFeatures();
   const { createMaintenance, updateMaintenance } = useMaintenanceActions();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCustomFeatureInput, setShowCustomFeatureInput] = useState(false);
+  const [customFeatureName, setCustomFeatureName] = useState('');
 
   const [formData, setFormData] = useState({
     applianceId: '',
     vehicleId: '',
+    homeFeature: '',
     description: '',
     partNumber: '',
     frequency: '',
@@ -63,10 +71,13 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
   // Reset form when dialog opens
   useEffect(() => {
     if (isOpen) {
+      setShowCustomFeatureInput(false);
+      setCustomFeatureName('');
       if (maintenance) {
         setFormData({
           applianceId: maintenance.applianceId || '',
           vehicleId: maintenance.vehicleId || '',
+          homeFeature: maintenance.homeFeature || '',
           description: maintenance.description,
           partNumber: maintenance.partNumber || '',
           frequency: maintenance.frequency.toString(),
@@ -77,6 +88,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
         setFormData({
           applianceId: preselectedApplianceId || '',
           vehicleId: preselectedVehicleId || '',
+          homeFeature: '',
           description: '',
           partNumber: '',
           frequency: '',
@@ -86,6 +98,46 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
       }
     }
   }, [isOpen, maintenance, preselectedApplianceId, preselectedVehicleId]);
+
+  const handleHomeFeatureChange = (value: string) => {
+    if (value === ADD_CUSTOM_FEATURE) {
+      setShowCustomFeatureInput(true);
+      setFormData(prev => ({ ...prev, homeFeature: '' }));
+    } else {
+      setShowCustomFeatureInput(false);
+      setCustomFeatureName('');
+      setFormData(prev => ({ ...prev, homeFeature: value }));
+    }
+  };
+
+  const handleAddCustomFeature = () => {
+    const trimmed = customFeatureName.trim();
+    if (!trimmed) {
+      toast({
+        title: 'Feature name required',
+        description: 'Please enter a name for the custom feature.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check if it already exists
+    if (allHomeFeatures.some(f => f.toLowerCase() === trimmed.toLowerCase())) {
+      // Just select it
+      setFormData(prev => ({ ...prev, homeFeature: allHomeFeatures.find(f => f.toLowerCase() === trimmed.toLowerCase()) || trimmed }));
+    } else {
+      // Add to custom features and select it
+      addCustomHomeFeature(trimmed);
+      setFormData(prev => ({ ...prev, homeFeature: trimmed }));
+    }
+    
+    setShowCustomFeatureInput(false);
+    setCustomFeatureName('');
+    toast({
+      title: 'Home feature added',
+      description: `"${trimmed}" has been added and selected.`,
+    });
+  };
 
   const handleSubmit = async () => {
     if (isVehicleMode && !formData.vehicleId) {
@@ -97,10 +149,11 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
       return;
     }
 
-    if (!isVehicleMode && !formData.applianceId) {
+    // For home maintenance, require either an appliance OR a home feature
+    if (!isVehicleMode && !formData.applianceId && !formData.homeFeature) {
       toast({
-        title: 'Appliance required',
-        description: 'Please select an appliance.',
+        title: 'Selection required',
+        description: 'Please select either an appliance or a home feature.',
         variant: 'destructive',
       });
       return;
@@ -130,8 +183,9 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
       const mileageInterval = formData.mileageInterval ? parseInt(formData.mileageInterval, 10) : undefined;
       
       const data = {
-        applianceId: isVehicleMode ? undefined : formData.applianceId,
+        applianceId: isVehicleMode ? undefined : (formData.applianceId || undefined),
         vehicleId: isVehicleMode ? formData.vehicleId : undefined,
+        homeFeature: isVehicleMode ? undefined : (formData.homeFeature || undefined),
         description: formData.description.trim(),
         partNumber: formData.partNumber.trim() || undefined,
         frequency,
@@ -163,6 +217,9 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
       setIsSubmitting(false);
     }
   };
+
+  // Check if home maintenance can be submitted (either appliance or home feature selected)
+  const canSubmitHomeMaintenance = formData.applianceId || formData.homeFeature;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -215,39 +272,112 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
               )}
             </div>
           ) : (
-            <div className="space-y-2">
-              <Label>Appliance *</Label>
-              <Select
-                value={formData.applianceId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, applianceId: value }))}
-                disabled={isEditing}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select an appliance" />
-                </SelectTrigger>
-                <SelectContent>
-                  {appliances.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground text-center">
-                      No appliances found. Add an appliance first.
-                    </div>
-                  ) : (
-                    appliances.map((appliance) => (
+            <>
+              {/* Home Feature Selection */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <TreePine className="h-4 w-4 text-green-600" />
+                  Home Feature
+                </Label>
+                {showCustomFeatureInput ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={customFeatureName}
+                      onChange={(e) => setCustomFeatureName(e.target.value)}
+                      placeholder="Enter custom feature name"
+                      className="flex-1"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomFeature();
+                        } else if (e.key === 'Escape') {
+                          setShowCustomFeatureInput(false);
+                          setCustomFeatureName('');
+                        }
+                      }}
+                    />
+                    <Button onClick={handleAddCustomFeature} size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowCustomFeatureInput(false);
+                        setCustomFeatureName('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.homeFeature}
+                    onValueChange={handleHomeFeatureChange}
+                    disabled={isEditing && !!maintenance?.homeFeature}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a home feature (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__" className="text-muted-foreground">
+                        None
+                      </SelectItem>
+                      {allHomeFeatures.map((feature) => (
+                        <SelectItem key={feature} value={feature}>
+                          {feature}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={ADD_CUSTOM_FEATURE} className="text-sky-600">
+                        <span className="flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          Add custom feature...
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Appliance Selection */}
+              <div className="space-y-2">
+                <Label>Appliance</Label>
+                <Select
+                  value={formData.applianceId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, applianceId: value === '__none__' ? '' : value }))}
+                  disabled={isEditing && !!maintenance?.applianceId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an appliance (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__" className="text-muted-foreground">
+                      None
+                    </SelectItem>
+                    {appliances.map((appliance) => (
                       <SelectItem key={appliance.id} value={appliance.id}>
                         {appliance.model} {appliance.room && `(${appliance.room})`}
                       </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              {/* Show appliance purchase date if selected */}
-              {selectedAppliance?.purchaseDate && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                  <Calendar className="h-4 w-4" />
-                  <span>Installed/Purchased: {selectedAppliance.purchaseDate}</span>
-                </div>
+                {/* Show appliance purchase date if selected */}
+                {selectedAppliance?.purchaseDate && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                    <Calendar className="h-4 w-4" />
+                    <span>Installed/Purchased: {selectedAppliance.purchaseDate}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Validation hint */}
+              {!canSubmitHomeMaintenance && (
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  Please select at least one: a home feature or an appliance.
+                </p>
               )}
-            </div>
+            </>
           )}
 
           {/* Maintenance Description */}
@@ -336,7 +466,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
         <div className="flex justify-start gap-2 pt-4 border-t">
           <Button 
             onClick={handleSubmit} 
-            disabled={isSubmitting || (isVehicleMode ? vehicles.length === 0 : appliances.length === 0)}
+            disabled={isSubmitting || (isVehicleMode ? vehicles.length === 0 : !canSubmitHomeMaintenance)}
           >
             {isSubmitting ? 'Saving...' : 'Save'}
           </Button>
