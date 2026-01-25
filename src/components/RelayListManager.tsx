@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, X, Wifi, Settings, Lock, RefreshCw, Zap } from 'lucide-react';
+import { Plus, X, Wifi, Settings, Lock, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -57,7 +57,7 @@ export function RelayListManager() {
   const { user } = useCurrentUser();
   const { mutate: publishEvent } = useNostrPublish();
   const { toast } = useToast();
-  const { isPrivateRelay, setPrivateRelay, isCachingRelay, setCachingRelay, cachingRelay } = useEncryptionSettings();
+  const { isPrivateRelay, setPrivateRelay, isCachingRelay } = useEncryptionSettings();
 
   const [relays, setRelays] = useState<Relay[]>(config.relayMetadata.relays);
   const [newRelayUrl, setNewRelayUrl] = useState('');
@@ -269,23 +269,19 @@ export function RelayListManager() {
     }
   }
 
-  // Sort relays: caching relay first, then private ones, then others
-  const sortedRelays = [...relays].sort((a, b) => {
-    const aIsCaching = isCachingRelay(a.url);
-    const bIsCaching = isCachingRelay(b.url);
-    const aIsPrivate = isPrivateRelay(a.url);
-    const bIsPrivate = isPrivateRelay(b.url);
-    
-    // Caching relay always first
-    if (aIsCaching && !bIsCaching) return -1;
-    if (!aIsCaching && bIsCaching) return 1;
-    
-    // Then private relays
-    if (aIsPrivate && !bIsPrivate) return -1;
-    if (!aIsPrivate && bIsPrivate) return 1;
-    
-    return 0;
-  });
+  // Filter out the caching relay (it's shown in its own section) and sort with private ones first
+  const sortedRelays = [...relays]
+    .filter(r => !isCachingRelay(r.url))
+    .sort((a, b) => {
+      const aIsPrivate = isPrivateRelay(a.url);
+      const bIsPrivate = isPrivateRelay(b.url);
+      
+      // Private relays first
+      if (aIsPrivate && !bIsPrivate) return -1;
+      if (!aIsPrivate && bIsPrivate) return 1;
+      
+      return 0;
+    });
 
   // Get status indicator color and tooltip
   const getStatusInfo = (status: RelayStatus) => {
@@ -324,21 +320,17 @@ export function RelayListManager() {
       <div className="space-y-2">
         {sortedRelays.map((relay) => {
           const isPrivate = isPrivateRelay(relay.url);
-          const isCaching = isCachingRelay(relay.url);
           const status = relayStatuses[relay.url] || 'unknown';
           const statusInfo = getStatusInfo(status);
-          
-          // Determine border/bg color based on relay type (caching takes precedence)
-          const getBorderClass = () => {
-            if (isCaching) return 'border-sky-200 bg-sky-50/50 dark:border-sky-800 dark:bg-sky-950/30';
-            if (isPrivate) return 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30';
-            return 'bg-muted/20';
-          };
           
           return (
             <div
               key={relay.url}
-              className={`flex items-center gap-3 p-3 rounded-md border ${getBorderClass()}`}
+              className={`flex items-center gap-3 p-3 rounded-md border ${
+                isPrivate 
+                  ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30' 
+                  : 'bg-muted/20'
+              }`}
             >
               {/* Status Indicator */}
               <Tooltip>
@@ -350,17 +342,11 @@ export function RelayListManager() {
                 </TooltipContent>
               </Tooltip>
 
-              <Wifi className={`h-4 w-4 shrink-0 ${isCaching ? 'text-sky-600' : isPrivate ? 'text-amber-600' : 'text-muted-foreground'}`} />
+              <Wifi className={`h-4 w-4 shrink-0 ${isPrivate ? 'text-amber-600' : 'text-muted-foreground'}`} />
               <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
                 <span className="font-mono text-sm truncate" title={relay.url}>
                   {renderRelayUrl(relay.url)}
                 </span>
-                {isCaching && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300 shrink-0">
-                    <Zap className="h-2.5 w-2.5 mr-0.5" />
-                    Caching
-                  </Badge>
-                )}
                 {isPrivate && (
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 shrink-0">
                     <Lock className="h-2.5 w-2.5 mr-0.5" />
@@ -402,36 +388,6 @@ export function RelayListManager() {
                         checked={relay.write}
                         onCheckedChange={() => handleToggleWrite(relay.url)}
                         className="data-[state=checked]:bg-blue-500 scale-75"
-                      />
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor={`caching-${relay.url}`} className="text-sm cursor-pointer flex items-center gap-1">
-                          <Zap className="h-3 w-3" />
-                          Caching Relay
-                        </Label>
-                        <p className="text-[10px] text-muted-foreground">
-                          Speeds up initial loading
-                        </p>
-                      </div>
-                      <Switch
-                        id={`caching-${relay.url}`}
-                        checked={isCaching}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setCachingRelay(relay.url);
-                            toast({
-                              title: 'Caching relay set',
-                              description: 'This relay will be prioritized for faster loading.',
-                            });
-                          } else {
-                            setCachingRelay(null);
-                          }
-                        }}
-                        className="data-[state=checked]:bg-sky-500 scale-75"
                       />
                     </div>
                     

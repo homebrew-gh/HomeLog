@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { RelayListManager } from '@/components/RelayListManager';
+import { CachingRelayManager } from '@/components/CachingRelayManager';
 import { BlossomServerManager } from '@/components/BlossomServerManager';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
@@ -41,12 +42,12 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
 
           {/* Relays Tab */}
           <TabsContent value="relays" className="space-y-4 mt-4">
-            {/* Caching Relays Info - Collapsible */}
+            {/* Caching Relay Section */}
             <Collapsible open={isCachingInfoOpen} onOpenChange={setIsCachingInfoOpen}>
               <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 rounded-md border border-sky-200 dark:border-sky-800 bg-sky-50/50 dark:bg-sky-950/30 hover:bg-sky-100/50 dark:hover:bg-sky-900/30 transition-colors">
                 <Zap className="h-4 w-4 text-sky-600 shrink-0" />
                 <span className="text-sm font-medium text-sky-800 dark:text-sky-200 flex-1 text-left">
-                  About Caching Relays
+                  Caching Relay
                 </span>
                 <ChevronDown className={`h-4 w-4 text-sky-600 transition-transform ${isCachingInfoOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
@@ -59,52 +60,43 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                 </Alert>
 
                 <div className="rounded-lg border border-dashed border-sky-300 dark:border-sky-700 bg-sky-50/50 dark:bg-sky-950/30 p-4 space-y-3">
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    To use a caching relay:
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
+                    Popular caching relay options:
                   </p>
-                  <ol className="text-sm text-slate-600 dark:text-slate-400 list-decimal list-inside space-y-1.5">
-                    <li>Add a caching relay URL (like Primal's) in the Relays section below</li>
-                    <li>Click the settings icon on the relay</li>
-                    <li>Enable "Caching Relay" to prioritize it for faster loading</li>
-                    <li>Only one relay can be designated as the caching relay</li>
-                  </ol>
-                  
-                  <div className="pt-2">
-                    <p className="text-xs text-slate-500 dark:text-slate-500">
-                      Popular caching relay options:
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <div className="flex items-center gap-1">
-                        <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">wss://relay.primal.net</code>
-                        <span className="text-xs text-slate-500">(Primal)</span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">
-                      Or run your own with:
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      <a 
-                        href="https://github.com/scsibug/nostr-rs-relay" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline"
-                      >
-                        nostr-rs-relay
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                      <span className="text-slate-300 dark:text-slate-600">•</span>
-                      <a 
-                        href="https://github.com/hoytech/strfry" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline"
-                      >
-                        strfry
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                  <div className="flex flex-wrap gap-2">
+                    <div className="flex items-center gap-1">
+                      <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">wss://relay.primal.net</code>
+                      <span className="text-xs text-slate-500">(Primal)</span>
                     </div>
                   </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
+                    Or run your own with:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <a 
+                      href="https://github.com/scsibug/nostr-rs-relay" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline"
+                    >
+                      nostr-rs-relay
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <span className="text-slate-300 dark:text-slate-600">•</span>
+                    <a 
+                      href="https://github.com/hoytech/strfry" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline"
+                    >
+                      strfry
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
                 </div>
+
+                {/* Caching Relay Manager */}
+                <CachingRelayManager />
               </CollapsibleContent>
             </Collapsible>
 
