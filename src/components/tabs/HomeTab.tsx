@@ -595,9 +595,9 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
         </Card>
       )}
 
-{/* Dashboard widgets - uniform grid of draggable cards */}
+{/* Dashboard widgets - masonry layout with consistent spacing */}
       {hasActiveTabs && (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 items-start">
+        <div className="columns-1 md:columns-2 gap-4 space-y-4">
           {activeWidgets.map((widgetId, index) => {
             const config = getWidgetConfig(widgetId);
             if (!config) return null;
@@ -909,7 +909,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                   }
                 }}
                 className={cn(
-                  "relative",
+                  "relative break-inside-avoid",
                   isDragging && "dashboard-card-placeholder",
                   isDragOver && "dashboard-card-drop-target",
                   isEditMode && !isDragging && getWiggleClass(index),
