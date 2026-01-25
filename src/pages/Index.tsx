@@ -31,8 +31,10 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
 import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
 
-// Minimum loading time in milliseconds to ensure smooth UX and allow data to load
-const MIN_LOADING_TIME_MS = 3000;
+// Minimum loading time in milliseconds for smooth UX transition
+// With cache-first loading, data is available almost instantly
+// This just prevents jarring flashes for returning users
+const MIN_LOADING_TIME_MS = 500;
 
 const Index = () => {
   useSeoMeta({
@@ -241,11 +243,11 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {isDataLoading ? (
-          // Loading profile and preferences from relay
+          // Loading profile and preferences (cache-first, very fast for returning users)
           <LoadingAnimation 
             size="md"
-            message={isProfileLoading ? "Loading your profile..." : isPreferencesLoading ? "Loading your preferences..." : "Preparing your dashboard..."}
-            subMessage="Fetching your data from Nostr relays"
+            message="Preparing your dashboard..."
+            subMessage={isProfileLoading || isPreferencesLoading ? "Syncing with Nostr relays" : undefined}
           />
         ) : !user ? (
           // Not logged in - Welcome screen

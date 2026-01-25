@@ -299,3 +299,29 @@ export async function clearAllCache(): Promise<void> {
     console.error('[EventCache] Failed to clear all cache:', error);
   }
 }
+
+/**
+ * Get a single cached event by kind and pubkey (for replaceable events like profiles)
+ * Returns the most recent event if multiple exist
+ */
+export async function getCachedEvent(kind: number, pubkey: string): Promise<NostrEvent | null> {
+  try {
+    const events = await getCachedEvents([kind], pubkey);
+    if (events.length === 0) return null;
+    
+    // Return the most recent event
+    return events.reduce((latest, event) => 
+      event.created_at > latest.created_at ? event : latest
+    );
+  } catch (error) {
+    console.error('[EventCache] Failed to get cached event:', error);
+    return null;
+  }
+}
+
+/**
+ * Cache a single event (convenience wrapper)
+ */
+export async function cacheEvent(event: NostrEvent): Promise<void> {
+  return cacheEvents([event]);
+}

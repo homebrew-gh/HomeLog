@@ -2,12 +2,25 @@ import { useNostr } from '@nostrify/react';
 import { useNostrLogin } from '@nostrify/react/login';
 import { useQuery } from '@tanstack/react-query';
 import { NSchema as n, NostrEvent, NostrMetadata } from '@nostrify/nostrify';
+import { getCachedEvents, cacheEvents } from '@/lib/eventCache';
 
 export interface Account {
   id: string;
   pubkey: string;
   event?: NostrEvent;
   metadata: NostrMetadata;
+}
+
+/**
+ * Parse metadata from an event, with fallback to empty object
+ */
+function parseMetadata(event?: NostrEvent): NostrMetadata {
+  if (!event?.content) return {};
+  try {
+    return n.json().pipe(n.metadata()).parse(event.content);
+  } catch {
+    return {};
+  }
 }
 
 export function useLoggedInAccounts() {
@@ -17,24 +30,68 @@ export function useLoggedInAccounts() {
   const { data: authors = [], isLoading, isFetched } = useQuery({
     queryKey: ['nostr', 'logins', logins.map((l) => l.id).join(';')],
     queryFn: async ({ signal }) => {
-      // Longer timeout for mobile/PWA mode where network might be slower
-      const events = await nostr.query(
-        [{ kinds: [0], authors: logins.map((l) => l.pubkey) }],
-        { signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]) },
-      );
-
-      return logins.map(({ id, pubkey }): Account => {
-        const event = events.find((e) => e.pubkey === pubkey);
-        try {
-          const metadata = n.json().pipe(n.metadata()).parse(event?.content);
-          return { id, pubkey, metadata, event };
-        } catch {
-          return { id, pubkey, metadata: {}, event };
+      const pubkeys = logins.map((l) => l.pubkey);
+      
+      // CACHE-FIRST: Try to load from IndexedDB cache immediately
+      const cachedEvents: NostrEvent[] = [];
+      for (const pubkey of pubkeys) {
+        const cached = await getCachedEvents([0], pubkey);
+        if (cached.length > 0) {
+          // Get the most recent cached event
+          const latest = cached.reduce((a, b) => a.created_at > b.created_at ? a : b);
+          cachedEvents.push(latest);
         }
+      }
+      
+      console.log('[useLoggedInAccounts] Found', cachedEvents.length, 'cached profiles');
+      
+      // Build initial results from cache (instant)
+      const cachedResults = logins.map(({ id, pubkey }): Account => {
+        const event = cachedEvents.find((e) => e.pubkey === pubkey);
+        return { id, pubkey, metadata: parseMetadata(event), event };
       });
+      
+      // BACKGROUND SYNC: Fetch fresh data from relays
+      // Use a shorter timeout since we already have cached data to show
+      const timeoutMs = cachedEvents.length > 0 ? 5000 : 15000;
+      
+      try {
+        const freshEvents = await nostr.query(
+          [{ kinds: [0], authors: pubkeys }],
+          { signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) },
+        );
+        
+        console.log('[useLoggedInAccounts] Fetched', freshEvents.length, 'profiles from relays');
+        
+        // Cache the fresh events for next time
+        if (freshEvents.length > 0) {
+          cacheEvents(freshEvents).catch(err => 
+            console.warn('[useLoggedInAccounts] Failed to cache profiles:', err)
+          );
+        }
+        
+        // Merge fresh data with cached data (prefer fresh)
+        return logins.map(({ id, pubkey }): Account => {
+          // Prefer fresh event, fall back to cached
+          const freshEvent = freshEvents.find((e) => e.pubkey === pubkey);
+          const cachedEvent = cachedEvents.find((e) => e.pubkey === pubkey);
+          const event = freshEvent || cachedEvent;
+          return { id, pubkey, metadata: parseMetadata(event), event };
+        });
+      } catch (error) {
+        console.warn('[useLoggedInAccounts] Relay fetch failed, using cache:', error);
+        // If relay fetch fails but we have cached data, return that
+        if (cachedEvents.length > 0) {
+          return cachedResults;
+        }
+        throw error; // Re-throw if no cache available
+      }
     },
-    retry: 3,
+    retry: 2,
     enabled: logins.length > 0,
+    // Return cached data immediately while fetching fresh data
+    staleTime: 0,
+    gcTime: Infinity,
   });
 
   // Current user is the first login
@@ -48,7 +105,8 @@ export function useLoggedInAccounts() {
   // Other users are all logins except the current one
   const otherUsers = (authors || []).slice(1) as Account[];
 
-  // Profile is loading if we have logins but haven't fetched profile data yet
+  // Profile loading is now much faster with cache-first
+  // Only show loading if we don't have cached data yet AND are still fetching
   const isProfileLoading = logins.length > 0 && isLoading && !isFetched;
 
   return {

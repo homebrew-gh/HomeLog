@@ -1,12 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppContext } from '@/hooks/useAppContext';
+import { getCachedEvents, cacheEvents } from '@/lib/eventCache';
 
 /**
- * NostrSync - Syncs user's Nostr data
+ * NostrSync - Syncs user's Nostr data in the background
  *
  * This component runs globally to sync various Nostr data when the user logs in.
+ * Uses cache-first pattern: loads from IndexedDB first, then syncs from relays.
+ * 
  * Currently syncs:
  * - NIP-65 relay list (kind 10002)
  */
@@ -14,19 +17,70 @@ export function NostrSync() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { config, updateConfig } = useAppContext();
+  const lastSyncedPubkey = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      lastSyncedPubkey.current = null;
+      return;
+    }
+
+    // Don't re-sync for the same user
+    if (lastSyncedPubkey.current === user.pubkey) {
+      return;
+    }
+    lastSyncedPubkey.current = user.pubkey;
 
     const syncRelaysFromNostr = async () => {
+      const pubkey = user.pubkey;
+      
+      // STEP 1: Try loading from cache first (instant)
+      try {
+        const cachedEvents = await getCachedEvents([10002], pubkey);
+        if (cachedEvents.length > 0) {
+          const cachedEvent = cachedEvents.reduce((a, b) => 
+            a.created_at > b.created_at ? a : b
+          );
+          
+          if (cachedEvent.created_at > config.relayMetadata.updatedAt) {
+            const cachedRelays = cachedEvent.tags
+              .filter(([name]) => name === 'r')
+              .map(([_, url, marker]) => ({
+                url,
+                read: !marker || marker === 'read',
+                write: !marker || marker === 'write',
+              }));
+
+            if (cachedRelays.length > 0) {
+              console.log('[NostrSync] Loading relay list from cache:', cachedRelays.length, 'relays');
+              updateConfig((current) => ({
+                ...current,
+                relayMetadata: {
+                  relays: cachedRelays,
+                  updatedAt: cachedEvent.created_at,
+                },
+              }));
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('[NostrSync] Failed to load relays from cache:', error);
+      }
+
+      // STEP 2: Fetch fresh data from relays in background
       try {
         const events = await nostr.query(
-          [{ kinds: [10002], authors: [user.pubkey], limit: 1 }],
+          [{ kinds: [10002], authors: [pubkey], limit: 1 }],
           { signal: AbortSignal.timeout(5000) }
         );
 
         if (events.length > 0) {
           const event = events[0];
+
+          // Cache the fresh event
+          cacheEvents([event]).catch(err => 
+            console.warn('[NostrSync] Failed to cache relay list:', err)
+          );
 
           // Only update if the event is newer than our stored data
           if (event.created_at > config.relayMetadata.updatedAt) {
@@ -39,7 +93,7 @@ export function NostrSync() {
               }));
 
             if (fetchedRelays.length > 0) {
-              console.log('Syncing relay list from Nostr:', fetchedRelays);
+              console.log('[NostrSync] Syncing relay list from Nostr:', fetchedRelays.length, 'relays');
               updateConfig((current) => ({
                 ...current,
                 relayMetadata: {
@@ -51,10 +105,11 @@ export function NostrSync() {
           }
         }
       } catch (error) {
-        console.error('Failed to sync relays from Nostr:', error);
+        console.warn('[NostrSync] Failed to sync relays from Nostr (using cache):', error);
       }
     };
 
+    // Run sync immediately but don't block
     syncRelaysFromNostr();
   }, [user, config.relayMetadata.updatedAt, nostr, updateConfig]);
 

@@ -179,41 +179,52 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const lastSyncedPubkey = useRef<string | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch preferences from Nostr
+  // Fetch preferences from Nostr (background sync)
+  // Local storage is used as the primary source for instant loading
   const { data: remotePreferences, isLoading: isLoadingRemote, isFetched } = useQuery({
     queryKey: ['user-preferences', user?.pubkey],
     queryFn: async (c) => {
       if (!user?.pubkey) return null;
 
-      // Longer timeout for mobile/PWA mode where network might be slower
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
-
-      const events = await nostr.query(
-        [
-          {
-            kinds: [APP_DATA_KIND],
-            authors: [user.pubkey],
-            '#d': [APP_IDENTIFIER],
-            limit: 1,
-          },
-        ],
-        { signal }
-      );
-
-      if (events.length === 0) {
-        return null;
-      }
+      // Use shorter timeout since we have local storage as fallback
+      // This is a background sync, not blocking UI
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
 
       try {
-        const preferences = JSON.parse(events[0].content) as UserPreferences;
-        return preferences;
+        const events = await nostr.query(
+          [
+            {
+              kinds: [APP_DATA_KIND],
+              authors: [user.pubkey],
+              '#d': [APP_IDENTIFIER],
+              limit: 1,
+            },
+          ],
+          { signal }
+        );
+
+        if (events.length === 0) {
+          console.log('[UserPreferences] No remote preferences found');
+          return null;
+        }
+
+        try {
+          const preferences = JSON.parse(events[0].content) as UserPreferences;
+          console.log('[UserPreferences] Loaded preferences from relay');
+          return preferences;
+        } catch (error) {
+          console.warn('Failed to parse user preferences from Nostr:', error);
+          return null;
+        }
       } catch (error) {
-        console.warn('Failed to parse user preferences from Nostr:', error);
+        console.warn('[UserPreferences] Relay fetch failed, using local storage:', error);
         return null;
       }
     },
     enabled: !!user?.pubkey,
     staleTime: 60000,
+    // Don't block on this - local storage is our primary source
+    retry: 1,
   });
 
   // Sync remote preferences to local on login
@@ -709,11 +720,16 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     version: localPreferences.version || 1,
   };
 
+  // CACHE-FIRST: We always have local preferences immediately
+  // Only show loading if this is a brand new user with no local data AND we're still fetching
+  const hasLocalData = localPreferences.version > 0 || localPreferences.activeTabs.length > 0;
+  const isActuallyLoading = !hasLocalData && isLoadingRemote && !hasSyncedFromRemote.current;
+
   return (
     <UserPreferencesContext.Provider
       value={{
         preferences: normalizedPreferences,
-        isLoading: isLoadingRemote && !hasSyncedFromRemote.current,
+        isLoading: isActuallyLoading,
         isSyncing: !!saveTimeoutRef.current,
         addTab,
         addTabs,
