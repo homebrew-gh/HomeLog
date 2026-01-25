@@ -297,12 +297,25 @@ export function Privacy() {
 
         <Separator className="my-8" />
 
-        {/* Back Link */}
-        <div className="text-center">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            <Link to="/" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
-              ← Back to Home Log
+        {/* Footer Links */}
+        <div className="text-center space-y-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center justify-center gap-3 flex-wrap">
+            <Link to="/faq" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+              FAQ
             </Link>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <Link to="/license" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+              MIT License
+            </Link>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <Link to="/" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+              Back to Home Log
+            </Link>
+          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+              Vibed with Shakespeare
+            </a>
           </p>
         </div>
       </main>

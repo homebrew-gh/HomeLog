@@ -291,13 +291,17 @@ const Index = () => {
             <LoginArea className="justify-center" />
 
             <div className="mt-8 text-sm text-slate-500 dark:text-slate-400 space-y-2">
-              <p className="flex items-center justify-center gap-3">
+              <p className="flex items-center justify-center gap-3 flex-wrap">
                 <Link to="/faq" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
                   FAQ
                 </Link>
                 <span className="text-slate-300 dark:text-slate-600">•</span>
                 <Link to="/privacy" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
                   Privacy Policy
+                </Link>
+                <span className="text-slate-300 dark:text-slate-600">•</span>
+                <Link to="/license" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                  MIT License
                 </Link>
               </p>
               <p>
@@ -320,13 +324,17 @@ const Index = () => {
 
             {/* Footer */}
             <footer className="text-center py-8 text-sm text-slate-500 dark:text-slate-400 space-y-2">
-              <p className="flex items-center justify-center gap-3">
+              <p className="flex items-center justify-center gap-3 flex-wrap">
                 <Link to="/faq" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
                   FAQ
                 </Link>
                 <span className="text-slate-300 dark:text-slate-600">•</span>
                 <Link to="/privacy" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
                   Privacy Policy
+                </Link>
+                <span className="text-slate-300 dark:text-slate-600">•</span>
+                <Link to="/license" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                  MIT License
                 </Link>
               </p>
               <p>
