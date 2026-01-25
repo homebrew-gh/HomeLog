@@ -594,7 +594,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
             Dashboard
           </h2>
           <p className="text-muted-foreground mt-1">
-            Overview of your home management
+            Overview of your Home
           </p>
         </div>
       </div>
