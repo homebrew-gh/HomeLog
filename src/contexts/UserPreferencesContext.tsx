@@ -43,6 +43,17 @@ export interface BlossomServer {
   isPrivate: boolean;
 }
 
+export type ColorTheme = 'blue' | 'orange' | 'green' | 'red' | 'pink' | 'purple';
+
+export const COLOR_THEMES: { id: ColorTheme; label: string; color: string }[] = [
+  { id: 'blue', label: 'Sky Blue', color: 'hsl(199, 89%, 48%)' },
+  { id: 'orange', label: 'Amber', color: 'hsl(25, 95%, 53%)' },
+  { id: 'green', label: 'Emerald', color: 'hsl(160, 84%, 39%)' },
+  { id: 'red', label: 'Rose', color: 'hsl(350, 89%, 60%)' },
+  { id: 'pink', label: 'Fuchsia', color: 'hsl(292, 84%, 61%)' },
+  { id: 'purple', label: 'Violet', color: 'hsl(263, 70%, 50%)' },
+];
+
 // Default server is public - users must configure a private server for sensitive uploads
 export const DEFAULT_BLOSSOM_SERVERS: BlossomServer[] = [
   { url: 'https://blossom.primal.net/', enabled: true, isPrivate: false },
@@ -58,6 +69,8 @@ export interface UserPreferences {
   appliancesViewMode: 'list' | 'card';
   vehiclesViewMode: 'list' | 'card';
   companiesViewMode: 'list' | 'card';
+  // Color theme preference
+  colorTheme: ColorTheme;
   // Custom rooms
   customRooms: string[];
   // Hidden default rooms (allows users to "delete" default rooms)
@@ -91,6 +104,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   appliancesViewMode: 'card',
   vehiclesViewMode: 'card',
   companiesViewMode: 'card',
+  colorTheme: 'blue',
   customRooms: [],
   hiddenDefaultRooms: [],
   customVehicleTypes: [],
@@ -158,6 +172,8 @@ interface UserPreferencesContextType {
   getEnabledBlossomServers: () => string[];
   getPrivateBlossomServers: () => string[];
   hasPrivateBlossomServer: () => boolean;
+  // Color theme actions
+  setColorTheme: (theme: ColorTheme) => void;
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | null>(null);
@@ -683,6 +699,14 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     return servers.some(s => s.enabled && s.isPrivate);
   }, [localPreferences.blossomServers]);
 
+  // Color theme action
+  const setColorTheme = useCallback((theme: ColorTheme) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      colorTheme: theme,
+    }));
+  }, [updatePreferences]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -706,6 +730,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     appliancesViewMode: localPreferences.appliancesViewMode || 'card',
     vehiclesViewMode: localPreferences.vehiclesViewMode || 'card',
     companiesViewMode: localPreferences.companiesViewMode || 'card',
+    colorTheme: localPreferences.colorTheme || 'blue',
     customRooms: localPreferences.customRooms || [],
     hiddenDefaultRooms: localPreferences.hiddenDefaultRooms || [],
     customVehicleTypes: localPreferences.customVehicleTypes || [],
@@ -771,6 +796,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         getEnabledBlossomServers,
         getPrivateBlossomServers,
         hasPrivateBlossomServer,
+        setColorTheme,
       }}
     >
       {children}

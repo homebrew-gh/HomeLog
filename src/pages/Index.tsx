@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine } from 'lucide-react';
+import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -13,6 +13,7 @@ import { VehicleTypeManagementDialog } from '@/components/VehicleTypeManagementD
 import { SubscriptionTypeManagementDialog } from '@/components/SubscriptionTypeManagementDialog';
 import { HomeFeatureManagementDialog } from '@/components/HomeFeatureManagementDialog';
 import { EncryptionSettingsDialog } from '@/components/EncryptionSettingsDialog';
+import { DisplaySettingsDialog } from '@/components/DisplaySettingsDialog';
 import { DonateSection } from '@/components/DonateSection';
 import { TabNavigation } from '@/components/TabNavigation';
 import { AddTabDialog } from '@/components/AddTabDialog';
@@ -30,6 +31,7 @@ import {
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
 import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
+import { useApplyColorTheme } from '@/hooks/useColorTheme';
 
 // Minimum loading time in milliseconds for smooth UX transition
 // With cache-first loading, data is available almost instantly
@@ -45,6 +47,9 @@ const Index = () => {
   const { user } = useCurrentUser();
   const { isProfileLoading } = useLoggedInAccounts();
   const { preferences, setActiveTab, isLoading: isPreferencesLoading } = useTabPreferences();
+  
+  // Apply color theme to document root
+  useApplyColorTheme();
 
   // Track minimum loading time
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
@@ -108,6 +113,7 @@ const Index = () => {
   const [subscriptionTypeManagementOpen, setSubscriptionTypeManagementOpen] = useState(false);
   const [homeFeatureManagementOpen, setHomeFeatureManagementOpen] = useState(false);
   const [encryptionSettingsOpen, setEncryptionSettingsOpen] = useState(false);
+  const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
   
   // Scroll target state for navigating to specific sections within tabs
@@ -161,9 +167,9 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 to-sky-100 dark:from-slate-900 dark:to-slate-800 tool-pattern-bg">
+    <div className="min-h-screen bg-theme-gradient tool-pattern-bg">
       {/* Header + Tab Navigation - Combined sticky container */}
-      <div className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-sky-200 dark:border-slate-700">
+      <div className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
         <header>
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             {/* Left - Menu & Logo */}
@@ -200,10 +206,16 @@ const Index = () => {
                       Data Encryption
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Server Settings</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => openRelayManagement('relays')}>
-                      <Wifi className="h-4 w-4 mr-2" />
-                      Relays
+                    <DropdownMenuLabel>Display</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setDisplaySettingsOpen(true)}>
+                      <Palette className="h-4 w-4 mr-2" />
+                      Color Theme
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Settings</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setRoomManagementOpen(true)}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Rooms
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openRelayManagement('media')}>
                       <Cloud className="h-4 w-4 mr-2" />
@@ -221,8 +233,8 @@ const Index = () => {
                 </DropdownMenu>
               )}
               <div className="flex items-center gap-2">
-                <Home className="h-6 w-6 text-sky-600 dark:text-sky-400" />
-                <span className="font-bold text-xl text-sky-700 dark:text-sky-300">Home Log</span>
+                <Home className="h-6 w-6 text-primary" />
+                <span className="font-bold text-xl text-theme-heading">Home Log</span>
               </div>
             </div>
 
@@ -253,8 +265,8 @@ const Index = () => {
           // Not logged in - Welcome screen
           <div className="max-w-2xl mx-auto text-center py-16">
             <div className="mb-8">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-sky-200 dark:bg-sky-800 mb-6">
-                <Home className="h-12 w-12 text-sky-600 dark:text-sky-300" />
+              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary/20 mb-6">
+                <Home className="h-12 w-12 text-primary" />
               </div>
               <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-4">
                 Welcome to Home Log
@@ -265,9 +277,9 @@ const Index = () => {
             </div>
 
             <div className="grid sm:grid-cols-3 gap-6 mb-12">
-              <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+              <Card className="bg-card border-border">
                 <CardContent className="pt-6">
-                  <Package className="h-10 w-10 text-sky-500 mx-auto mb-3" />
+                  <Package className="h-10 w-10 text-primary mx-auto mb-3" />
                   <h3 className="font-semibold mb-2">Track Everything</h3>
                   <p className="text-sm text-muted-foreground">
                     Appliances, vehicles, warranties, and companies all in one place.
@@ -275,9 +287,9 @@ const Index = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+              <Card className="bg-card border-border">
                 <CardContent className="pt-6">
-                  <Wrench className="h-10 w-10 text-sky-500 mx-auto mb-3" />
+                  <Wrench className="h-10 w-10 text-primary mx-auto mb-3" />
                   <h3 className="font-semibold mb-2">Never Miss a Task</h3>
                   <p className="text-sm text-muted-foreground">
                     Schedule maintenance for your home, vehicles, and subscriptions.
@@ -285,9 +297,9 @@ const Index = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+              <Card className="bg-card border-border">
                 <CardContent className="pt-6">
-                  <Calendar className="h-10 w-10 text-sky-500 mx-auto mb-3" />
+                  <Calendar className="h-10 w-10 text-primary mx-auto mb-3" />
                   <h3 className="font-semibold mb-2">Plan Ahead</h3>
                   <p className="text-sm text-muted-foreground">
                     Organize future projects and keep your home running smoothly.
@@ -298,22 +310,22 @@ const Index = () => {
 
             <LoginArea className="justify-center" />
 
-            <div className="mt-8 text-sm text-slate-500 dark:text-slate-400 space-y-2">
+            <div className="mt-8 text-sm text-muted-foreground space-y-2">
               <p className="flex items-center justify-center gap-3 flex-wrap">
-                <Link to="/faq" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                <Link to="/faq" className="hover:text-primary transition-colors">
                   FAQ
                 </Link>
-                <span className="text-slate-300 dark:text-slate-600">•</span>
-                <Link to="/privacy" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                <span className="text-border">•</span>
+                <Link to="/privacy" className="hover:text-primary transition-colors">
                   Privacy Policy
                 </Link>
-                <span className="text-slate-300 dark:text-slate-600">•</span>
-                <Link to="/license" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                <span className="text-border">•</span>
+                <Link to="/license" className="hover:text-primary transition-colors">
                   MIT License
                 </Link>
               </p>
               <p>
-                <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
                   Vibed with Shakespeare
                 </a>
               </p>
@@ -331,22 +343,22 @@ const Index = () => {
             </section>
 
             {/* Footer */}
-            <footer className="text-center py-8 text-sm text-slate-500 dark:text-slate-400 space-y-2">
+            <footer className="text-center py-8 text-sm text-muted-foreground space-y-2">
               <p className="flex items-center justify-center gap-3 flex-wrap">
-                <Link to="/faq" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                <Link to="/faq" className="hover:text-primary transition-colors">
                   FAQ
                 </Link>
-                <span className="text-slate-300 dark:text-slate-600">•</span>
-                <Link to="/privacy" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                <span className="text-border">•</span>
+                <Link to="/privacy" className="hover:text-primary transition-colors">
                   Privacy Policy
                 </Link>
-                <span className="text-slate-300 dark:text-slate-600">•</span>
-                <Link to="/license" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                <span className="text-border">•</span>
+                <Link to="/license" className="hover:text-primary transition-colors">
                   MIT License
                 </Link>
               </p>
               <p>
-                <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                <a href="https://shakespeare.diy" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
                   Vibed with Shakespeare
                 </a>
               </p>
@@ -390,6 +402,11 @@ const Index = () => {
       <HomeFeatureManagementDialog
         isOpen={homeFeatureManagementOpen}
         onClose={() => setHomeFeatureManagementOpen(false)}
+      />
+
+      <DisplaySettingsDialog
+        isOpen={displaySettingsOpen}
+        onClose={() => setDisplaySettingsOpen(false)}
       />
     </div>
   );
