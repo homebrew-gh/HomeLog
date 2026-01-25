@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Home, Package, Wrench, Calendar, Menu, Settings, Wifi, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette } from 'lucide-react';
+import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -229,7 +229,7 @@ const Index = () => {
                 </DropdownMenu>
               )}
               <div className="flex items-center gap-2">
-                <Home className="h-6 w-6 text-primary" />
+                <img src="/logo.png" alt="Home Log" className="h-6 w-6" />
                 <span className="font-bold text-xl text-theme-heading">Home Log</span>
               </div>
             </div>
@@ -261,8 +261,8 @@ const Index = () => {
           // Not logged in - Welcome screen
           <div className="max-w-2xl mx-auto text-center py-16">
             <div className="mb-8">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary/20 mb-6">
-                <Home className="h-12 w-12 text-primary" />
+              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary/10 mb-6 overflow-hidden">
+                <img src="/logo.png" alt="Home Log" className="h-20 w-20 object-contain" />
               </div>
               <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-4">
                 Welcome to Home Log
