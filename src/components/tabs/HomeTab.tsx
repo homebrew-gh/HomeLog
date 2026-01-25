@@ -1074,24 +1074,24 @@ interface WidgetCardProps {
 function WidgetCard({ title, icon: Icon, onClick, isLoading, badge, clickable = true, children }: WidgetCardProps) {
   return (
     <Card 
-      className={`bg-card border-border transition-shadow ${
+      className={`bg-card border-border transition-shadow break-inside-avoid ${
         clickable ? 'cursor-pointer hover:shadow-md group' : ''
       }`}
       onClick={clickable ? onClick : undefined}
     >
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-base">
-          <div className="flex items-center gap-2">
-            <Icon className="h-5 w-5 text-primary" />
-            <span>{title}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <Icon className="h-5 w-5 text-primary flex-shrink-0" />
+            <span className="truncate">{title}</span>
             {badge && (
-              <Badge variant={badge.variant} className="text-xs">
+              <Badge variant={badge.variant} className="text-xs flex-shrink-0">
                 {badge.text}
               </Badge>
             )}
           </div>
           {clickable && (
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-2" />
           )}
         </CardTitle>
       </CardHeader>
