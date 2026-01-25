@@ -1,11 +1,10 @@
-import { Shield, Globe, Lock, ExternalLink, Cloud, HelpCircle, Zap } from 'lucide-react';
+import { Shield, Globe, Lock, ExternalLink, Cloud, HelpCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { RelayListManager } from '@/components/RelayListManager';
-import { CachingRelayManager } from '@/components/CachingRelayManager';
 import { BlossomServerManager } from '@/components/BlossomServerManager';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
@@ -18,7 +17,6 @@ interface RelayManagementDialogProps {
 
 export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }: RelayManagementDialogProps) {
   const [isRelayInfoOpen, setIsRelayInfoOpen] = useState(false);
-  const [isCachingInfoOpen, setIsCachingInfoOpen] = useState(false);
   const [isBlossomInfoOpen, setIsBlossomInfoOpen] = useState(false);
 
   return (
@@ -42,64 +40,6 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
 
           {/* Relays Tab */}
           <TabsContent value="relays" className="space-y-4 mt-4">
-            {/* Caching Relay Section */}
-            <Collapsible open={isCachingInfoOpen} onOpenChange={setIsCachingInfoOpen}>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 rounded-md border border-sky-200 dark:border-sky-800 bg-sky-50/50 dark:bg-sky-950/30 hover:bg-sky-100/50 dark:hover:bg-sky-900/30 transition-colors">
-                <Zap className="h-4 w-4 text-sky-600 shrink-0" />
-                <span className="text-sm font-medium text-sky-800 dark:text-sky-200 flex-1 text-left">
-                  Caching Relay
-                </span>
-                <ChevronDown className={`h-4 w-4 text-sky-600 transition-transform ${isCachingInfoOpen ? 'rotate-180' : ''}`} />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3 space-y-3">
-                <Alert className="border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/50">
-                  <Zap className="h-4 w-4 text-sky-600" />
-                  <AlertDescription className="text-sm text-sky-800 dark:text-sky-200">
-                    <strong>Faster loading times:</strong> A caching relay stores copies of your profile and settings, allowing Home Log to load much faster on first login. This is especially helpful when you haven't cached any data in your browser yet.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="rounded-lg border border-dashed border-sky-300 dark:border-sky-700 bg-sky-50/50 dark:bg-sky-950/30 p-4 space-y-3">
-                  <p className="text-xs text-slate-500 dark:text-slate-500">
-                    Popular caching relay options:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <div className="flex items-center gap-1">
-                      <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">wss://relay.primal.net</code>
-                      <span className="text-xs text-slate-500">(Primal)</span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-500">
-                    Or run your own with:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <a 
-                      href="https://github.com/scsibug/nostr-rs-relay" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline"
-                    >
-                      nostr-rs-relay
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                    <span className="text-slate-300 dark:text-slate-600">•</span>
-                    <a 
-                      href="https://github.com/hoytech/strfry" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-400 hover:underline"
-                    >
-                      strfry
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-
-                {/* Caching Relay Manager */}
-                <CachingRelayManager />
-              </CollapsibleContent>
-            </Collapsible>
-
             {/* Private Relays Info - Collapsible */}
             <Collapsible open={isRelayInfoOpen} onOpenChange={setIsRelayInfoOpen}>
               <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 hover:bg-amber-100/50 dark:hover:bg-amber-900/30 transition-colors">
