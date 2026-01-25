@@ -39,6 +39,7 @@ import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useHomeLogFriends } from '@/hooks/useHomeLogFriends';
 import { useAuthor } from '@/hooks/useAuthor';
+import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
 import { genUserName } from '@/lib/genUserName';
 import type { MaintenanceSchedule } from '@/lib/types';
 
@@ -104,6 +105,18 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const { data: completions = [] } = useMaintenanceCompletions();
   const applianceMaintenance = useApplianceMaintenance();
   const vehicleMaintenance = useVehicleMaintenance();
+  
+  // Track data sync status for showing loading states
+  const { isSyncing: isDataSyncing, isSynced: isDataSynced, categories: syncCategories } = useDataSyncStatus();
+  
+  // Show loading if:
+  // 1. TanStack query is loading, OR
+  // 2. Data sync is in progress AND we have no data yet AND sync hasn't completed
+  const showAppliancesLoading = isLoadingAppliances || (isDataSyncing && appliances.length === 0 && !syncCategories.appliances.synced);
+  const showVehiclesLoading = isLoadingVehicles || (isDataSyncing && vehicles.length === 0 && !syncCategories.vehicles.synced);
+  const showCompaniesLoading = isLoadingCompanies || (isDataSyncing && companies.length === 0 && !syncCategories.companies.synced);
+  const showSubscriptionsLoading = isLoadingSubscriptions || (isDataSyncing && subscriptions.length === 0 && !syncCategories.subscriptions.synced);
+  const showMaintenanceLoading = isLoadingMaintenance || (isDataSyncing && maintenance.length === 0 && !syncCategories.maintenance.synced);
   
   // Discover friends using HomeLog
   const { friends: homeLogFriends, isLoading: isLoadingFriends } = useHomeLogFriends();
@@ -698,7 +711,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                       title="Appliances"
                       icon={Package}
                       onClick={() => !isEditMode && onNavigateToTab('appliances')}
-                      isLoading={isLoadingAppliances}
+                      isLoading={showAppliancesLoading}
                       clickable={!isEditMode}
                     >
                       {appliances.length === 0 ? (
@@ -745,7 +758,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                       title="Vehicles"
                       icon={Car}
                       onClick={() => !isEditMode && onNavigateToTab('vehicles')}
-                      isLoading={isLoadingVehicles}
+                      isLoading={showVehiclesLoading}
                       clickable={!isEditMode}
                     >
                       {vehicles.length === 0 ? (
@@ -792,7 +805,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                       title="Companies & Services"
                       icon={Users}
                       onClick={() => !isEditMode && onNavigateToTab('companies')}
-                      isLoading={isLoadingCompanies}
+                      isLoading={showCompaniesLoading}
                       clickable={!isEditMode}
                     >
                       {companies.length === 0 ? (
@@ -844,7 +857,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                       title="Home Maintenance"
                       icon={Home}
                       onClick={() => !isEditMode && onNavigateToTab('maintenance', 'home-maintenance')}
-                      isLoading={isLoadingMaintenance}
+                      isLoading={showMaintenanceLoading}
                       clickable={!isEditMode}
                       badge={upcomingHomeMaintenance.filter(m => m.isOverdue).length > 0 ? {
                         text: `${upcomingHomeMaintenance.filter(m => m.isOverdue).length} overdue`,
@@ -907,7 +920,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                       title="Vehicle Maintenance"
                       icon={Car}
                       onClick={() => !isEditMode && onNavigateToTab('maintenance', 'vehicle-maintenance')}
-                      isLoading={isLoadingMaintenance || isLoadingVehicles}
+                      isLoading={showMaintenanceLoading || showVehiclesLoading}
                       clickable={!isEditMode}
                       badge={upcomingVehicleMaintenance.filter(m => m.isOverdue).length > 0 ? {
                         text: `${upcomingVehicleMaintenance.filter(m => m.isOverdue).length} overdue`,
@@ -968,7 +981,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                       title="Subscriptions"
                       icon={CreditCard}
                       onClick={() => !isEditMode && onNavigateToTab('subscriptions')}
-                      isLoading={isLoadingSubscriptions}
+                      isLoading={showSubscriptionsLoading}
                       clickable={!isEditMode}
                     >
                       {subscriptions.length === 0 ? (
@@ -1208,9 +1221,13 @@ function WidgetCard({ title, icon: Icon, onClick, isLoading, badge, clickable = 
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
+          <div className="space-y-3">
+            {/* Skeleton that mimics the category pill buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-8 w-24 rounded-full" />
+              <Skeleton className="h-8 w-20 rounded-full" />
+              <Skeleton className="h-8 w-28 rounded-full" />
+            </div>
           </div>
         ) : (
           children

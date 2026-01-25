@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette } from 'lucide-react';
+import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -32,11 +32,11 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
 import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
 import { useApplyColorTheme } from '@/hooks/useColorTheme';
+import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
 
-// Minimum loading time in milliseconds for smooth UX transition
-// With cache-first loading, data is available almost instantly
+// Minimum loading time in milliseconds for initial profile loading
 // This just prevents jarring flashes for returning users
-const MIN_LOADING_TIME_MS = 500;
+const MIN_LOADING_TIME_MS = 300;
 
 const Index = () => {
   useSeoMeta({
@@ -46,29 +46,30 @@ const Index = () => {
 
   const { user } = useCurrentUser();
   const { isProfileLoading } = useLoggedInAccounts();
-  const { preferences, setActiveTab, isLoading: isPreferencesLoading } = useTabPreferences();
+  const { preferences, setActiveTab } = useTabPreferences();
+  const { isSyncing: isDataSyncing, isSynced: isDataSynced } = useDataSyncStatus();
   
   // Apply color theme to document root
   useApplyColorTheme();
 
-  // Track minimum loading time
+  // Track minimum loading time for initial auth/profile load only
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const loadingStartTime = useRef<number | null>(null);
 
-  // Start timer when user logs in and loading begins
+  // Start timer when user logs in and profile loading begins
   useEffect(() => {
-    if (user && (isProfileLoading || isPreferencesLoading)) {
+    if (user && isProfileLoading) {
       // Only set start time if we haven't already
       if (loadingStartTime.current === null) {
         loadingStartTime.current = Date.now();
         setMinTimeElapsed(false);
       }
     }
-  }, [user, isProfileLoading, isPreferencesLoading]);
+  }, [user, isProfileLoading]);
 
-  // Check if minimum time has elapsed once data loading completes
+  // Check if minimum time has elapsed once profile loading completes
   useEffect(() => {
-    if (user && !isProfileLoading && !isPreferencesLoading && loadingStartTime.current !== null) {
+    if (user && !isProfileLoading && loadingStartTime.current !== null) {
       const elapsed = Date.now() - loadingStartTime.current;
       const remaining = MIN_LOADING_TIME_MS - elapsed;
       
@@ -86,7 +87,7 @@ const Index = () => {
         return () => clearTimeout(timer);
       }
     }
-  }, [user, isProfileLoading, isPreferencesLoading]);
+  }, [user, isProfileLoading]);
 
   // Reset state when user logs out
   useEffect(() => {
@@ -96,14 +97,15 @@ const Index = () => {
     }
   }, [user]);
 
-  // Combined loading state:
-  // - Show loading if profile or preferences are still loading from relay
-  // - Also show loading until minimum time has elapsed (for smooth UX)
-  const isDataLoading = user && (
+  // Initial loading state - only for authentication and basic profile
+  // This should be very brief (< 1 second)
+  const isInitialLoading = user && (
     isProfileLoading || 
-    isPreferencesLoading || 
     (!minTimeElapsed && loadingStartTime.current !== null)
   );
+  
+  // Data sync is happening in background - show indicator but don't block UI
+  const isBackgroundSyncing = user && isDataSyncing && !isDataSynced;
 
   // Dialog states
   const [roomManagementOpen, setRoomManagementOpen] = useState(false);
@@ -174,7 +176,7 @@ const Index = () => {
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             {/* Left - Menu & Logo */}
             <div className="flex items-center gap-3">
-              {user && !isDataLoading && (
+              {user && !isInitialLoading && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full">
@@ -242,20 +244,20 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Tab Navigation - Only shown when logged in and all data is loaded */}
-        {user && !isDataLoading && (
+        {/* Tab Navigation - Only shown when logged in and initial auth is complete */}
+        {user && !isInitialLoading && (
           <TabNavigation onAddTabClick={() => setAddTabDialogOpen(true)} />
         )}
       </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {isDataLoading ? (
-          // Loading profile and preferences (cache-first, very fast for returning users)
+        {isInitialLoading ? (
+          // Brief initial loading while authenticating
           <LoadingAnimation 
             size="md"
-            message="Preparing your dashboard..."
-            subMessage={isProfileLoading || isPreferencesLoading ? "Syncing with Nostr relays" : undefined}
+            message="Signing in..."
+            subMessage="Connecting to your account"
           />
         ) : !user ? (
           // Not logged in - Welcome screen
@@ -330,6 +332,14 @@ const Index = () => {
         ) : (
           // Logged in - Tab-based dashboard
           <div className="space-y-8">
+            {/* Background sync indicator - subtle notification */}
+            {isBackgroundSyncing && (
+              <div className="flex items-center justify-center gap-2 py-2 px-4 bg-primary/10 rounded-lg text-sm text-primary animate-pulse">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span>Syncing your data from Nostr relays...</span>
+              </div>
+            )}
+            
             {/* Tab Content */}
             {renderTabContent()}
 
