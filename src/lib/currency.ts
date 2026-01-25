@@ -111,6 +111,9 @@ export interface ExchangeRates {
   btcPrice?: number; // BTC price in base currency
 }
 
+// Satoshis per Bitcoin constant
+const SATS_PER_BTC = 100_000_000;
+
 // Convert amount between currencies
 export function convertCurrency(
   amount: number,
@@ -122,27 +125,37 @@ export function convertCurrency(
     return amount;
   }
 
-  // Handle satoshi <-> BTC conversions directly
+  // Handle satoshi <-> BTC conversions directly (no rates needed)
   if (fromCurrency === 'BTC' && toCurrency === 'SATS') {
-    return amount * 100_000_000;
+    return amount * SATS_PER_BTC;
   }
   if (fromCurrency === 'SATS' && toCurrency === 'BTC') {
-    return amount / 100_000_000;
+    return amount / SATS_PER_BTC;
   }
 
-  // Get the BTC price if needed
-  const btcPrice = rates.btcPrice || rates.rates['BTC'] ? (1 / rates.rates['BTC']) : 0;
+  // Get the BTC price in the base currency (e.g., USD)
+  // btcPrice is stored as "how many USD per 1 BTC"
+  const btcPrice = rates.btcPrice || 0;
+  
+  if (btcPrice === 0 && (fromCurrency === 'BTC' || fromCurrency === 'SATS' || toCurrency === 'BTC' || toCurrency === 'SATS')) {
+    console.warn('No BTC price available for conversion');
+    return amount;
+  }
 
-  // Convert from source to USD (or base currency)
+  // Convert from source currency to base currency (USD)
   let amountInBase: number;
   
   if (fromCurrency === 'BTC') {
+    // BTC -> USD: multiply by BTC price
     amountInBase = amount * btcPrice;
   } else if (fromCurrency === 'SATS') {
-    amountInBase = (amount / 100_000_000) * btcPrice;
+    // SATS -> USD: convert to BTC first, then to USD
+    const amountInBtc = amount / SATS_PER_BTC;
+    amountInBase = amountInBtc * btcPrice;
   } else if (fromCurrency === rates.base) {
     amountInBase = amount;
   } else {
+    // Fiat -> USD: divide by exchange rate
     const fromRate = rates.rates[fromCurrency];
     if (!fromRate) {
       console.warn(`No exchange rate found for ${fromCurrency}`);
@@ -151,14 +164,18 @@ export function convertCurrency(
     amountInBase = amount / fromRate;
   }
 
-  // Convert from base to target currency
+  // Convert from base currency (USD) to target currency
   if (toCurrency === 'BTC') {
-    return btcPrice > 0 ? amountInBase / btcPrice : 0;
+    // USD -> BTC: divide by BTC price
+    return amountInBase / btcPrice;
   } else if (toCurrency === 'SATS') {
-    return btcPrice > 0 ? (amountInBase / btcPrice) * 100_000_000 : 0;
+    // USD -> SATS: convert to BTC first, then to sats
+    const amountInBtc = amountInBase / btcPrice;
+    return amountInBtc * SATS_PER_BTC;
   } else if (toCurrency === rates.base) {
     return amountInBase;
   } else {
+    // USD -> Fiat: multiply by exchange rate
     const toRate = rates.rates[toCurrency];
     if (!toRate) {
       console.warn(`No exchange rate found for ${toCurrency}`);
