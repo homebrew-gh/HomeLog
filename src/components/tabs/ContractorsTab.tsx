@@ -20,7 +20,9 @@ import {
   PaintBucket,
   Hammer,
   TreeDeciduous,
-  CircleDot
+  CircleDot,
+  FileUp,
+  UserPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,10 +30,12 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { ContractorDialog } from '@/components/ContractorDialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ContractorDialog, parseVcf, type VcfData } from '@/components/ContractorDialog';
 import { ContractorDetailDialog } from '@/components/ContractorDetailDialog';
 import { useContractors } from '@/hooks/useContractors';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
+import { toast } from '@/hooks/useToast';
 import type { Contractor } from '@/lib/types';
 
 // Get icon based on service type
@@ -68,12 +72,14 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContractor, setEditingContractor] = useState<Contractor | undefined>();
   const [viewingContractor, setViewingContractor] = useState<Contractor | undefined>();
+  const [vcfImportData, setVcfImportData] = useState<VcfData | undefined>();
 
   // Collapsed types state (for list view)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
 
   // Refs for service type sections
   const typeRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const vcfInputRef = useRef<HTMLInputElement>(null);
 
   // Handle scroll to target when scrollTarget changes
   useEffect(() => {
@@ -137,7 +143,52 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
 
   const handleEditContractor = (contractor: Contractor) => {
     setEditingContractor(contractor);
+    setVcfImportData(undefined);
     setDialogOpen(true);
+  };
+
+  const handleAddManually = () => {
+    setEditingContractor(undefined);
+    setVcfImportData(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleVcfImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const content = await file.text();
+      const data = parseVcf(content);
+      
+      if (!data.name && !data.phone && !data.email) {
+        toast({
+          title: 'Import failed',
+          description: 'Could not extract contact information from the VCF file.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setEditingContractor(undefined);
+      setVcfImportData(data);
+      setDialogOpen(true);
+
+      toast({
+        title: 'Contact imported',
+        description: `Imported "${data.name || 'contact'}". Please select a service type and review the details.`,
+      });
+    } catch (error) {
+      console.error('VCF import error:', error);
+      toast({
+        title: 'Import failed',
+        description: 'Could not read the VCF file. Please check the file format.',
+        variant: 'destructive',
+      });
+    }
+
+    // Reset input so the same file can be selected again
+    e.target.value = '';
   };
 
   return (
@@ -172,16 +223,33 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
               </ToggleGroupItem>
             </ToggleGroup>
           )}
-          <Button
-            onClick={() => {
-              setEditingContractor(undefined);
-              setDialogOpen(true);
-            }}
-            className="bg-sky-600 hover:bg-sky-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Contractor
-          </Button>
+          {/* Hidden file input for VCF import */}
+          <input
+            type="file"
+            accept=".vcf,.vcard"
+            className="hidden"
+            ref={vcfInputRef}
+            onChange={handleVcfImport}
+          />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="bg-sky-600 hover:bg-sky-700 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Service
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleAddManually}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Manually
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => vcfInputRef.current?.click()}>
+                <FileUp className="h-4 w-4 mr-2" />
+                Import from Contact (.vcf)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -229,15 +297,12 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
               Keep contact information, service history, and invoices for all your trusted contractors and service providers.
             </p>
             <Button
-              onClick={() => {
-                setEditingContractor(undefined);
-                setDialogOpen(true);
-              }}
+              onClick={handleAddManually}
               variant="outline"
               className="border-sky-300 hover:bg-sky-50 dark:border-sky-700 dark:hover:bg-sky-900"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Your First Contractor
+              Add Your First Service
             </Button>
           </CardContent>
         </Card>
@@ -356,8 +421,10 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
         onClose={() => {
           setDialogOpen(false);
           setEditingContractor(undefined);
+          setVcfImportData(undefined);
         }}
         contractor={editingContractor}
+        initialData={vcfImportData}
       />
 
       {viewingContractor && (

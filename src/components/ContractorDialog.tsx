@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Star, Calendar } from 'lucide-react';
+import { Plus, Upload, X, FileText, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Star, Calendar, FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -14,6 +14,124 @@ import { useContractorTypes } from '@/hooks/useContractorTypes';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import type { Contractor, Invoice } from '@/lib/types';
+
+// VCF Parser - extracts contact information from vCard format
+interface VcfData {
+  name?: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  notes?: string;
+}
+
+function parseVcf(vcfContent: string): VcfData {
+  const data: VcfData = {};
+  const lines = vcfContent.split(/\r?\n/);
+  
+  // Handle folded lines (lines starting with space/tab are continuations)
+  const unfoldedLines: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith(' ') || line.startsWith('\t')) {
+      // Continuation of previous line
+      if (unfoldedLines.length > 0) {
+        unfoldedLines[unfoldedLines.length - 1] += line.substring(1);
+      }
+    } else {
+      unfoldedLines.push(line);
+    }
+  }
+  
+  for (const line of unfoldedLines) {
+    // Skip empty lines
+    if (!line.trim()) continue;
+    
+    // Parse property name and value
+    const colonIndex = line.indexOf(':');
+    if (colonIndex === -1) continue;
+    
+    const propertyPart = line.substring(0, colonIndex);
+    const valuePart = line.substring(colonIndex + 1);
+    
+    // Extract base property name (before any parameters like ;TYPE=)
+    const propertyName = propertyPart.split(';')[0].toUpperCase();
+    
+    // Decode quoted-printable if needed
+    const isQuotedPrintable = propertyPart.toUpperCase().includes('ENCODING=QUOTED-PRINTABLE');
+    const value = isQuotedPrintable ? decodeQuotedPrintable(valuePart) : valuePart;
+    
+    switch (propertyName) {
+      case 'FN': // Formatted Name - use as business name
+        data.name = value.trim();
+        break;
+        
+      case 'N': // Structured Name - use as contact name if different
+        const nameParts = value.split(';').map(p => p.trim()).filter(Boolean);
+        if (nameParts.length >= 2) {
+          // Format: Last;First;Middle;Prefix;Suffix
+          const contactName = [nameParts[1], nameParts[0]].filter(Boolean).join(' ');
+          if (contactName && contactName !== data.name) {
+            data.contactName = contactName;
+          }
+        }
+        break;
+        
+      case 'ORG': // Organization
+        if (!data.name) {
+          data.name = value.split(';')[0].trim();
+        }
+        break;
+        
+      case 'TEL': // Telephone
+        if (!data.phone) {
+          // Clean up phone number
+          data.phone = value.replace(/[^\d+\-() ]/g, '').trim();
+        }
+        break;
+        
+      case 'EMAIL': // Email
+        if (!data.email) {
+          data.email = value.trim();
+        }
+        break;
+        
+      case 'URL': // Website
+        if (!data.website) {
+          data.website = value.trim();
+        }
+        break;
+        
+      case 'ADR': // Address
+        // Format: PO Box;Extended;Street;City;State;Postal;Country
+        const addrParts = value.split(';').map(p => p.trim());
+        if (addrParts.length >= 3) {
+          const street = [addrParts[0], addrParts[1], addrParts[2]].filter(Boolean).join(' ');
+          if (street) data.address = street;
+          if (addrParts[3]) data.city = addrParts[3];
+          if (addrParts[4]) data.state = addrParts[4];
+          if (addrParts[5]) data.zipCode = addrParts[5];
+        }
+        break;
+        
+      case 'NOTE': // Notes
+        data.notes = value.trim();
+        break;
+    }
+  }
+  
+  return data;
+}
+
+// Decode quoted-printable encoding
+function decodeQuotedPrintable(str: string): string {
+  return str
+    .replace(/=\r?\n/g, '') // Remove soft line breaks
+    .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
 
 // Get today's date in MM/DD/YYYY format
 function getTodayFormatted(): string {
@@ -28,9 +146,10 @@ interface ContractorDialogProps {
   isOpen: boolean;
   onClose: () => void;
   contractor?: Contractor; // If provided, we're editing
+  initialData?: Partial<VcfData>; // Initial data from VCF import
 }
 
-export function ContractorDialog({ isOpen, onClose, contractor }: ContractorDialogProps) {
+export function ContractorDialog({ isOpen, onClose, contractor, initialData }: ContractorDialogProps) {
   const { createContractor, updateContractor } = useContractorActions();
   const { allContractorTypes, addCustomContractorType } = useContractorTypes();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
@@ -95,6 +214,28 @@ export function ContractorDialog({ isOpen, onClose, contractor }: ContractorDial
         });
         setShowAddress(!!(contractor.address || contractor.city || contractor.state || contractor.zipCode));
         setShowBusiness(!!(contractor.licenseNumber || contractor.insuranceInfo));
+      } else if (initialData) {
+        // Pre-populate from VCF import
+        setFormData({
+          serviceType: '',
+          name: initialData.name || '',
+          contactName: initialData.contactName || '',
+          phone: initialData.phone || '',
+          email: initialData.email || '',
+          website: initialData.website || '',
+          address: initialData.address || '',
+          city: initialData.city || '',
+          state: initialData.state || '',
+          zipCode: initialData.zipCode || '',
+          licenseNumber: '',
+          insuranceInfo: '',
+          invoices: [],
+          rating: undefined,
+          notes: initialData.notes || '',
+        });
+        // Show address section if any address data was imported
+        setShowAddress(!!(initialData.address || initialData.city || initialData.state || initialData.zipCode));
+        setShowBusiness(false);
       } else {
         setFormData({
           serviceType: '',
@@ -124,7 +265,7 @@ export function ContractorDialog({ isOpen, onClose, contractor }: ContractorDial
         description: '',
       });
     }
-  }, [isOpen, contractor]);
+  }, [isOpen, contractor, initialData]);
 
   const handleInvoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -263,11 +404,20 @@ export function ContractorDialog({ isOpen, onClose, contractor }: ContractorDial
     }
   };
 
+  const isImport = !isEditing && !!initialData;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Contractor' : 'Add Contractor'}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? 'Edit Service' : isImport ? 'Import Service from Contact' : 'Add Service'}
+          </DialogTitle>
+          {isImport && (
+            <DialogDescription>
+              Contact information has been imported. Please select a service type and review the details.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -653,3 +803,7 @@ export function ContractorDialog({ isOpen, onClose, contractor }: ContractorDial
     </Dialog>
   );
 }
+
+// Export VCF parser for use in ContractorsTab
+export { parseVcf };
+export type { VcfData };
