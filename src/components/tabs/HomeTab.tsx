@@ -822,7 +822,9 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                                   {maint.description}
                                 </p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                  {appliance?.model || 'Unknown'}
+                                  {appliance?.model 
+                                    ? (maint.homeFeature ? `${appliance.model} - ${maint.homeFeature}` : appliance.model)
+                                    : (maint.homeFeature || 'Home')}
                                 </p>
                               </div>
                               <div className="text-right shrink-0 ml-2">
@@ -883,7 +885,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                                   {maint.description}
                                 </p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                  {vehicle?.name || 'Unknown'}
+                                  {vehicle?.name || 'Vehicle'}
                                 </p>
                               </div>
                               <div className="text-right shrink-0 ml-2">
