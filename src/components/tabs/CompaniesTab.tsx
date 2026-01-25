@@ -22,7 +22,8 @@ import {
   TreeDeciduous,
   CircleDot,
   FileUp,
-  UserPlus
+  UserPlus,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +35,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { CompanyDialog, parseVcf, type VcfData } from '@/components/CompanyDialog';
 import { CompanyDetailDialog } from '@/components/CompanyDetailDialog';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useSubscriptionsByCompanyId } from '@/hooks/useSubscriptions';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { toast } from '@/hooks/useToast';
 import type { Company } from '@/lib/types';
@@ -447,6 +449,8 @@ interface CompanyCardProps {
 
 function CompanyCard({ company, onClick }: CompanyCardProps) {
   const ServiceIcon = getServiceIcon(company.serviceType);
+  const linkedSubscriptions = useSubscriptionsByCompanyId(company.id);
+  const hasActiveSubscription = linkedSubscriptions.length > 0;
   
   return (
     <button
@@ -494,12 +498,23 @@ function CompanyCard({ company, onClick }: CompanyCardProps) {
         </p>
       )}
 
-      {/* Invoice Count */}
-      {company.invoices && company.invoices.length > 0 && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
-          {company.invoices.length} invoice{company.invoices.length === 1 ? '' : 's'} on file
-        </p>
-      )}
+      {/* Footer info */}
+      <div className="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700 space-y-1">
+        {/* Active Subscription Badge */}
+        {hasActiveSubscription && (
+          <p className="text-xs text-primary flex items-center gap-1">
+            <CreditCard className="h-3 w-3" />
+            <span>{linkedSubscriptions.length} active subscription{linkedSubscriptions.length === 1 ? '' : 's'}</span>
+          </p>
+        )}
+
+        {/* Invoice Count */}
+        {company.invoices && company.invoices.length > 0 && (
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {company.invoices.length} invoice{company.invoices.length === 1 ? '' : 's'} on file
+          </p>
+        )}
+      </div>
 
       {/* Hover indicator */}
       <div className="absolute inset-0 rounded-xl ring-2 ring-primary ring-opacity-0 group-hover:ring-opacity-20 transition-all pointer-events-none" />

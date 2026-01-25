@@ -14,7 +14,8 @@ import {
   StickyNote,
   Calendar,
   DollarSign,
-  User
+  User,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,8 +24,10 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { useCompanyActions } from '@/hooks/useCompanies';
+import { useSubscriptionsByCompanyId } from '@/hooks/useSubscriptions';
 import { toast } from '@/hooks/useToast';
 import type { Company } from '@/lib/types';
+import { BILLING_FREQUENCIES } from '@/lib/types';
 
 interface CompanyDetailDialogProps {
   isOpen: boolean;
@@ -36,6 +39,7 @@ interface CompanyDetailDialogProps {
 
 export function CompanyDetailDialog({ isOpen, onClose, company, onEdit, onDelete }: CompanyDetailDialogProps) {
   const { deleteCompany } = useCompanyActions();
+  const linkedSubscriptions = useSubscriptionsByCompanyId(company.id);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -266,6 +270,41 @@ export function CompanyDetailDialog({ isOpen, onClose, company, onEdit, onDelete
                           <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
                         </a>
                       ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Linked Subscriptions */}
+            {linkedSubscriptions.length > 0 && (
+              <>
+                <Separator />
+                <div className="flex items-start gap-3">
+                  <CreditCard className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      Active Subscriptions ({linkedSubscriptions.length})
+                    </p>
+                    <div className="space-y-2">
+                      {linkedSubscriptions.map((subscription) => {
+                        const billingLabel = BILLING_FREQUENCIES.find(f => f.value === subscription.billingFrequency)?.label || subscription.billingFrequency;
+                        return (
+                          <div 
+                            key={subscription.id}
+                            className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{subscription.name}</p>
+                              <p className="text-xs text-muted-foreground">{subscription.subscriptionType}</p>
+                            </div>
+                            <div className="text-right ml-2">
+                              <p className="font-semibold text-primary">{subscription.cost}</p>
+                              <p className="text-xs text-muted-foreground">{billingLabel}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

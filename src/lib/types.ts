@@ -180,6 +180,32 @@ export const DEFAULT_SUBSCRIPTION_TYPES = [
 
 export type DefaultSubscriptionType = typeof DEFAULT_SUBSCRIPTION_TYPES[number];
 
+// Billing Frequencies for subscriptions
+export const BILLING_FREQUENCIES = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'semi-annually', label: 'Semi-Annually' },
+  { value: 'annually', label: 'Annually' },
+  { value: 'one-time', label: 'One-Time' },
+] as const;
+
+export type BillingFrequency = typeof BILLING_FREQUENCIES[number]['value'];
+
+export interface Subscription {
+  id: string;
+  subscriptionType: string;
+  name: string; // Description/name of the subscription
+  cost: string; // Price as string to handle currency formatting
+  billingFrequency: BillingFrequency;
+  companyId?: string; // Optional - link to a company/service provider
+  companyName?: string; // Manual entry if not linking to a company
+  notes?: string;
+  // Metadata
+  pubkey: string;
+  createdAt: number;
+}
+
 export interface Invoice {
   url: string;
   date: string; // MM/DD/YYYY format
@@ -221,3 +247,4 @@ export const VEHICLE_KIND = 32628;
 export const COMPANY_KIND = 37003;
 export const MAINTENANCE_KIND = 30229;
 export const MAINTENANCE_COMPLETION_KIND = 9413;
+export const SUBSCRIPTION_KIND = 37004;

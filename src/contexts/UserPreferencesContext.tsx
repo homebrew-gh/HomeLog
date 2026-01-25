@@ -69,6 +69,7 @@ export interface UserPreferences {
   appliancesViewMode: 'list' | 'card';
   vehiclesViewMode: 'list' | 'card';
   companiesViewMode: 'list' | 'card';
+  subscriptionsViewMode: 'list' | 'card';
   // Color theme preference
   colorTheme: ColorTheme;
   // Custom rooms
@@ -104,6 +105,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   appliancesViewMode: 'card',
   vehiclesViewMode: 'card',
   companiesViewMode: 'card',
+  subscriptionsViewMode: 'card',
   colorTheme: 'blue',
   customRooms: [],
   hiddenDefaultRooms: [],
@@ -138,6 +140,7 @@ interface UserPreferencesContextType {
   setAppliancesViewMode: (mode: 'list' | 'card') => void;
   setVehiclesViewMode: (mode: 'list' | 'card') => void;
   setCompaniesViewMode: (mode: 'list' | 'card') => void;
+  setSubscriptionsViewMode: (mode: 'list' | 'card') => void;
   // Room actions
   addCustomRoom: (room: string) => void;
   removeCustomRoom: (room: string) => void;
@@ -423,6 +426,13 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     updatePreferences((prev) => ({
       ...prev,
       companiesViewMode: mode,
+    }));
+  }, [updatePreferences]);
+
+  const setSubscriptionsViewMode = useCallback((mode: 'list' | 'card') => {
+    updatePreferences((prev) => ({
+      ...prev,
+      subscriptionsViewMode: mode,
     }));
   }, [updatePreferences]);
 
@@ -730,6 +740,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     appliancesViewMode: localPreferences.appliancesViewMode || 'card',
     vehiclesViewMode: localPreferences.vehiclesViewMode || 'card',
     companiesViewMode: localPreferences.companiesViewMode || 'card',
+    subscriptionsViewMode: localPreferences.subscriptionsViewMode || 'card',
     colorTheme: localPreferences.colorTheme || 'blue',
     customRooms: localPreferences.customRooms || [],
     hiddenDefaultRooms: localPreferences.hiddenDefaultRooms || [],
@@ -768,6 +779,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         setAppliancesViewMode,
         setVehiclesViewMode,
         setCompaniesViewMode,
+        setSubscriptionsViewMode,
         addCustomRoom,
         removeCustomRoom,
         hideDefaultRoom,

@@ -337,3 +337,85 @@ A regular event recording the completion of a maintenance task.
 - Completion events are regular events (not replaceable) so the full history is preserved
 - Completions are displayed chronologically under each maintenance item
 - For vehicle maintenance, recording mileage at completion helps track usage-based maintenance intervals
+
+---
+
+## Kind 37004: Subscription
+
+An addressable event representing a recurring subscription or service.
+
+### Format
+
+```json
+{
+  "kind": 37004,
+  "content": "",
+  "tags": [
+    ["d", "<unique-identifier>"],
+    ["alt", "Subscription: <name>"],
+    ["name", "<subscription name/description>"],
+    ["subscription_type", "<type>"],
+    ["cost", "<cost>"],
+    ["billing_frequency", "<frequency>"],
+    ["company_id", "<company-d-tag>"],
+    ["company_name", "<manual company name>"],
+    ["notes", "<notes>"]
+  ]
+}
+```
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `d` | Yes | Unique identifier (UUID) for the subscription |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `name` | Yes | Name or description of the subscription |
+| `subscription_type` | Yes | Type of subscription (see Subscription Types below) |
+| `cost` | Yes | Cost/price of the subscription (e.g., "$15.99", "$120/year") |
+| `billing_frequency` | Yes | How often the subscription is billed (see Billing Frequencies below) |
+| `company_id` | No | Reference to a Company/Service Provider (d-tag from kind 37003). Mutually exclusive with `company_name`. |
+| `company_name` | No | Manual company name entry. Mutually exclusive with `company_id`. |
+| `notes` | No | Additional notes about the subscription |
+
+### Subscription Types
+
+Standard subscription types include:
+- Streaming
+- Software
+- Health/Wellness
+- Shopping
+- Vehicle
+- Food
+- Gaming
+- News/Media
+- Music
+- Home
+- Finance
+- Pet Care
+
+Custom subscription types can also be used.
+
+### Billing Frequencies
+
+Valid billing frequency values:
+- `weekly` - Billed weekly
+- `monthly` - Billed monthly
+- `quarterly` - Billed every 3 months
+- `semi-annually` - Billed every 6 months
+- `annually` - Billed yearly
+- `one-time` - One-time purchase (not recurring)
+
+### Company Linking
+
+Subscriptions can optionally be linked to a company/service provider in two ways:
+
+1. **By reference** (`company_id`): Links to an existing company from the Companies/Services tab using the company's `d` tag identifier. This creates a two-way relationship where the company card shows active subscriptions.
+
+2. **By name** (`company_name`): Manually entered company name for subscriptions that don't need a full company record.
+
+Only one of `company_id` or `company_name` should be present.
+
+### Security Warning
+
+The notes field should NOT be used to store login credentials, passwords, or other sensitive authentication information. Users should use a dedicated password manager for storing such data securely
