@@ -149,7 +149,7 @@ const Index = () => {
       case 'vehicles':
         return <VehiclesTab scrollTarget={scrollTarget} />;
       case 'subscriptions':
-        return <SubscriptionsTab />;
+        return <SubscriptionsTab scrollTarget={scrollTarget} />;
       case 'warranties':
         return <WarrantiesTab />;
       case 'companies':

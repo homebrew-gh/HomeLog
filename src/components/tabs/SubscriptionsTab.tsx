@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   CreditCard, 
   Plus, 
@@ -53,7 +53,11 @@ function getSubscriptionIcon(type: string) {
   return CreditCard;
 }
 
-export function SubscriptionsTab() {
+interface SubscriptionsTabProps {
+  scrollTarget?: string;
+}
+
+export function SubscriptionsTab({ scrollTarget }: SubscriptionsTabProps) {
   const { data: subscriptions = [], isLoading } = useSubscriptions();
   const { preferences, setSubscriptionsViewMode } = useUserPreferences();
   const viewMode = preferences.subscriptionsViewMode || 'card';
@@ -65,6 +69,35 @@ export function SubscriptionsTab() {
 
   // Collapsed types state (for list view)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
+
+  // Refs for subscription type sections
+  const typeRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Handle scroll to target when scrollTarget changes
+  useEffect(() => {
+    if (scrollTarget && scrollTarget.startsWith('type-') && !isLoading) {
+      const typeName = scrollTarget.replace('type-', '');
+      // Small delay to ensure the DOM has rendered
+      const timer = setTimeout(() => {
+        const element = typeRefs.current[typeName];
+        if (element) {
+          // Expand the type if it's collapsed (for list view)
+          setCollapsedTypes(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(typeName);
+            return newSet;
+          });
+          // Scroll into view with offset for sticky header
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Adjust for sticky header (approximately 120px)
+          setTimeout(() => {
+            window.scrollBy({ top: -120, behavior: 'smooth' });
+          }, 100);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [scrollTarget, isLoading]);
 
   // Group subscriptions by type
   const subscriptionsByType = useMemo(() => {
@@ -261,38 +294,42 @@ export function SubscriptionsTab() {
             {subscriptionsByType.sortedTypes.map((type) => {
               const TypeIcon = getSubscriptionIcon(type);
               return (
-                <Collapsible
+                <div
                   key={type}
-                  open={!collapsedTypes.has(type)}
-                  onOpenChange={() => toggleType(type)}
-                  className="mb-2 last:mb-0"
+                  ref={(el) => { typeRefs.current[type] = el; }}
                 >
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-primary/10 transition-colors">
-                    {collapsedTypes.has(type) ? (
-                      <ChevronRight className="h-4 w-4 text-slate-500" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-slate-500" />
-                    )}
-                    <TypeIcon className="h-4 w-4 text-primary" />
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">
-                      {type}
-                    </span>
-                    <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary">
-                      {subscriptionsByType.grouped[type].length}
-                    </Badge>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="pl-8 py-2 space-y-1">
-                      {subscriptionsByType.grouped[type].map((subscription) => (
-                        <SubscriptionListItem
-                          key={subscription.id}
-                          subscription={subscription}
-                          onClick={() => setViewingSubscription(subscription)}
-                        />
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                  <Collapsible
+                    open={!collapsedTypes.has(type)}
+                    onOpenChange={() => toggleType(type)}
+                    className="mb-2 last:mb-0"
+                  >
+                    <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-primary/10 transition-colors">
+                      {collapsedTypes.has(type) ? (
+                        <ChevronRight className="h-4 w-4 text-slate-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-slate-500" />
+                      )}
+                      <TypeIcon className="h-4 w-4 text-primary" />
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">
+                        {type}
+                      </span>
+                      <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary">
+                        {subscriptionsByType.grouped[type].length}
+                      </Badge>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="pl-8 py-2 space-y-1">
+                        {subscriptionsByType.grouped[type].map((subscription) => (
+                          <SubscriptionListItem
+                            key={subscription.id}
+                            subscription={subscription}
+                            onClick={() => setViewingSubscription(subscription)}
+                          />
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               );
             })}
           </CardContent>
@@ -303,7 +340,11 @@ export function SubscriptionsTab() {
           {subscriptionsByType.sortedTypes.map((type) => {
             const TypeIcon = getSubscriptionIcon(type);
             return (
-              <Card key={type} className="bg-card border-border overflow-hidden">
+              <Card 
+                key={type} 
+                ref={(el) => { typeRefs.current[type] = el; }}
+                className="bg-card border-border overflow-hidden"
+              >
                 <CardHeader className="pb-3 bg-gradient-to-r from-primary/10 to-transparent">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <div className="p-1.5 rounded-lg bg-primary/10">

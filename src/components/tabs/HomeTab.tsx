@@ -19,7 +19,8 @@ import {
   Check,
   UserCheck,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  DollarSign
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
@@ -97,6 +99,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const { data: appliances = [], isLoading: isLoadingAppliances } = useAppliances();
   const { data: vehicles = [], isLoading: isLoadingVehicles } = useVehicles();
   const { data: companies = [], isLoading: isLoadingCompanies } = useCompanies();
+  const { data: subscriptions = [], isLoading: isLoadingSubscriptions } = useSubscriptions();
   const { data: maintenance = [], isLoading: isLoadingMaintenance } = useMaintenance();
   const { data: completions = [] } = useMaintenanceCompletions();
   const applianceMaintenance = useApplianceMaintenance();
@@ -257,6 +260,53 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       return a.localeCompare(b);
     });
   }, [companies]);
+
+  // Get unique subscription types from subscriptions
+  const usedSubscriptionTypes = useMemo(() => {
+    const types = new Set<string>();
+    subscriptions.forEach(sub => {
+      if (sub.subscriptionType) {
+        types.add(sub.subscriptionType);
+      }
+    });
+    return Array.from(types).sort((a, b) => {
+      if (a === 'Uncategorized' || a === 'Other') return 1;
+      if (b === 'Uncategorized' || b === 'Other') return -1;
+      return a.localeCompare(b);
+    });
+  }, [subscriptions]);
+
+  // Calculate total monthly cost estimate for subscriptions
+  const totalMonthlyCost = useMemo(() => {
+    let total = 0;
+    for (const sub of subscriptions) {
+      // Extract numeric value from cost string
+      const numericCost = parseFloat(sub.cost.replace(/[^0-9.]/g, '')) || 0;
+      
+      // Convert to monthly equivalent
+      switch (sub.billingFrequency) {
+        case 'weekly':
+          total += numericCost * 4.33; // Average weeks per month
+          break;
+        case 'monthly':
+          total += numericCost;
+          break;
+        case 'quarterly':
+          total += numericCost / 3;
+          break;
+        case 'semi-annually':
+          total += numericCost / 6;
+          break;
+        case 'annually':
+          total += numericCost / 12;
+          break;
+        case 'one-time':
+          // Don't add one-time costs to monthly
+          break;
+      }
+    }
+    return total;
+  }, [subscriptions]);
 
   // Get ordered list of active widgets based on active tabs
   const activeWidgets = useMemo((): WidgetId[] => {
@@ -912,8 +962,69 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                     </WidgetCard>
                   );
                   
-                // Coming soon widgets
                 case 'subscriptions':
+                  return (
+                    <WidgetCard
+                      title="Subscriptions"
+                      icon={CreditCard}
+                      onClick={() => !isEditMode && onNavigateToTab('subscriptions')}
+                      isLoading={isLoadingSubscriptions}
+                      clickable={!isEditMode}
+                    >
+                      {subscriptions.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No subscriptions tracked yet</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {/* Monthly Cost Summary at top */}
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10">
+                            <DollarSign className="h-4 w-4 text-primary" />
+                            <span className="text-sm text-muted-foreground">Est. Monthly:</span>
+                            <span className="font-bold text-primary ml-auto">${totalMonthlyCost.toFixed(2)}</span>
+                          </div>
+                          
+                          {/* Subscription type buttons */}
+                          {usedSubscriptionTypes.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {usedSubscriptionTypes.slice(0, 6).map(type => {
+                                const count = subscriptions.filter(s => s.subscriptionType === type).length;
+                                return (
+                                  <button
+                                    key={type}
+                                    onClick={(e) => {
+                                      if (isEditMode) {
+                                        e.stopPropagation();
+                                        return;
+                                      }
+                                      e.stopPropagation();
+                                      onNavigateToTab('subscriptions', `type-${type}`);
+                                    }}
+                                    disabled={isEditMode}
+                                    className={cn(
+                                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary transition-colors",
+                                      !isEditMode && "hover:bg-primary/20"
+                                    )}
+                                  >
+                                    <CreditCard className="h-3.5 w-3.5" />
+                                    {type}
+                                    <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-primary/20">
+                                      {count}
+                                    </Badge>
+                                  </button>
+                                );
+                              })}
+                              {usedSubscriptionTypes.length > 6 && (
+                                <span className="text-sm text-muted-foreground self-center">
+                                  +{usedSubscriptionTypes.length - 6} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </WidgetCard>
+                  );
+
+                // Coming soon widgets
                 case 'warranties':
                 case 'projects':
                   return (
