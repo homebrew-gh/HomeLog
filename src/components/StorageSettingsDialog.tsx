@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react';
-import { HardDrive, Check, X, AlertTriangle, Info } from 'lucide-react';
+import { HardDrive, Check, X, AlertTriangle, Info, Database, Shield, Settings } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/useToast';
+import { 
+  SAFE_STORAGE_KEYS, 
+  SENSITIVE_STORAGE_KEYS, 
+  INDEXED_DB_DATABASES,
+  getAppLocalStorageKeys,
+  formatBytes,
+} from '@/hooks/usePersistentStorage';
 
 interface StorageSettingsDialogProps {
   isOpen: boolean;
@@ -33,11 +41,17 @@ export function StorageSettingsDialog({ isOpen, onClose }: StorageSettingsDialog
   const [storageEstimate, setStorageEstimate] = useState<StorageEstimate | null>(null);
   const [isRequestingPersistence, setIsRequestingPersistence] = useState(false);
   const [persistenceSupported, setPersistenceSupported] = useState(true);
+  const [showStorageDetails, setShowStorageDetails] = useState(false);
+  const [appStorageKeys, setAppStorageKeys] = useState<string[]>([]);
   
   // Check current storage status when dialog opens
   useEffect(() => {
-    if (isOpen && navigator.storage) {
-      checkStorageStatus();
+    if (isOpen) {
+      if (navigator.storage) {
+        checkStorageStatus();
+      }
+      // Get list of app storage keys
+      setAppStorageKeys(getAppLocalStorageKeys());
     }
   }, [isOpen]);
   
@@ -119,14 +133,6 @@ export function StorageSettingsDialog({ isOpen, onClose }: StorageSettingsDialog
         description: 'Your preference has been saved. Note: Already-persisted storage cannot be reverted via browser API.',
       });
     }
-  };
-  
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
   
   const usagePercentage = storageEstimate 
@@ -259,11 +265,97 @@ export function StorageSettingsDialog({ isOpen, onClose }: StorageSettingsDialog
                 </div>
               </div>
 
+              {/* What's Stored Section */}
+              <Collapsible open={showStorageDetails} onOpenChange={setShowStorageDetails}>
+                <CollapsibleTrigger className="w-full flex items-center justify-between p-3 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      What's Being Stored?
+                    </span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {showStorageDetails ? 'Hide' : 'Show'} Details
+                  </Badge>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3 space-y-3">
+                  {/* Safe Data */}
+                  <div className="rounded-lg border border-green-200 dark:border-green-800 p-3 bg-green-50/50 dark:bg-green-950/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                        Safe Data (Preferences Only)
+                      </span>
+                    </div>
+                    <ul className="text-xs text-green-600 dark:text-green-400 space-y-1 ml-6">
+                      <li>• Theme and display preferences</li>
+                      <li>• Widget order and layout</li>
+                      <li>• Relay configuration</li>
+                      <li>• Encryption toggles (on/off settings)</li>
+                      <li>• Cached Nostr events (already encrypted)</li>
+                    </ul>
+                  </div>
+
+                  {/* Sensitive Data Info */}
+                  <div className="rounded-lg border border-amber-200 dark:border-amber-800 p-3 bg-amber-50/50 dark:bg-amber-950/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                        Connection Data
+                      </span>
+                    </div>
+                    <ul className="text-xs text-amber-600 dark:text-amber-400 space-y-1 ml-6">
+                      <li>• Wallet connection strings (NWC)</li>
+                      <li>• Login session state</li>
+                    </ul>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 ml-6">
+                      Note: Your private key is never stored. It stays in your signer (extension/app).
+                    </p>
+                  </div>
+
+                  {/* IndexedDB Info */}
+                  <div className="rounded-lg border border-sky-200 dark:border-sky-800 p-3 bg-sky-50/50 dark:bg-sky-950/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Settings className="h-4 w-4 text-sky-600" />
+                      <span className="text-sm font-medium text-sky-700 dark:text-sky-300">
+                        Cached Databases (IndexedDB)
+                      </span>
+                    </div>
+                    <ul className="text-xs text-sky-600 dark:text-sky-400 space-y-1 ml-6">
+                      <li>• <code className="bg-sky-100 dark:bg-sky-900 px-1 rounded">{INDEXED_DB_DATABASES.EVENT_CACHE}</code> - Cached events for fast loading</li>
+                      <li>• <code className="bg-sky-100 dark:bg-sky-900 px-1 rounded">{INDEXED_DB_DATABASES.DM_MESSAGES}</code> - Cached direct messages</li>
+                    </ul>
+                    <p className="text-xs text-sky-600 dark:text-sky-400 mt-2 ml-6">
+                      These contain encrypted data that can only be read with your private key.
+                    </p>
+                  </div>
+
+                  {/* Current Keys */}
+                  {appStorageKeys.length > 0 && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="mb-1">Active localStorage keys ({appStorageKeys.length}):</p>
+                      <div className="flex flex-wrap gap-1">
+                        {appStorageKeys.slice(0, 10).map(key => (
+                          <Badge key={key} variant="outline" className="text-[10px] font-mono">
+                            {key.length > 25 ? key.slice(0, 25) + '...' : key}
+                          </Badge>
+                        ))}
+                        {appStorageKeys.length > 10 && (
+                          <Badge variant="outline" className="text-[10px]">
+                            +{appStorageKeys.length - 10} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+
               {/* Additional Info */}
               <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
                 <p>
-                  <strong>Note:</strong> Even without persistent storage, your primary data is safely stored on 
-                  Nostr relays. Local storage is used for caching and faster loading.
+                  <strong>Note:</strong> Your actual data (appliances, vehicles, etc.) is stored encrypted on 
+                  Nostr relays. Local storage is only used for caching and preferences.
                 </p>
                 <p>
                   Some browsers automatically grant persistent storage to sites you use frequently or have 
