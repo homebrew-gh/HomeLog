@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins } from 'lucide-react';
+import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -13,6 +13,7 @@ import { VehicleTypeManagementDialog } from '@/components/VehicleTypeManagementD
 import { SubscriptionTypeManagementDialog } from '@/components/SubscriptionTypeManagementDialog';
 import { HomeFeatureManagementDialog } from '@/components/HomeFeatureManagementDialog';
 import { EncryptionSettingsDialog } from '@/components/EncryptionSettingsDialog';
+import { StorageSettingsDialog } from '@/components/StorageSettingsDialog';
 import { DisplaySettingsDialog } from '@/components/DisplaySettingsDialog';
 import { CurrencySettingsDialog } from '@/components/CurrencySettingsDialog';
 import { DonateSection } from '@/components/DonateSection';
@@ -122,6 +123,7 @@ const Index = () => {
   const [subscriptionTypeManagementOpen, setSubscriptionTypeManagementOpen] = useState(false);
   const [homeFeatureManagementOpen, setHomeFeatureManagementOpen] = useState(false);
   const [encryptionSettingsOpen, setEncryptionSettingsOpen] = useState(false);
+  const [storageSettingsOpen, setStorageSettingsOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const [currencySettingsOpen, setCurrencySettingsOpen] = useState(false);
   const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
@@ -214,6 +216,10 @@ const Index = () => {
                     <DropdownMenuItem onClick={() => setEncryptionSettingsOpen(true)}>
                       <Shield className="h-4 w-4 mr-2" />
                       Data Encryption
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStorageSettingsOpen(true)}>
+                      <HardDrive className="h-4 w-4 mr-2" />
+                      Browser Storage
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Display</DropdownMenuLabel>
@@ -423,6 +429,11 @@ const Index = () => {
       <EncryptionSettingsDialog
         isOpen={encryptionSettingsOpen}
         onClose={() => setEncryptionSettingsOpen(false)}
+      />
+
+      <StorageSettingsDialog
+        isOpen={storageSettingsOpen}
+        onClose={() => setStorageSettingsOpen(false)}
       />
 
       <HomeFeatureManagementDialog
