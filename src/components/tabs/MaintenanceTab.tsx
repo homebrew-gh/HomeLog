@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge } from 'lucide-react';
+import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
+import { CalendarExportDialog } from '@/components/CalendarExportDialog';
 import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
 import { useVehicles, useVehicleById } from '@/hooks/useVehicles';
-import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, useHomeFeatureMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
+import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletions, useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
 import type { MaintenanceSchedule, Appliance, Vehicle, MaintenanceCompletion } from '@/lib/types';
 
@@ -90,6 +91,7 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
   const [dialogMode, setDialogMode] = useState<'appliance' | 'vehicle'>('appliance');
   const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceSchedule | undefined>();
   const [viewingMaintenance, setViewingMaintenance] = useState<MaintenanceSchedule | undefined>();
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   // Refs for maintenance sections
   const homeMaintenanceRef = useRef<HTMLDivElement | null>(null);
@@ -140,6 +142,18 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
           <Wrench className="h-6 w-6 text-primary" />
           Maintenance
         </h2>
+        {allMaintenance.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setExportDialogOpen(true)}
+            className="gap-2"
+          >
+            <CalendarPlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Export to Calendar</span>
+            <span className="sm:hidden">Export</span>
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -275,6 +289,11 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
           onEdit={() => handleEditMaintenance(viewingMaintenance)}
         />
       )}
+
+      <CalendarExportDialog
+        isOpen={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+      />
     </section>
   );
 }
