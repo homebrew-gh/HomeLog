@@ -52,6 +52,12 @@ export interface CategoryRelayConfig {
 export type PrivateRelayList = string[];
 
 /**
+ * Caching relay URL (only one can be set at a time)
+ * A caching relay is prioritized for initial data fetches to speed up loading
+ */
+export type CachingRelayUrl = string | null;
+
+/**
  * Default encryption settings
  * - Appliances, vehicles, warranties, subscriptions, maintenance: encrypted by default (private data)
  * - Contractors, projects: plaintext by default (shareable in the future)
@@ -125,6 +131,7 @@ interface EncryptionContextType {
   settings: EncryptionSettings;
   categoryRelayConfig: CategoryRelayConfig;
   privateRelays: PrivateRelayList;
+  cachingRelay: CachingRelayUrl;
   isEncryptionEnabled: (category: EncryptableCategory) => boolean;
   setEncryptionEnabled: (category: EncryptableCategory, enabled: boolean) => void;
   setAllEncryption: (enabled: boolean) => void;
@@ -136,6 +143,9 @@ interface EncryptionContextType {
   // Private relay management
   isPrivateRelay: (relayUrl: string) => boolean;
   setPrivateRelay: (relayUrl: string, isPrivate: boolean) => void;
+  // Caching relay management
+  isCachingRelay: (relayUrl: string) => boolean;
+  setCachingRelay: (relayUrl: string | null) => void;
 }
 
 /**
@@ -146,6 +156,7 @@ const defaultContextValue: EncryptionContextType = {
   settings: DEFAULT_ENCRYPTION_SETTINGS,
   categoryRelayConfig: DEFAULT_CATEGORY_RELAY_CONFIG,
   privateRelays: [],
+  cachingRelay: null,
   isEncryptionEnabled: (category: EncryptableCategory) => DEFAULT_ENCRYPTION_SETTINGS[category],
   setEncryptionEnabled: () => {},
   setAllEncryption: () => {},
@@ -155,6 +166,8 @@ const defaultContextValue: EncryptionContextType = {
   getEnabledRelaysForCategory: (_, allRelays) => allRelays,
   isPrivateRelay: () => false,
   setPrivateRelay: () => {},
+  isCachingRelay: () => false,
+  setCachingRelay: () => {},
 };
 
 const EncryptionContext = createContext<EncryptionContextType>(defaultContextValue);
@@ -173,6 +186,11 @@ export function EncryptionProvider({ children }: { children: ReactNode }) {
   const [privateRelays, setPrivateRelays] = useLocalStorage<PrivateRelayList>(
     'homelog-private-relays',
     []
+  );
+
+  const [cachingRelay, setCachingRelayStorage] = useLocalStorage<CachingRelayUrl>(
+    'homelog-caching-relay',
+    null
   );
 
   const isEncryptionEnabled = useCallback((category: EncryptableCategory): boolean => {
@@ -254,12 +272,23 @@ export function EncryptionProvider({ children }: { children: ReactNode }) {
     });
   }, [setPrivateRelays]);
 
+  // Check if a relay is the caching relay
+  const isCachingRelay = useCallback((relayUrl: string): boolean => {
+    return cachingRelay === relayUrl;
+  }, [cachingRelay]);
+
+  // Set the caching relay (only one at a time, pass null to clear)
+  const setCachingRelay = useCallback((relayUrl: string | null) => {
+    setCachingRelayStorage(relayUrl);
+  }, [setCachingRelayStorage]);
+
   return (
     <EncryptionContext.Provider
       value={{
         settings,
         categoryRelayConfig,
         privateRelays,
+        cachingRelay,
         isEncryptionEnabled,
         setEncryptionEnabled,
         setAllEncryption,
@@ -269,6 +298,8 @@ export function EncryptionProvider({ children }: { children: ReactNode }) {
         getEnabledRelaysForCategory,
         isPrivateRelay,
         setPrivateRelay,
+        isCachingRelay,
+        setCachingRelay,
       }}
     >
       {children}
