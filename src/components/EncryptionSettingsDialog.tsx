@@ -29,7 +29,7 @@ const CATEGORY_ORDER: EncryptableCategory[] = [
   'maintenance',
   'warranties',
   'subscriptions',
-  'contractors',
+  'companies',
   'projects',
 ];
 
