@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HardDrive, Check, X, AlertTriangle, Info, Database, Shield, Settings } from 'lucide-react';
+import { HardDrive, Check, X, AlertTriangle, Info, Database, Shield, Settings, LogOut } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -9,12 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/useToast';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { 
   SAFE_STORAGE_KEYS, 
   SENSITIVE_STORAGE_KEYS, 
   INDEXED_DB_DATABASES,
   getAppLocalStorageKeys,
   formatBytes,
+  LOGOUT_ON_CLOSE_KEY,
 } from '@/hooks/usePersistentStorage';
 
 interface StorageSettingsDialogProps {
@@ -30,10 +32,17 @@ interface StorageEstimate {
 
 export function StorageSettingsDialog({ isOpen, onClose }: StorageSettingsDialogProps) {
   const { toast } = useToast();
+  const { user } = useCurrentUser();
   
   // Store the user's preference for persistent storage
   const [persistentStorageEnabled, setPersistentStorageEnabled] = useLocalStorage<boolean>(
     'homelog:persistent-storage-preference',
+    false
+  );
+  
+  // Store the user's preference for logout on browser close
+  const [logoutOnClose, setLogoutOnClose] = useLocalStorage<boolean>(
+    LOGOUT_ON_CLOSE_KEY,
     false
   );
   
@@ -261,6 +270,59 @@ export function StorageSettingsDialog({ isOpen, onClose }: StorageSettingsDialog
                     <p className="text-xs text-green-600 dark:text-green-400 mt-2">
                       Persistent storage is already enabled for this site.
                     </p>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Session Security */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Session Security
+                </h3>
+                
+                <div className={`rounded-lg border p-4 transition-colors ${
+                  logoutOnClose 
+                    ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/50' 
+                    : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800'
+                }`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <LogOut className={`h-4 w-4 ${logoutOnClose ? 'text-amber-600' : 'text-slate-400'}`} />
+                        <span className="font-medium text-slate-800 dark:text-slate-200">
+                          Logout When Browser Closes
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Automatically log out when you close all browser tabs/windows. 
+                        This is useful on shared computers to prevent others from accessing your account.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={logoutOnClose}
+                      onCheckedChange={(checked) => {
+                        setLogoutOnClose(checked);
+                        toast({
+                          title: checked ? 'Logout on Close Enabled' : 'Logout on Close Disabled',
+                          description: checked 
+                            ? 'You will be logged out when you close the browser.'
+                            : 'Your login session will persist across browser restarts.',
+                        });
+                      }}
+                    />
+                  </div>
+                  
+                  {logoutOnClose && (
+                    <Alert className="mt-3 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/50">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
+                        {user 
+                          ? "You'll need to log in again when you reopen the browser."
+                          : "This will take effect once you log in."}
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </div>
               </div>

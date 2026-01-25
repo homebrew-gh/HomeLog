@@ -1,6 +1,11 @@
 import { useEffect, useCallback, useState } from 'react';
 
 /**
+ * Key for logout on close preference
+ */
+export const LOGOUT_ON_CLOSE_KEY = 'homelog:logout-on-close';
+
+/**
  * Storage keys that are safe to persist (non-sensitive data)
  * These contain only preferences and cached data, not secrets
  */
@@ -20,6 +25,9 @@ export const SAFE_STORAGE_KEYS = {
   
   // Persistent storage preference
   PERSISTENT_STORAGE_PREF: 'homelog:persistent-storage-preference',
+  
+  // Logout on close preference
+  LOGOUT_ON_CLOSE: LOGOUT_ON_CLOSE_KEY,
 } as const;
 
 /**

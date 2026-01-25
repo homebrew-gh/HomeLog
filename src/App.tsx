@@ -9,6 +9,7 @@ import NostrProvider from '@/components/NostrProvider';
 import { NostrSync } from '@/components/NostrSync';
 import { PWAManager } from '@/components/PWAManager';
 import { PersistentStorageManager } from '@/components/PersistentStorageManager';
+import { SessionManager } from '@/components/SessionManager';
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { NostrLoginProvider } from '@nostrify/react/login';
@@ -55,6 +56,7 @@ export function App() {
       <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig}>
         <QueryClientProvider client={queryClient}>
           <NostrLoginProvider storageKey='nostr:login'>
+            <SessionManager />
             <NostrProvider>
               <NostrSync />
               <NWCProvider>
