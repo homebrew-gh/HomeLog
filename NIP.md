@@ -256,6 +256,7 @@ An addressable event representing a maintenance schedule for an appliance or veh
     ["alt", "Maintenance schedule: <description>"],
     ["a", "32627:<pubkey>:<appliance-d-tag>", "", "appliance"],
     ["a", "32628:<pubkey>:<vehicle-d-tag>", "", "vehicle"],
+    ["a", "37003:<pubkey>:<contractor-d-tag>", "", "contractor"],
     ["description", "<maintenance description>"],
     ["part_number", "<part number>"],
     ["frequency", "<number>"],
@@ -271,7 +272,7 @@ An addressable event representing a maintenance schedule for an appliance or veh
 |-----|----------|-------------|
 | `d` | Yes | Unique identifier (UUID) for the maintenance schedule |
 | `alt` | Yes | Human-readable description (NIP-31) |
-| `a` | Conditional | Reference to an appliance (kind 32627) OR vehicle (kind 32628) - at least one required |
+| `a` | Conditional | Reference to an appliance (kind 32627), vehicle (kind 32628), or contractor (kind 37003). At least one appliance, vehicle, or home feature reference is required. Contractor reference is optional. |
 | `description` | Yes | Description of the maintenance task |
 | `part_number` | No | Part number for replacement parts |
 | `frequency` | Yes | Numeric frequency value |
@@ -282,7 +283,8 @@ An addressable event representing a maintenance schedule for an appliance or veh
 
 - Each maintenance schedule references either an appliance OR a vehicle, not both
 - Vehicle maintenance can optionally include a mileage interval in addition to time-based frequency
-- The `a` tag marker indicates whether the reference is to an "appliance" or "vehicle"
+- The `a` tag marker indicates whether the reference is to an "appliance", "vehicle", or "contractor"
+- A contractor/service provider reference can be optionally added to link the maintenance task to a service provider from the Company/Service tab
 
 ### Due Date Calculation
 

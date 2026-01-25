@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Info, Home, Car, Plus, TreePine, CheckCircle2 } from 'lucide-react';
+import { Calendar, Info, Home, Car, Plus, TreePine, CheckCircle2, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
+import { useContractors } from '@/hooks/useContractors';
 import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate } from '@/hooks/useMaintenance';
 import { useCompletionsByMaintenance, useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
@@ -28,6 +29,7 @@ const ADD_CUSTOM_FEATURE = '__add_custom__';
 export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApplianceId, preselectedVehicleId, mode = 'appliance' }: MaintenanceDialogProps) {
   const { data: appliances = [] } = useAppliances();
   const { data: vehicles = [] } = useVehicles();
+  const { data: contractors = [] } = useContractors();
   const { allHomeFeatures, addCustomHomeFeature } = useCustomHomeFeatures();
   const { createMaintenance, updateMaintenance } = useMaintenanceActions();
   const { createCompletion } = useMaintenanceCompletionActions();
@@ -40,6 +42,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
     applianceId: '',
     vehicleId: '',
     homeFeature: '',
+    contractorId: '',
     description: '',
     partNumber: '',
     frequency: '',
@@ -87,6 +90,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           applianceId: maintenance.applianceId || '',
           vehicleId: maintenance.vehicleId || '',
           homeFeature: maintenance.homeFeature || '',
+          contractorId: maintenance.contractorId || '',
           description: maintenance.description,
           partNumber: maintenance.partNumber || '',
           frequency: maintenance.frequency.toString(),
@@ -99,6 +103,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           applianceId: preselectedApplianceId || '',
           vehicleId: preselectedVehicleId || '',
           homeFeature: '',
+          contractorId: '',
           description: '',
           partNumber: '',
           frequency: '',
@@ -197,6 +202,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
         applianceId: isVehicleMode ? undefined : (formData.applianceId || undefined),
         vehicleId: isVehicleMode ? formData.vehicleId : undefined,
         homeFeature: isVehicleMode ? undefined : (formData.homeFeature || undefined),
+        contractorId: formData.contractorId || undefined,
         description: formData.description.trim(),
         partNumber: formData.partNumber.trim() || undefined,
         frequency,
@@ -422,6 +428,41 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
               onChange={(e) => setFormData(prev => ({ ...prev, partNumber: e.target.value }))}
               placeholder="Optional part number"
             />
+          </div>
+
+          {/* Contractor/Service Provider */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-orange-600" />
+              Service Provider
+            </Label>
+            <Select
+              value={formData.contractorId}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, contractorId: value === '__none__' ? '' : value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a contractor (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__" className="text-muted-foreground">
+                  None
+                </SelectItem>
+                {contractors.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground text-center">
+                    No contractors found. Add one in the Company/Service tab.
+                  </div>
+                ) : (
+                  contractors.map((contractor) => (
+                    <SelectItem key={contractor.id} value={contractor.id}>
+                      {contractor.name} ({contractor.serviceType})
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Link this task to a contractor from your Company/Service list
+            </p>
           </div>
 
           {/* Frequency */}

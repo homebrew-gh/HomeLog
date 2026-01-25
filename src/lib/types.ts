@@ -69,6 +69,7 @@ export interface MaintenanceSchedule {
   applianceId?: string; // Optional - for appliance maintenance
   vehicleId?: string; // Optional - for vehicle maintenance
   homeFeature?: string; // Optional - for home feature maintenance (e.g., "Chimney", "Gutters")
+  contractorId?: string; // Optional - reference to a contractor/service provider
   description: string;
   partNumber?: string;
   frequency: number;
