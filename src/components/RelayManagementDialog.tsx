@@ -25,7 +25,7 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Server Settings</DialogTitle>
+          <DialogTitle>Relay Configuration</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue={defaultTab} className="w-full">

@@ -213,7 +213,7 @@ const Index = () => {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Nostr Relays</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => openRelayManagement('media')}>
+                    <DropdownMenuItem onClick={() => openRelayManagement('relays')}>
                       <Cloud className="h-4 w-4 mr-2" />
                       Configure
                     </DropdownMenuItem>
