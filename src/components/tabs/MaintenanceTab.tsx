@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,19 +9,81 @@ import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
 import { useVehicles, useVehicleById } from '@/hooks/useVehicles';
 import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, useHomeFeatureMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
-import { useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
-import type { MaintenanceSchedule } from '@/lib/types';
+import { useMaintenanceCompletions, useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
+import type { MaintenanceSchedule, Appliance, Vehicle, MaintenanceCompletion } from '@/lib/types';
 
 interface MaintenanceTabProps {
   scrollTarget?: string;
+}
+
+// Helper function to calculate due date for sorting
+function getMaintenanceDueDate(
+  maintenance: MaintenanceSchedule,
+  appliances: Appliance[],
+  vehicles: Vehicle[],
+  completions: MaintenanceCompletion[]
+): Date | null {
+  // Get the purchase date based on type
+  let purchaseDate = '';
+  
+  if (maintenance.vehicleId) {
+    const vehicle = vehicles.find(v => v.id === maintenance.vehicleId);
+    purchaseDate = vehicle?.purchaseDate || '';
+  } else if (maintenance.applianceId) {
+    const appliance = appliances.find(a => a.id === maintenance.applianceId);
+    purchaseDate = appliance?.purchaseDate || '';
+  }
+  
+  // Get the last completion date for this maintenance
+  const maintenanceCompletions = completions.filter(c => c.maintenanceId === maintenance.id);
+  const lastCompletionDate = maintenanceCompletions.length > 0 ? maintenanceCompletions[0].completedDate : undefined;
+  
+  // For home feature-only maintenance without a purchase date, use last completion or today
+  const isHomeFeatureOnly = maintenance.homeFeature && !maintenance.applianceId && !maintenance.vehicleId;
+  const effectivePurchaseDate = purchaseDate || (lastCompletionDate ? '' : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }));
+  
+  return calculateNextDueDate(effectivePurchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate);
+}
+
+// Sort maintenance items by due date (closest first)
+function sortMaintenanceByDueDate(
+  maintenanceList: MaintenanceSchedule[],
+  appliances: Appliance[],
+  vehicles: Vehicle[],
+  completions: MaintenanceCompletion[]
+): MaintenanceSchedule[] {
+  return [...maintenanceList].sort((a, b) => {
+    const dueDateA = getMaintenanceDueDate(a, appliances, vehicles, completions);
+    const dueDateB = getMaintenanceDueDate(b, appliances, vehicles, completions);
+    
+    // Items with no due date go to the end
+    if (!dueDateA && !dueDateB) return 0;
+    if (!dueDateA) return 1;
+    if (!dueDateB) return -1;
+    
+    // Sort by due date (earliest first)
+    return dueDateA.getTime() - dueDateB.getTime();
+  });
 }
 
 export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
   const { data: appliances = [] } = useAppliances();
   const { data: vehicles = [] } = useVehicles();
   const { data: allMaintenance = [], isLoading } = useMaintenance();
-  const applianceMaintenance = useApplianceMaintenance();
-  const vehicleMaintenance = useVehicleMaintenance();
+  const { data: completions = [] } = useMaintenanceCompletions();
+  const applianceMaintenanceRaw = useApplianceMaintenance();
+  const vehicleMaintenanceRaw = useVehicleMaintenance();
+  
+  // Sort maintenance items by due date (closest first)
+  const applianceMaintenance = useMemo(() => 
+    sortMaintenanceByDueDate(applianceMaintenanceRaw, appliances, vehicles, completions),
+    [applianceMaintenanceRaw, appliances, vehicles, completions]
+  );
+  
+  const vehicleMaintenance = useMemo(() => 
+    sortMaintenanceByDueDate(vehicleMaintenanceRaw, appliances, vehicles, completions),
+    [vehicleMaintenanceRaw, appliances, vehicles, completions]
+  );
 
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
