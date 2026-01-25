@@ -238,11 +238,7 @@
   pointer-events: none;
 }
 
-/* Drop target indicator */
-.dashboard-card-drop-target {
-  outline: 2px dashed hsl(var(--primary));
-  outline-offset: 4px;
-}
+
 
 /* Hammer and nail loading animation */
 /* Hammer: head on top, handle below, pivots from bottom (hand position at 65,75) */

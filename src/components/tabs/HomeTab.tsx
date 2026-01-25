@@ -108,11 +108,12 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   // Edit mode for reordering dashboard cards
   const [isEditMode, setIsEditMode] = useState(false);
   const [draggedWidget, setDraggedWidget] = useState<WidgetId | null>(null);
-  const [dragOverWidget, setDragOverWidget] = useState<WidgetId | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null); // Index where the card will be inserted
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [draggedWidgetSize, setDraggedWidgetSize] = useState<{ width: number; height: number } | null>(null);
   const widgetRefs = useRef<Map<WidgetId, HTMLDivElement>>(new Map());
+  const containerRef = useRef<HTMLDivElement>(null);
   
   // Widget order state - stored separately from tab order
   const [widgetOrder, setWidgetOrder] = useLocalStorage<WidgetId[]>('homelog-widget-order', []);
@@ -361,26 +362,51 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     setDragPosition({ x: clientX, y: clientY });
     currentPointerY.current = clientY; // Update for auto-scroll
     
-    // Find which widget we're hovering over
-    let foundTarget: WidgetId | null = null;
-    widgetRefs.current.forEach((element, widgetId) => {
+    // Find the best drop position based on cursor location
+    const draggedIndex = activeWidgets.indexOf(draggedWidget);
+    let bestDropIndex: number | null = null;
+    let bestDistance = Infinity;
+    
+    // Check each widget to find the closest drop zone
+    activeWidgets.forEach((widgetId, index) => {
       if (widgetId === draggedWidget) return;
       
-      const rect = element.getBoundingClientRect();
+      const element = widgetRefs.current.get(widgetId);
+      if (!element) return;
       
-      // Check if pointer is within the widget bounds
-      if (
-        clientX >= rect.left &&
-        clientX <= rect.right &&
-        clientY >= rect.top &&
-        clientY <= rect.bottom
-      ) {
-        foundTarget = widgetId;
+      const rect = element.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      
+      // Check if cursor is above the midpoint of this card
+      if (clientY < midY) {
+        const distance = Math.abs(clientY - rect.top);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          // If dragging from above, insert at this index; if from below, same index
+          bestDropIndex = index;
+        }
+      } else {
+        const distance = Math.abs(clientY - rect.bottom);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          // Insert after this card
+          bestDropIndex = index + 1;
+        }
       }
     });
     
-    setDragOverWidget(foundTarget);
-  }, [draggedWidget]);
+    // Adjust drop index if we're dragging from before the drop point
+    if (bestDropIndex !== null && draggedIndex < bestDropIndex) {
+      bestDropIndex = bestDropIndex - 1;
+    }
+    
+    // Don't show drop indicator at the dragged item's current position
+    if (bestDropIndex === draggedIndex) {
+      bestDropIndex = null;
+    }
+    
+    setDropIndex(bestDropIndex);
+  }, [draggedWidget, activeWidgets]);
 
   // Shared drag end logic for both mouse and touch
   const endDrag = useCallback(() => {
@@ -392,26 +418,27 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       autoScrollRef.current = null;
     }
     
-    // If we're over a drop target, perform the swap
-    if (dragOverWidget && draggedWidget !== dragOverWidget) {
+    // If we have a valid drop index, perform the reorder
+    if (dropIndex !== null) {
       const currentOrder = [...activeWidgets];
       const draggedIndex = currentOrder.indexOf(draggedWidget);
-      const targetIndex = currentOrder.indexOf(dragOverWidget);
 
-      if (draggedIndex !== -1 && targetIndex !== -1) {
-        // Remove dragged item and insert at target position
+      if (draggedIndex !== -1 && dropIndex !== draggedIndex) {
+        // Remove dragged item
         currentOrder.splice(draggedIndex, 1);
-        currentOrder.splice(targetIndex, 0, draggedWidget);
+        // Insert at new position (adjust if needed after removal)
+        const insertIndex = dropIndex > draggedIndex ? dropIndex : dropIndex;
+        currentOrder.splice(insertIndex, 0, draggedWidget);
         setWidgetOrder(currentOrder);
       }
     }
     
     // Reset drag state
     setDraggedWidget(null);
-    setDragOverWidget(null);
+    setDropIndex(null);
     setDragPosition(null);
     setDraggedWidgetSize(null);
-  }, [draggedWidget, dragOverWidget, activeWidgets, setWidgetOrder]);
+  }, [draggedWidget, dropIndex, activeWidgets, setWidgetOrder]);
 
   // Mouse-based drag and drop handlers
   const handleMouseDown = useCallback((e: React.MouseEvent, widgetId: WidgetId) => {
@@ -597,13 +624,20 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
 
 {/* Dashboard widgets - masonry layout with consistent spacing */}
       {hasActiveTabs && (
-        <div className="columns-1 md:columns-2 gap-4 space-y-4">
+        <div ref={containerRef} className="columns-1 md:columns-2 gap-4 space-y-4">
           {activeWidgets.map((widgetId, index) => {
+            const draggedIndex = draggedWidget ? activeWidgets.indexOf(draggedWidget) : -1;
+            // Show drop indicator before this card if dropIndex matches
+            // Account for the removed dragged item when calculating display position
+            const showDropBefore = dropIndex !== null && draggedWidget && (
+              draggedIndex < index 
+                ? dropIndex === index - 1 
+                : dropIndex === index
+            );
             const config = getWidgetConfig(widgetId);
             if (!config) return null;
             
             const isDragging = draggedWidget === widgetId;
-            const isDragOver = dragOverWidget === widgetId;
             
             // Render widget content based on type
             const renderWidgetContent = () => {
@@ -899,27 +933,30 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
             };
             
             return (
-              <div
-                key={widgetId}
-                ref={(el) => {
-                  if (el) {
-                    widgetRefs.current.set(widgetId, el);
-                  } else {
-                    widgetRefs.current.delete(widgetId);
-                  }
-                }}
-                className={cn(
-                  "relative break-inside-avoid",
-                  isDragging && "dashboard-card-placeholder",
-                  isDragOver && "dashboard-card-drop-target",
-                  isEditMode && !isDragging && getWiggleClass(index),
-                  isEditMode && !isDragging && "cursor-grab",
-                  isEditMode && "touch-none" // Prevent default touch actions in edit mode
+              <div key={widgetId} className="break-inside-avoid">
+                {/* Drop indicator before this card */}
+                {showDropBefore && (
+                  <div className="h-1 bg-sky-500 dark:bg-sky-400 rounded-full mb-4 mx-2 animate-pulse" />
                 )}
-                style={isEditMode && !isDragging ? getAnimationStyle(widgetId) : undefined}
-                onMouseDown={(e) => handleMouseDown(e, widgetId)}
-                onTouchStart={(e) => handleTouchStart(e, widgetId)}
-              >
+                <div
+                  ref={(el) => {
+                    if (el) {
+                      widgetRefs.current.set(widgetId, el);
+                    } else {
+                      widgetRefs.current.delete(widgetId);
+                    }
+                  }}
+                  className={cn(
+                    "relative",
+                    isDragging && "dashboard-card-placeholder",
+                    isEditMode && !isDragging && getWiggleClass(index),
+                    isEditMode && !isDragging && "cursor-grab",
+                    isEditMode && "touch-none" // Prevent default touch actions in edit mode
+                  )}
+                  style={isEditMode && !isDragging ? getAnimationStyle(widgetId) : undefined}
+                  onMouseDown={(e) => handleMouseDown(e, widgetId)}
+                  onTouchStart={(e) => handleTouchStart(e, widgetId)}
+                >
                 {/* Edit mode overlay with drag handle and up/down buttons */}
                 {isEditMode && (
                   <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
@@ -964,8 +1001,15 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                 )}
                 {renderWidgetContent()}
               </div>
+              </div>
             );
           })}
+          {/* Drop indicator at the end of the list */}
+          {dropIndex !== null && draggedWidget && dropIndex === activeWidgets.length - 1 && activeWidgets.indexOf(draggedWidget) < activeWidgets.length - 1 && (
+            <div className="break-inside-avoid">
+              <div className="h-1 bg-sky-500 dark:bg-sky-400 rounded-full mx-2 animate-pulse" />
+            </div>
+          )}
         </div>
       )}
 
