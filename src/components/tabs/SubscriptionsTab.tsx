@@ -33,7 +33,9 @@ import { SubscriptionDetailDialog } from '@/components/SubscriptionDetailDialog'
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useCompanyById } from '@/hooks/useCompanies';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
+import { useSubscriptionCurrency, useCurrency } from '@/hooks/useCurrency';
 import { BILLING_FREQUENCIES, type Subscription } from '@/lib/types';
+import { parseCurrencyAmount, formatCurrency, convertCurrency, getCurrency } from '@/lib/currency';
 
 // Get icon based on subscription type
 function getSubscriptionIcon(type: string) {
@@ -61,6 +63,8 @@ export function SubscriptionsTab({ scrollTarget }: SubscriptionsTabProps) {
   const { data: subscriptions = [], isLoading } = useSubscriptions();
   const { preferences, setSubscriptionsViewMode } = useUserPreferences();
   const viewMode = preferences.subscriptionsViewMode || 'card';
+  const { formatSubscriptionCost, entryCurrency, displayCurrency, hasRates } = useSubscriptionCurrency();
+  const { rates } = useCurrency();
 
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -121,37 +125,47 @@ export function SubscriptionsTab({ scrollTarget }: SubscriptionsTabProps) {
     return { grouped, sortedTypes };
   }, [subscriptions]);
 
-  // Calculate total monthly cost estimate
-  const totalMonthlyCost = useMemo(() => {
+  // Calculate total monthly cost estimate with currency conversion
+  const { totalMonthlyCost, formattedTotal } = useMemo(() => {
     let total = 0;
     for (const sub of subscriptions) {
       // Extract numeric value from cost string
-      const numericCost = parseFloat(sub.cost.replace(/[^0-9.]/g, '')) || 0;
+      const numericCost = parseCurrencyAmount(sub.cost);
+      const subCurrency = sub.currency || entryCurrency;
+      
+      // Convert to display currency if rates are available
+      let costInDisplayCurrency = numericCost;
+      if (hasRates && subCurrency !== displayCurrency) {
+        costInDisplayCurrency = convertCurrency(numericCost, subCurrency, displayCurrency, rates);
+      }
       
       // Convert to monthly equivalent
       switch (sub.billingFrequency) {
         case 'weekly':
-          total += numericCost * 4.33; // Average weeks per month
+          total += costInDisplayCurrency * 4.33; // Average weeks per month
           break;
         case 'monthly':
-          total += numericCost;
+          total += costInDisplayCurrency;
           break;
         case 'quarterly':
-          total += numericCost / 3;
+          total += costInDisplayCurrency / 3;
           break;
         case 'semi-annually':
-          total += numericCost / 6;
+          total += costInDisplayCurrency / 6;
           break;
         case 'annually':
-          total += numericCost / 12;
+          total += costInDisplayCurrency / 12;
           break;
         case 'one-time':
           // Don't add one-time costs to monthly
           break;
       }
     }
-    return total;
-  }, [subscriptions]);
+    return {
+      totalMonthlyCost: total,
+      formattedTotal: formatCurrency(total, displayCurrency),
+    };
+  }, [subscriptions, entryCurrency, displayCurrency, hasRates, rates]);
 
   const toggleType = (type: string) => {
     setCollapsedTypes(prev => {
@@ -227,7 +241,7 @@ export function SubscriptionsTab({ scrollTarget }: SubscriptionsTabProps) {
                 <span className="font-medium text-muted-foreground">Estimated Monthly Cost</span>
               </div>
               <span className="text-2xl font-bold text-primary">
-                ${totalMonthlyCost.toFixed(2)}
+                {formattedTotal}
               </span>
             </div>
           </CardContent>
@@ -403,8 +417,10 @@ interface SubscriptionListItemProps {
 
 function SubscriptionListItem({ subscription, onClick }: SubscriptionListItemProps) {
   const linkedCompany = useCompanyById(subscription.companyId);
+  const { formatSubscriptionCost } = useSubscriptionCurrency();
   const billingLabel = BILLING_FREQUENCIES.find(f => f.value === subscription.billingFrequency)?.label || subscription.billingFrequency;
   const companyName = linkedCompany?.name || subscription.companyName;
+  const formattedCost = formatSubscriptionCost(subscription.cost, subscription.currency);
 
   return (
     <button
@@ -423,7 +439,7 @@ function SubscriptionListItem({ subscription, onClick }: SubscriptionListItemPro
       </div>
       <div className="flex items-center gap-3 ml-2">
         <span className="text-sm font-semibold text-primary whitespace-nowrap">
-          {subscription.cost}
+          {formattedCost}
         </span>
         <Badge variant="outline" className="text-xs whitespace-nowrap">
           {billingLabel}
@@ -441,8 +457,10 @@ interface SubscriptionCardProps {
 function SubscriptionCard({ subscription, onClick }: SubscriptionCardProps) {
   const TypeIcon = getSubscriptionIcon(subscription.subscriptionType);
   const linkedCompany = useCompanyById(subscription.companyId);
+  const { formatSubscriptionCost } = useSubscriptionCurrency();
   const billingLabel = BILLING_FREQUENCIES.find(f => f.value === subscription.billingFrequency)?.label || subscription.billingFrequency;
   const companyName = linkedCompany?.name || subscription.companyName;
+  const formattedCost = formatSubscriptionCost(subscription.cost, subscription.currency);
   
   return (
     <button
@@ -455,7 +473,7 @@ function SubscriptionCard({ subscription, onClick }: SubscriptionCardProps) {
           <TypeIcon className="h-5 w-5 text-primary" />
         </div>
         <div className="text-right">
-          <p className="font-bold text-lg text-primary">{subscription.cost}</p>
+          <p className="font-bold text-lg text-primary">{formattedCost}</p>
           <p className="text-xs text-muted-foreground">{billingLabel}</p>
         </div>
       </div>

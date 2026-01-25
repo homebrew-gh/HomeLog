@@ -36,6 +36,7 @@ function parseSubscriptionPlaintext(event: NostrEvent): Subscription | null {
     subscriptionType,
     name,
     cost,
+    currency: getTagValue(event, 'currency'),
     billingFrequency,
     companyId: getTagValue(event, 'company_id'),
     companyName: getTagValue(event, 'company_name'),
@@ -245,6 +246,7 @@ export function useSubscriptionActions() {
       tags.push(['cost', data.cost]);
       tags.push(['billing_frequency', data.billingFrequency]);
       
+      if (data.currency) tags.push(['currency', data.currency]);
       if (data.companyId) tags.push(['company_id', data.companyId]);
       if (data.companyName) tags.push(['company_name', data.companyName]);
       if (data.notes) tags.push(['notes', data.notes]);
@@ -288,6 +290,7 @@ export function useSubscriptionActions() {
       tags.push(['cost', data.cost]);
       tags.push(['billing_frequency', data.billingFrequency]);
       
+      if (data.currency) tags.push(['currency', data.currency]);
       if (data.companyId) tags.push(['company_id', data.companyId]);
       if (data.companyName) tags.push(['company_name', data.companyName]);
       if (data.notes) tags.push(['notes', data.notes]);

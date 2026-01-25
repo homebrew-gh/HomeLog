@@ -59,6 +59,14 @@ export const DEFAULT_BLOSSOM_SERVERS: BlossomServer[] = [
   { url: 'https://blossom.primal.net/', enabled: true, isPrivate: false },
 ];
 
+// Exchange rates storage type
+export interface StoredExchangeRates {
+  base: string;
+  rates: Record<string, number>;
+  timestamp: number;
+  btcPrice?: number;
+}
+
 export interface UserPreferences {
   // Tab preferences
   activeTabs: TabId[];
@@ -72,6 +80,10 @@ export interface UserPreferences {
   subscriptionsViewMode: 'list' | 'card';
   // Color theme preference
   colorTheme: ColorTheme;
+  // Currency preferences
+  entryCurrency: string; // Currency used for data entry
+  displayCurrency: string; // Currency used for display/viewing
+  exchangeRates?: StoredExchangeRates; // Cached exchange rates
   // Custom rooms
   customRooms: string[];
   // Hidden default rooms (allows users to "delete" default rooms)
@@ -107,6 +119,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   companiesViewMode: 'card',
   subscriptionsViewMode: 'card',
   colorTheme: 'blue',
+  entryCurrency: 'USD',
+  displayCurrency: 'USD',
+  exchangeRates: undefined,
   customRooms: [],
   hiddenDefaultRooms: [],
   customVehicleTypes: [],
@@ -177,6 +192,10 @@ interface UserPreferencesContextType {
   hasPrivateBlossomServer: () => boolean;
   // Color theme actions
   setColorTheme: (theme: ColorTheme) => void;
+  // Currency actions
+  setEntryCurrency: (currency: string) => void;
+  setDisplayCurrency: (currency: string) => void;
+  setExchangeRates: (rates: StoredExchangeRates) => void;
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | null>(null);
@@ -717,6 +736,28 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  // Currency actions
+  const setEntryCurrency = useCallback((currency: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      entryCurrency: currency,
+    }));
+  }, [updatePreferences]);
+
+  const setDisplayCurrency = useCallback((currency: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      displayCurrency: currency,
+    }));
+  }, [updatePreferences]);
+
+  const setExchangeRates = useCallback((rates: StoredExchangeRates) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      exchangeRates: rates,
+    }));
+  }, [updatePreferences]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -742,6 +783,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     companiesViewMode: localPreferences.companiesViewMode || 'card',
     subscriptionsViewMode: localPreferences.subscriptionsViewMode || 'card',
     colorTheme: localPreferences.colorTheme || 'blue',
+    entryCurrency: localPreferences.entryCurrency || 'USD',
+    displayCurrency: localPreferences.displayCurrency || 'USD',
+    exchangeRates: localPreferences.exchangeRates,
     customRooms: localPreferences.customRooms || [],
     hiddenDefaultRooms: localPreferences.hiddenDefaultRooms || [],
     customVehicleTypes: localPreferences.customVehicleTypes || [],
@@ -809,6 +853,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         getPrivateBlossomServers,
         hasPrivateBlossomServer,
         setColorTheme,
+        setEntryCurrency,
+        setDisplayCurrency,
+        setExchangeRates,
       }}
     >
       {children}

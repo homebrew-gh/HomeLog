@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw } from 'lucide-react';
+import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -14,6 +14,7 @@ import { SubscriptionTypeManagementDialog } from '@/components/SubscriptionTypeM
 import { HomeFeatureManagementDialog } from '@/components/HomeFeatureManagementDialog';
 import { EncryptionSettingsDialog } from '@/components/EncryptionSettingsDialog';
 import { DisplaySettingsDialog } from '@/components/DisplaySettingsDialog';
+import { CurrencySettingsDialog } from '@/components/CurrencySettingsDialog';
 import { DonateSection } from '@/components/DonateSection';
 import { TabNavigation } from '@/components/TabNavigation';
 import { AddTabDialog } from '@/components/AddTabDialog';
@@ -116,6 +117,7 @@ const Index = () => {
   const [homeFeatureManagementOpen, setHomeFeatureManagementOpen] = useState(false);
   const [encryptionSettingsOpen, setEncryptionSettingsOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
+  const [currencySettingsOpen, setCurrencySettingsOpen] = useState(false);
   const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
   
   // Scroll target state for navigating to specific sections within tabs
@@ -212,6 +214,10 @@ const Index = () => {
                     <DropdownMenuItem onClick={() => setDisplaySettingsOpen(true)}>
                       <Palette className="h-4 w-4 mr-2" />
                       Color Theme
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCurrencySettingsOpen(true)}>
+                      <Coins className="h-4 w-4 mr-2" />
+                      Currency
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Nostr Relays</DropdownMenuLabel>
@@ -413,6 +419,11 @@ const Index = () => {
       <DisplaySettingsDialog
         isOpen={displaySettingsOpen}
         onClose={() => setDisplaySettingsOpen(false)}
+      />
+
+      <CurrencySettingsDialog
+        isOpen={currencySettingsOpen}
+        onClose={() => setCurrencySettingsOpen(false)}
       />
     </div>
   );

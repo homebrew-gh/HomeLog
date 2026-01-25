@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useSubscriptionActions } from '@/hooks/useSubscriptions';
 import { useCompanyById } from '@/hooks/useCompanies';
+import { useSubscriptionCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import { BILLING_FREQUENCIES, type Subscription } from '@/lib/types';
 
@@ -36,8 +37,12 @@ export function SubscriptionDetailDialog({
 }: SubscriptionDetailDialogProps) {
   const { deleteSubscription } = useSubscriptionActions();
   const linkedCompany = useCompanyById(subscription.companyId);
+  const { formatSubscriptionCost } = useSubscriptionCurrency();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Format the cost with proper currency symbol
+  const formattedCost = formatSubscriptionCost(subscription.cost, subscription.currency);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -95,7 +100,7 @@ export function SubscriptionDetailDialog({
                   <DollarSign className="h-4 w-4" />
                   Cost
                 </div>
-                <p className="font-semibold text-lg text-primary">{subscription.cost}</p>
+                <p className="font-semibold text-lg text-primary">{formattedCost}</p>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

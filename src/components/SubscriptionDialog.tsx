@@ -5,15 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useSubscriptionActions } from '@/hooks/useSubscriptions';
 import { useSubscriptionTypes } from '@/hooks/useSubscriptionTypes';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import { BILLING_FREQUENCIES, type Subscription, type BillingFrequency } from '@/lib/types';
+import { getGroupedCurrencies, getCurrency } from '@/lib/currency';
 
 interface SubscriptionDialogProps {
   isOpen: boolean;
@@ -25,6 +27,7 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
   const { createSubscription, updateSubscription } = useSubscriptionActions();
   const { allSubscriptionTypes, addCustomSubscriptionType } = useSubscriptionTypes();
   const { data: companies = [] } = useCompanies();
+  const { entryCurrency } = useCurrency();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddType, setShowAddType] = useState(false);
@@ -36,12 +39,14 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
     name: '',
     subscriptionType: '',
     cost: '',
+    currency: entryCurrency,
     billingFrequency: 'monthly' as BillingFrequency,
     companyId: '',
     companyName: '',
     notes: '',
   });
 
+  const groupedCurrencies = getGroupedCurrencies();
   const isEditing = !!subscription;
 
   // Reset form when dialog opens
@@ -52,6 +57,7 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
           name: subscription.name,
           subscriptionType: subscription.subscriptionType,
           cost: subscription.cost,
+          currency: subscription.currency || entryCurrency,
           billingFrequency: subscription.billingFrequency,
           companyId: subscription.companyId || '',
           companyName: subscription.companyName || '',
@@ -62,6 +68,7 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
           name: '',
           subscriptionType: '',
           cost: '',
+          currency: entryCurrency,
           billingFrequency: 'monthly',
           companyId: '',
           companyName: '',
@@ -72,7 +79,7 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
       setNewType('');
       setCompanySearch('');
     }
-  }, [isOpen, subscription]);
+  }, [isOpen, subscription, entryCurrency]);
 
   // Filter companies for search
   const filteredCompanies = useMemo(() => {
@@ -167,6 +174,7 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
         name: formData.name.trim(),
         subscriptionType: formData.subscriptionType,
         cost: formData.cost.trim(),
+        currency: formData.currency,
         billingFrequency: formData.billingFrequency,
         companyId: formData.companyId || undefined,
         companyName: formData.companyName.trim() || undefined,
@@ -265,15 +273,43 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
             />
           </div>
 
-          {/* Cost */}
+          {/* Cost with Currency */}
           <div className="space-y-2">
             <Label htmlFor="cost">Cost *</Label>
-            <Input
-              id="cost"
-              value={formData.cost}
-              onChange={(e) => setFormData(prev => ({ ...prev, cost: e.target.value }))}
-              placeholder="e.g., $15.99, $120/year"
-            />
+            <div className="flex gap-2">
+              <Select
+                value={formData.currency}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}
+              >
+                <SelectTrigger className="w-28 shrink-0">
+                  <SelectValue>
+                    {getCurrency(formData.currency)?.symbol || formData.currency}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {groupedCurrencies.map((group) => (
+                    <SelectGroup key={group.label}>
+                      <SelectLabel>{group.label}</SelectLabel>
+                      {group.currencies.map((currency) => (
+                        <SelectItem key={currency.code} value={currency.code}>
+                          <span className="flex items-center gap-2">
+                            <span className="font-mono w-8">{currency.symbol}</span>
+                            <span className="text-xs text-muted-foreground">{currency.code}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                id="cost"
+                value={formData.cost}
+                onChange={(e) => setFormData(prev => ({ ...prev, cost: e.target.value }))}
+                placeholder="e.g., 15.99"
+                className="flex-1"
+              />
+            </div>
           </div>
 
           {/* Billing Frequency */}

@@ -197,6 +197,7 @@ export interface Subscription {
   subscriptionType: string;
   name: string; // Description/name of the subscription
   cost: string; // Price as string to handle currency formatting
+  currency?: string; // Currency code (e.g., 'USD', 'EUR', 'BTC') - defaults to user's entry currency
   billingFrequency: BillingFrequency;
   companyId?: string; // Optional - link to a company/service provider
   companyName?: string; // Manual entry if not linking to a company

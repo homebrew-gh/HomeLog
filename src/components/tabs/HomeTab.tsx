@@ -40,7 +40,9 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useHomeLogFriends } from '@/hooks/useHomeLogFriends';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
+import { useCurrency } from '@/hooks/useCurrency';
 import { genUserName } from '@/lib/genUserName';
+import { parseCurrencyAmount, formatCurrency, convertCurrency } from '@/lib/currency';
 import type { MaintenanceSchedule } from '@/lib/types';
 
 const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
@@ -108,6 +110,9 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   
   // Track data sync status for showing loading states
   const { isSyncing: isDataSyncing, isSynced: isDataSynced, categories: syncCategories } = useDataSyncStatus();
+  
+  // Currency preferences
+  const { entryCurrency, displayCurrency, hasRates, rates } = useCurrency();
   
   // Show loading if:
   // 1. TanStack query is loading, OR
@@ -289,37 +294,47 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     });
   }, [subscriptions]);
 
-  // Calculate total monthly cost estimate for subscriptions
-  const totalMonthlyCost = useMemo(() => {
+  // Calculate total monthly cost estimate for subscriptions with currency conversion
+  const { totalMonthlyCost, formattedTotalMonthlyCost } = useMemo(() => {
     let total = 0;
     for (const sub of subscriptions) {
       // Extract numeric value from cost string
-      const numericCost = parseFloat(sub.cost.replace(/[^0-9.]/g, '')) || 0;
+      const numericCost = parseCurrencyAmount(sub.cost);
+      const subCurrency = sub.currency || entryCurrency;
+      
+      // Convert to display currency if rates are available
+      let costInDisplayCurrency = numericCost;
+      if (hasRates && subCurrency !== displayCurrency) {
+        costInDisplayCurrency = convertCurrency(numericCost, subCurrency, displayCurrency, rates);
+      }
       
       // Convert to monthly equivalent
       switch (sub.billingFrequency) {
         case 'weekly':
-          total += numericCost * 4.33; // Average weeks per month
+          total += costInDisplayCurrency * 4.33; // Average weeks per month
           break;
         case 'monthly':
-          total += numericCost;
+          total += costInDisplayCurrency;
           break;
         case 'quarterly':
-          total += numericCost / 3;
+          total += costInDisplayCurrency / 3;
           break;
         case 'semi-annually':
-          total += numericCost / 6;
+          total += costInDisplayCurrency / 6;
           break;
         case 'annually':
-          total += numericCost / 12;
+          total += costInDisplayCurrency / 12;
           break;
         case 'one-time':
           // Don't add one-time costs to monthly
           break;
       }
     }
-    return total;
-  }, [subscriptions]);
+    return {
+      totalMonthlyCost: total,
+      formattedTotalMonthlyCost: formatCurrency(total, displayCurrency),
+    };
+  }, [subscriptions, entryCurrency, displayCurrency, hasRates, rates]);
 
   // Get ordered list of active widgets based on active tabs
   const activeWidgets = useMemo((): WidgetId[] => {
@@ -992,7 +1007,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                           <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10">
                             <DollarSign className="h-4 w-4 text-primary" />
                             <span className="text-sm text-muted-foreground">Est. Monthly:</span>
-                            <span className="font-bold text-primary ml-auto">${totalMonthlyCost.toFixed(2)}</span>
+                            <span className="font-bold text-primary ml-auto">{formattedTotalMonthlyCost}</span>
                           </div>
                           
                           {/* Subscription type buttons */}
