@@ -4,5 +4,5 @@ export { MaintenanceTab } from './MaintenanceTab';
 export { VehiclesTab } from './VehiclesTab';
 export { SubscriptionsTab } from './SubscriptionsTab';
 export { WarrantiesTab } from './WarrantiesTab';
-export { ContractorsTab } from './ContractorsTab';
+export { CompaniesTab } from './CompaniesTab';
 export { ProjectsTab } from './ProjectsTab';

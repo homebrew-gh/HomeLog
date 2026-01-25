@@ -31,12 +31,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ContractorDialog, parseVcf, type VcfData } from '@/components/ContractorDialog';
-import { ContractorDetailDialog } from '@/components/ContractorDetailDialog';
-import { useContractors } from '@/hooks/useContractors';
+import { CompanyDialog, parseVcf, type VcfData } from '@/components/CompanyDialog';
+import { CompanyDetailDialog } from '@/components/CompanyDetailDialog';
+import { useCompanies } from '@/hooks/useCompanies';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { toast } from '@/hooks/useToast';
-import type { Contractor } from '@/lib/types';
+import type { Company } from '@/lib/types';
 
 // Get icon based on service type
 function getServiceIcon(type: string) {
@@ -59,19 +59,19 @@ function getServiceIcon(type: string) {
   return Users;
 }
 
-interface ContractorsTabProps {
+interface CompaniesTabProps {
   scrollTarget?: string;
 }
 
-export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
-  const { data: contractors = [], isLoading } = useContractors();
-  const { preferences, setContractorsViewMode } = useUserPreferences();
-  const viewMode = preferences.contractorsViewMode;
+export function CompaniesTab({ scrollTarget }: CompaniesTabProps) {
+  const { data: companies = [], isLoading } = useCompanies();
+  const { preferences, setCompaniesViewMode } = useUserPreferences();
+  const viewMode = preferences.companiesViewMode;
 
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingContractor, setEditingContractor] = useState<Contractor | undefined>();
-  const [viewingContractor, setViewingContractor] = useState<Contractor | undefined>();
+  const [editingCompany, setEditingCompany] = useState<Company | undefined>();
+  const [viewingCompany, setViewingCompany] = useState<Company | undefined>();
   const [vcfImportData, setVcfImportData] = useState<VcfData | undefined>();
 
   // Collapsed types state (for list view)
@@ -107,16 +107,16 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
     }
   }, [scrollTarget, isLoading]);
 
-  // Group contractors by service type
-  const contractorsByType = useMemo(() => {
-    const grouped: Record<string, Contractor[]> = {};
+  // Group companies by service type
+  const companiesByType = useMemo(() => {
+    const grouped: Record<string, Company[]> = {};
 
-    for (const contractor of contractors) {
-      const type = contractor.serviceType || 'Uncategorized';
+    for (const company of companies) {
+      const type = company.serviceType || 'Uncategorized';
       if (!grouped[type]) {
         grouped[type] = [];
       }
-      grouped[type].push(contractor);
+      grouped[type].push(company);
     }
 
     // Sort types alphabetically, but put "Uncategorized" and "Other" at the end
@@ -127,7 +127,7 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
     });
 
     return { grouped, sortedTypes };
-  }, [contractors]);
+  }, [companies]);
 
   const toggleType = (type: string) => {
     setCollapsedTypes(prev => {
@@ -141,14 +141,14 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
     });
   };
 
-  const handleEditContractor = (contractor: Contractor) => {
-    setEditingContractor(contractor);
+  const handleEditCompany = (company: Company) => {
+    setEditingCompany(company);
     setVcfImportData(undefined);
     setDialogOpen(true);
   };
 
   const handleAddManually = () => {
-    setEditingContractor(undefined);
+    setEditingCompany(undefined);
     setVcfImportData(undefined);
     setDialogOpen(true);
   };
@@ -170,7 +170,7 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
         return;
       }
 
-      setEditingContractor(undefined);
+      setEditingCompany(undefined);
       setVcfImportData(data);
       setDialogOpen(true);
 
@@ -196,15 +196,15 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
           <Users className="h-6 w-6 text-sky-600 dark:text-sky-400" />
-          Contractors & Services
+          Companies & Services
         </h2>
         <div className="flex items-center gap-2">
           {/* View Toggle */}
-          {contractors.length > 0 && (
+          {companies.length > 0 && (
             <ToggleGroup 
               type="single" 
               value={viewMode} 
-              onValueChange={(value) => value && setContractorsViewMode(value as 'list' | 'card')}
+              onValueChange={(value) => value && setCompaniesViewMode(value as 'list' | 'card')}
               className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5"
             >
               <ToggleGroupItem 
@@ -286,15 +286,15 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
             ))}
           </div>
         )
-      ) : contractors.length === 0 ? (
+      ) : companies.length === 0 ? (
         <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 border-dashed">
           <CardContent className="py-12 text-center">
             <Users className="h-12 w-12 text-sky-300 dark:text-sky-700 mx-auto mb-4" />
             <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">
-              No Contractors Yet
+              No Companies Yet
             </h3>
             <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-              Keep contact information, service history, and invoices for all your trusted contractors and service providers.
+              Keep contact information, service history, and invoices for all your trusted companies and service providers.
             </p>
             <Button
               onClick={handleAddManually}
@@ -310,7 +310,7 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
         /* List View */
         <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
           <CardContent className="p-4">
-            {contractorsByType.sortedTypes.map((type) => {
+            {companiesByType.sortedTypes.map((type) => {
               const TypeIcon = getServiceIcon(type);
               return (
                 <div
@@ -333,27 +333,27 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
                       {type}
                     </span>
                     <Badge variant="secondary" className="ml-auto bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
-                      {contractorsByType.grouped[type].length}
+                      {companiesByType.grouped[type].length}
                     </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="pl-8 py-2 space-y-1">
-                      {contractorsByType.grouped[type].map((contractor) => (
+                      {companiesByType.grouped[type].map((company) => (
                         <button
-                          key={contractor.id}
-                          onClick={() => setViewingContractor(contractor)}
+                          key={company.id}
+                          onClick={() => setViewingCompany(company)}
                           className="flex items-center gap-2 w-full p-2 rounded-lg text-left hover:bg-sky-50 dark:hover:bg-slate-700 transition-colors group"
                         >
                           <span className="text-slate-600 dark:text-slate-300 group-hover:text-sky-700 dark:group-hover:text-sky-300 font-medium">
-                            {contractor.name}
+                            {company.name}
                           </span>
-                          {contractor.rating && (
+                          {company.rating && (
                             <div className="flex items-center gap-0.5 ml-2">
                               {[1, 2, 3, 4, 5].map((star) => (
                                 <Star
                                   key={star}
                                   className={`h-3 w-3 ${
-                                    star <= contractor.rating!
+                                    star <= company.rating!
                                       ? 'fill-amber-400 text-amber-400'
                                       : 'text-slate-300 dark:text-slate-600'
                                   }`}
@@ -361,9 +361,9 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
                               ))}
                             </div>
                           )}
-                          {contractor.phone && (
+                          {company.phone && (
                             <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto">
-                              {contractor.phone}
+                              {company.phone}
                             </span>
                           )}
                         </button>
@@ -379,7 +379,7 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
       ) : (
         /* Card View */
         <div className="space-y-6">
-          {contractorsByType.sortedTypes.map((type) => {
+          {companiesByType.sortedTypes.map((type) => {
             const TypeIcon = getServiceIcon(type);
             return (
               <Card 
@@ -394,17 +394,17 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
                     </div>
                     <span className="text-slate-700 dark:text-slate-200">{type}</span>
                     <Badge variant="secondary" className="ml-auto bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
-                      {contractorsByType.grouped[type].length} {contractorsByType.grouped[type].length === 1 ? 'contractor' : 'contractors'}
+                      {companiesByType.grouped[type].length} {companiesByType.grouped[type].length === 1 ? 'company' : 'companies'}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {contractorsByType.grouped[type].map((contractor) => (
-                      <ContractorCard
-                        key={contractor.id}
-                        contractor={contractor}
-                        onClick={() => setViewingContractor(contractor)}
+                    {companiesByType.grouped[type].map((company) => (
+                      <CompanyCard
+                        key={company.id}
+                        company={company}
+                        onClick={() => setViewingCompany(company)}
                       />
                     ))}
                   </div>
@@ -416,37 +416,37 @@ export function ContractorsTab({ scrollTarget }: ContractorsTabProps) {
       )}
 
       {/* Dialogs */}
-      <ContractorDialog
+      <CompanyDialog
         isOpen={dialogOpen}
         onClose={() => {
           setDialogOpen(false);
-          setEditingContractor(undefined);
+          setEditingCompany(undefined);
           setVcfImportData(undefined);
         }}
-        contractor={editingContractor}
+        company={editingCompany}
         initialData={vcfImportData}
       />
 
-      {viewingContractor && (
-        <ContractorDetailDialog
-          isOpen={!!viewingContractor}
-          onClose={() => setViewingContractor(undefined)}
-          contractor={viewingContractor}
-          onEdit={() => handleEditContractor(viewingContractor)}
-          onDelete={() => setViewingContractor(undefined)}
+      {viewingCompany && (
+        <CompanyDetailDialog
+          isOpen={!!viewingCompany}
+          onClose={() => setViewingCompany(undefined)}
+          company={viewingCompany}
+          onEdit={() => handleEditCompany(viewingCompany)}
+          onDelete={() => setViewingCompany(undefined)}
         />
       )}
     </section>
   );
 }
 
-interface ContractorCardProps {
-  contractor: Contractor;
+interface CompanyCardProps {
+  company: Company;
   onClick: () => void;
 }
 
-function ContractorCard({ contractor, onClick }: ContractorCardProps) {
-  const ServiceIcon = getServiceIcon(contractor.serviceType);
+function CompanyCard({ company, onClick }: CompanyCardProps) {
+  const ServiceIcon = getServiceIcon(company.serviceType);
   
   return (
     <button
@@ -458,13 +458,13 @@ function ContractorCard({ contractor, onClick }: ContractorCardProps) {
         <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-900/50 group-hover:bg-sky-200 dark:group-hover:bg-sky-800 transition-colors">
           <ServiceIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
         </div>
-        {contractor.rating && (
+        {company.rating && (
           <div className="flex items-center gap-0.5">
             {[1, 2, 3, 4, 5].map((star) => (
               <Star
                 key={star}
                 className={`h-3.5 w-3.5 ${
-                  star <= contractor.rating!
+                  star <= company.rating!
                     ? 'fill-amber-400 text-amber-400'
                     : 'text-slate-300 dark:text-slate-600'
                 }`}
@@ -476,28 +476,28 @@ function ContractorCard({ contractor, onClick }: ContractorCardProps) {
 
       {/* Name */}
       <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1 line-clamp-2 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition-colors">
-        {contractor.name}
+        {company.name}
       </h3>
 
       {/* Contact Info */}
-      {contractor.phone && (
+      {company.phone && (
         <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
           <Phone className="h-3.5 w-3.5" />
-          <span className="truncate">{contractor.phone}</span>
+          <span className="truncate">{company.phone}</span>
         </p>
       )}
 
-      {contractor.email && (
+      {company.email && (
         <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
           <Mail className="h-3.5 w-3.5" />
-          <span className="truncate">{contractor.email}</span>
+          <span className="truncate">{company.email}</span>
         </p>
       )}
 
       {/* Invoice Count */}
-      {contractor.invoices && contractor.invoices.length > 0 && (
+      {company.invoices && company.invoices.length > 0 && (
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
-          {contractor.invoices.length} invoice{contractor.invoices.length === 1 ? '' : 's'} on file
+          {company.invoices.length} invoice{company.invoices.length === 1 ? '' : 's'} on file
         </p>
       )}
 

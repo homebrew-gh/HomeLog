@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
-import { useContractors } from '@/hooks/useContractors';
+import { useCompanies } from '@/hooks/useCompanies';
 import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate } from '@/hooks/useMaintenance';
 import { useCompletionsByMaintenance, useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
@@ -29,7 +29,7 @@ const ADD_CUSTOM_FEATURE = '__add_custom__';
 export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApplianceId, preselectedVehicleId, mode = 'appliance' }: MaintenanceDialogProps) {
   const { data: appliances = [] } = useAppliances();
   const { data: vehicles = [] } = useVehicles();
-  const { data: contractors = [] } = useContractors();
+  const { data: companies = [] } = useCompanies();
   const { allHomeFeatures, addCustomHomeFeature } = useCustomHomeFeatures();
   const { createMaintenance, updateMaintenance } = useMaintenanceActions();
   const { createCompletion } = useMaintenanceCompletionActions();
@@ -42,7 +42,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
     applianceId: '',
     vehicleId: '',
     homeFeature: '',
-    contractorId: '',
+    companyId: '',
     description: '',
     partNumber: '',
     frequency: '',
@@ -90,7 +90,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           applianceId: maintenance.applianceId || '',
           vehicleId: maintenance.vehicleId || '',
           homeFeature: maintenance.homeFeature || '',
-          contractorId: maintenance.contractorId || '',
+          companyId: maintenance.companyId || '',
           description: maintenance.description,
           partNumber: maintenance.partNumber || '',
           frequency: maintenance.frequency.toString(),
@@ -103,7 +103,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           applianceId: preselectedApplianceId || '',
           vehicleId: preselectedVehicleId || '',
           homeFeature: '',
-          contractorId: '',
+          companyId: '',
           description: '',
           partNumber: '',
           frequency: '',
@@ -202,7 +202,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
         applianceId: isVehicleMode ? undefined : (formData.applianceId || undefined),
         vehicleId: isVehicleMode ? formData.vehicleId : undefined,
         homeFeature: isVehicleMode ? undefined : (formData.homeFeature || undefined),
-        contractorId: formData.contractorId || undefined,
+        companyId: formData.companyId || undefined,
         description: formData.description.trim(),
         partNumber: formData.partNumber.trim() || undefined,
         frequency,
@@ -430,38 +430,38 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
             />
           </div>
 
-          {/* Contractor/Service Provider */}
+          {/* Company/Service Provider */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Wrench className="h-4 w-4 text-orange-600" />
               Service Provider
             </Label>
             <Select
-              value={formData.contractorId}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, contractorId: value === '__none__' ? '' : value }))}
+              value={formData.companyId}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value === '__none__' ? '' : value }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a contractor (optional)" />
+                <SelectValue placeholder="Select a company (optional)" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__" className="text-muted-foreground">
                   None
                 </SelectItem>
-                {contractors.length === 0 ? (
+                {companies.length === 0 ? (
                   <div className="p-2 text-sm text-muted-foreground text-center">
-                    No contractors found. Add one in the Company/Service tab.
+                    No companies found. Add one in the Company/Service tab.
                   </div>
                 ) : (
-                  contractors.map((contractor) => (
-                    <SelectItem key={contractor.id} value={contractor.id}>
-                      {contractor.name} ({contractor.serviceType})
+                  companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name} ({company.serviceType})
                     </SelectItem>
                   ))
                 )}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Link this task to a contractor from your Company/Service list
+              Link this task to a company from your Company/Service list
             </p>
           </div>
 

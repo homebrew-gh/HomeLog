@@ -22,20 +22,20 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
-import { useContractorActions } from '@/hooks/useContractors';
+import { useCompanyActions } from '@/hooks/useCompanies';
 import { toast } from '@/hooks/useToast';
-import type { Contractor } from '@/lib/types';
+import type { Company } from '@/lib/types';
 
-interface ContractorDetailDialogProps {
+interface CompanyDetailDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  contractor: Contractor;
+  company: Company;
   onEdit: () => void;
   onDelete?: () => void;
 }
 
-export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, onDelete }: ContractorDetailDialogProps) {
-  const { deleteContractor } = useContractorActions();
+export function CompanyDetailDialog({ isOpen, onClose, company, onEdit, onDelete }: CompanyDetailDialogProps) {
+  const { deleteCompany } = useCompanyActions();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -43,10 +43,10 @@ export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, on
     setShowDeleteConfirm(false);
     setIsDeleting(true);
     try {
-      await deleteContractor(contractor.id);
+      await deleteCompany(company.id);
       toast({
-        title: 'Contractor deleted',
-        description: 'The contractor has been removed.',
+        title: 'Company deleted',
+        description: 'The company has been removed.',
       });
       // Close dialog and notify parent of deletion
       onClose();
@@ -54,7 +54,7 @@ export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, on
     } catch {
       toast({
         title: 'Error',
-        description: 'Failed to delete contractor. Please try again.',
+        description: 'Failed to delete company. Please try again.',
         variant: 'destructive',
       });
       setIsDeleting(false);
@@ -68,7 +68,7 @@ export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, on
         <DialogContent className="max-w-[95vw] sm:max-w-md" hideCloseButton>
           <LoadingAnimation 
             size="md" 
-            message="Deleting Contractor" 
+            message="Deleting Company" 
             subMessage="Please wait..."
           />
         </DialogContent>
@@ -84,11 +84,11 @@ export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, on
   // Format full address
   const formatAddress = () => {
     const parts = [];
-    if (contractor.address) parts.push(contractor.address);
+    if (company.address) parts.push(company.address);
     const cityStateZip = [
-      contractor.city,
-      contractor.state,
-      contractor.zipCode
+      company.city,
+      company.state,
+      company.zipCode
     ].filter(Boolean).join(', ');
     if (cityStateZip) parts.push(cityStateZip);
     return parts.join('\n');
@@ -103,17 +103,17 @@ export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, on
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-sky-600" />
-              <span>{contractor.name}</span>
+              <span>{company.name}</span>
             </DialogTitle>
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="secondary">{contractor.serviceType}</Badge>
-              {contractor.rating && (
+              <Badge variant="secondary">{company.serviceType}</Badge>
+              {company.rating && (
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
                       key={star}
                       className={`h-4 w-4 ${
-                        star <= contractor.rating!
+                        star <= company.rating!
                           ? 'fill-amber-400 text-amber-400'
                           : 'text-slate-300 dark:text-slate-600'
                       }`}
@@ -126,61 +126,61 @@ export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, on
 
           <div className="space-y-4 py-4">
             {/* Contact Person */}
-            {contractor.contactName && (
+            {company.contactName && (
               <div className="flex items-start gap-3">
                 <User className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Contact Person</p>
-                  <p>{contractor.contactName}</p>
+                  <p>{company.contactName}</p>
                 </div>
               </div>
             )}
 
             {/* Phone */}
-            {contractor.phone && (
+            {company.phone && (
               <div className="flex items-start gap-3">
                 <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-muted-foreground">Phone</p>
                   <a 
-                    href={`tel:${contractor.phone}`}
+                    href={`tel:${company.phone}`}
                     className="text-primary hover:underline"
                   >
-                    {contractor.phone}
+                    {company.phone}
                   </a>
                 </div>
               </div>
             )}
 
             {/* Email */}
-            {contractor.email && (
+            {company.email && (
               <div className="flex items-start gap-3">
                 <Mail className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-muted-foreground">Email</p>
                   <a 
-                    href={`mailto:${contractor.email}`}
+                    href={`mailto:${company.email}`}
                     className="text-primary hover:underline truncate block"
                   >
-                    {contractor.email}
+                    {company.email}
                   </a>
                 </div>
               </div>
             )}
 
             {/* Website */}
-            {contractor.website && (
+            {company.website && (
               <div className="flex items-start gap-3">
                 <Globe className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-muted-foreground">Website</p>
                   <a 
-                    href={contractor.website}
+                    href={company.website}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline flex items-center gap-1"
                   >
-                    <span className="truncate">{contractor.website.replace(/^https?:\/\//, '')}</span>
+                    <span className="truncate">{company.website.replace(/^https?:\/\//, '')}</span>
                     <ExternalLink className="h-3 w-3 shrink-0" />
                   </a>
                 </div>
@@ -202,25 +202,25 @@ export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, on
             )}
 
             {/* Business Details */}
-            {(contractor.licenseNumber || contractor.insuranceInfo) && (
+            {(company.licenseNumber || company.insuranceInfo) && (
               <>
                 <Separator />
-                {contractor.licenseNumber && (
+                {company.licenseNumber && (
                   <div className="flex items-start gap-3">
                     <Shield className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">License Number</p>
-                      <p className="font-mono text-sm">{contractor.licenseNumber}</p>
+                      <p className="font-mono text-sm">{company.licenseNumber}</p>
                     </div>
                   </div>
                 )}
 
-                {contractor.insuranceInfo && (
+                {company.insuranceInfo && (
                   <div className="flex items-start gap-3">
                     <Shield className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Insurance</p>
-                      <p>{contractor.insuranceInfo}</p>
+                      <p>{company.insuranceInfo}</p>
                     </div>
                   </div>
                 )}
@@ -228,17 +228,17 @@ export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, on
             )}
 
             {/* Invoices */}
-            {contractor.invoices && contractor.invoices.length > 0 && (
+            {company.invoices && company.invoices.length > 0 && (
               <>
                 <Separator />
                 <div className="flex items-start gap-3">
                   <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-muted-foreground mb-2">
-                      Invoices ({contractor.invoices.length})
+                      Invoices ({company.invoices.length})
                     </p>
                     <div className="space-y-2">
-                      {contractor.invoices.map((invoice, index) => (
+                      {company.invoices.map((invoice, index) => (
                         <a 
                           key={index}
                           href={invoice.url}
@@ -273,14 +273,14 @@ export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, on
             )}
 
             {/* Notes */}
-            {contractor.notes && (
+            {company.notes && (
               <>
                 <Separator />
                 <div className="flex items-start gap-3">
                   <StickyNote className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Notes</p>
-                    <p className="whitespace-pre-wrap">{contractor.notes}</p>
+                    <p className="whitespace-pre-wrap">{company.notes}</p>
                   </div>
                 </div>
               </>
@@ -308,9 +308,9 @@ export function ContractorDetailDialog({ isOpen, onClose, contractor, onEdit, on
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Contractor?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Company?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{contractor.name}" and all associated invoices. This action cannot be undone.
+              This will permanently delete "{company.name}" and all associated invoices. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

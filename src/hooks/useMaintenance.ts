@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { MAINTENANCE_KIND, APPLIANCE_KIND, VEHICLE_KIND, CONTRACTOR_KIND, type MaintenanceSchedule } from '@/lib/types';
+import { MAINTENANCE_KIND, APPLIANCE_KIND, VEHICLE_KIND, COMPANY_KIND, type MaintenanceSchedule } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 
 // Helper to get tag value
@@ -20,11 +20,11 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
   const frequency = getTagValue(event, 'frequency');
   const frequencyUnit = getTagValue(event, 'frequency_unit');
 
-  // Get reference from 'a' tags - could be appliance, vehicle, or contractor
+  // Get reference from 'a' tags - could be appliance, vehicle, or company
   const aTags = event.tags.filter(([name]) => name === 'a');
   let applianceId: string | undefined;
   let vehicleId: string | undefined;
-  let contractorId: string | undefined;
+  let companyId: string | undefined;
 
   for (const aTag of aTags) {
     const parts = aTag[1]?.split(':');
@@ -35,8 +35,8 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
         applianceId = refId;
       } else if (kind === VEHICLE_KIND) {
         vehicleId = refId;
-      } else if (kind === CONTRACTOR_KIND) {
-        contractorId = refId;
+      } else if (kind === COMPANY_KIND) {
+        companyId = refId;
       }
     }
   }
@@ -57,7 +57,7 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
     applianceId,
     vehicleId,
     homeFeature,
-    contractorId,
+    companyId,
     description,
     partNumber: getTagValue(event, 'part_number'),
     frequency: parseInt(frequency, 10),
@@ -287,9 +287,9 @@ export function useMaintenanceActions() {
     if (data.homeFeature) {
       tags.push(['home_feature', data.homeFeature]);
     }
-    // Add contractor reference if present
-    if (data.contractorId) {
-      tags.push(['a', `${CONTRACTOR_KIND}:${user.pubkey}:${data.contractorId}`, '', 'contractor']);
+    // Add company reference if present
+    if (data.companyId) {
+      tags.push(['a', `${COMPANY_KIND}:${user.pubkey}:${data.companyId}`, '', 'company']);
     }
 
     if (data.partNumber) tags.push(['part_number', data.partNumber]);
@@ -335,9 +335,9 @@ export function useMaintenanceActions() {
     if (data.homeFeature) {
       tags.push(['home_feature', data.homeFeature]);
     }
-    // Add contractor reference if present
-    if (data.contractorId) {
-      tags.push(['a', `${CONTRACTOR_KIND}:${user.pubkey}:${data.contractorId}`, '', 'contractor']);
+    // Add company reference if present
+    if (data.companyId) {
+      tags.push(['a', `${COMPANY_KIND}:${user.pubkey}:${data.companyId}`, '', 'company']);
     }
 
     if (data.partNumber) tags.push(['part_number', data.partNumber]);

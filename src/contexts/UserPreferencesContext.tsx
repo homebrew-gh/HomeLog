@@ -16,7 +16,7 @@ export type TabId =
   | 'vehicles'
   | 'subscriptions'
   | 'warranties'
-  | 'contractors'
+  | 'companies'
   | 'projects';
 
 export interface TabDefinition {
@@ -32,7 +32,7 @@ export const AVAILABLE_TABS: TabDefinition[] = [
   { id: 'vehicles', label: 'Vehicles', icon: 'Car', description: 'Manage vehicle information and maintenance' },
   { id: 'subscriptions', label: 'Subscriptions', icon: 'CreditCard', description: 'Track recurring subscriptions and payments' },
   { id: 'warranties', label: 'Warranties', icon: 'Shield', description: 'Store warranty information and expiration dates' },
-  { id: 'contractors', label: 'Contractors/Services', icon: 'Users', description: 'Keep contact info for service providers' },
+  { id: 'companies', label: 'Companies/Services', icon: 'Users', description: 'Keep contact info for service providers' },
   { id: 'projects', label: 'Projects', icon: 'FolderKanban', description: 'Plan and track home improvement projects' },
 ];
 
@@ -57,7 +57,7 @@ export interface UserPreferences {
   // View preferences
   appliancesViewMode: 'list' | 'card';
   vehiclesViewMode: 'list' | 'card';
-  contractorsViewMode: 'list' | 'card';
+  companiesViewMode: 'list' | 'card';
   // Custom rooms
   customRooms: string[];
   // Hidden default rooms (allows users to "delete" default rooms)
@@ -66,10 +66,10 @@ export interface UserPreferences {
   customVehicleTypes: string[];
   // Hidden default vehicle types
   hiddenDefaultVehicleTypes: string[];
-  // Custom contractor/service types
-  customContractorTypes: string[];
-  // Hidden default contractor types
-  hiddenDefaultContractorTypes: string[];
+  // Custom company/service types
+  customCompanyTypes: string[];
+  // Hidden default company types
+  hiddenDefaultCompanyTypes: string[];
   // Custom subscription types
   customSubscriptionTypes: string[];
   // Hidden default subscription types
@@ -90,13 +90,13 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   dashboardCardOrder: [],
   appliancesViewMode: 'card',
   vehiclesViewMode: 'card',
-  contractorsViewMode: 'card',
+  companiesViewMode: 'card',
   customRooms: [],
   hiddenDefaultRooms: [],
   customVehicleTypes: [],
   hiddenDefaultVehicleTypes: [],
-  customContractorTypes: [],
-  hiddenDefaultContractorTypes: [],
+  customCompanyTypes: [],
+  hiddenDefaultCompanyTypes: [],
   customSubscriptionTypes: [],
   hiddenDefaultSubscriptionTypes: [],
   customHomeFeatures: [],
@@ -123,7 +123,7 @@ interface UserPreferencesContextType {
   // View mode actions
   setAppliancesViewMode: (mode: 'list' | 'card') => void;
   setVehiclesViewMode: (mode: 'list' | 'card') => void;
-  setContractorsViewMode: (mode: 'list' | 'card') => void;
+  setCompaniesViewMode: (mode: 'list' | 'card') => void;
   // Room actions
   addCustomRoom: (room: string) => void;
   removeCustomRoom: (room: string) => void;
@@ -134,11 +134,11 @@ interface UserPreferencesContextType {
   removeCustomVehicleType: (type: string) => void;
   hideDefaultVehicleType: (type: string) => void;
   restoreDefaultVehicleType: (type: string) => void;
-  // Contractor type actions
-  addCustomContractorType: (type: string) => void;
-  removeCustomContractorType: (type: string) => void;
-  hideDefaultContractorType: (type: string) => void;
-  restoreDefaultContractorType: (type: string) => void;
+  // Company type actions
+  addCustomCompanyType: (type: string) => void;
+  removeCustomCompanyType: (type: string) => void;
+  hideDefaultCompanyType: (type: string) => void;
+  restoreDefaultCompanyType: (type: string) => void;
   // Subscription type actions
   addCustomSubscriptionType: (type: string) => void;
   removeCustomSubscriptionType: (type: string) => void;
@@ -403,10 +403,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
-  const setContractorsViewMode = useCallback((mode: 'list' | 'card') => {
+  const setCompaniesViewMode = useCallback((mode: 'list' | 'card') => {
     updatePreferences((prev) => ({
       ...prev,
-      contractorsViewMode: mode,
+      companiesViewMode: mode,
     }));
   }, [updatePreferences]);
 
@@ -490,43 +490,43 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
-  // Contractor type actions
-  const addCustomContractorType = useCallback((type: string) => {
+  // Company type actions
+  const addCustomCompanyType = useCallback((type: string) => {
     updatePreferences((prev) => {
-      const currentCustomTypes = prev.customContractorTypes || [];
-      const currentHiddenTypes = prev.hiddenDefaultContractorTypes || [];
+      const currentCustomTypes = prev.customCompanyTypes || [];
+      const currentHiddenTypes = prev.hiddenDefaultCompanyTypes || [];
       if (currentCustomTypes.includes(type)) return prev;
       return {
         ...prev,
-        customContractorTypes: [...currentCustomTypes, type],
+        customCompanyTypes: [...currentCustomTypes, type],
         // If adding a type that was a hidden default, remove it from hidden
-        hiddenDefaultContractorTypes: currentHiddenTypes.filter(t => t !== type),
+        hiddenDefaultCompanyTypes: currentHiddenTypes.filter(t => t !== type),
       };
     });
   }, [updatePreferences]);
 
-  const removeCustomContractorType = useCallback((type: string) => {
+  const removeCustomCompanyType = useCallback((type: string) => {
     updatePreferences((prev) => ({
       ...prev,
-      customContractorTypes: (prev.customContractorTypes || []).filter(t => t !== type),
+      customCompanyTypes: (prev.customCompanyTypes || []).filter(t => t !== type),
     }));
   }, [updatePreferences]);
 
-  const hideDefaultContractorType = useCallback((type: string) => {
+  const hideDefaultCompanyType = useCallback((type: string) => {
     updatePreferences((prev) => {
-      const currentHiddenTypes = prev.hiddenDefaultContractorTypes || [];
+      const currentHiddenTypes = prev.hiddenDefaultCompanyTypes || [];
       if (currentHiddenTypes.includes(type)) return prev;
       return {
         ...prev,
-        hiddenDefaultContractorTypes: [...currentHiddenTypes, type],
+        hiddenDefaultCompanyTypes: [...currentHiddenTypes, type],
       };
     });
   }, [updatePreferences]);
 
-  const restoreDefaultContractorType = useCallback((type: string) => {
+  const restoreDefaultCompanyType = useCallback((type: string) => {
     updatePreferences((prev) => ({
       ...prev,
-      hiddenDefaultContractorTypes: (prev.hiddenDefaultContractorTypes || []).filter(t => t !== type),
+      hiddenDefaultCompanyTypes: (prev.hiddenDefaultCompanyTypes || []).filter(t => t !== type),
     }));
   }, [updatePreferences]);
 
@@ -705,13 +705,13 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     dashboardCardOrder: localPreferences.dashboardCardOrder || [],
     appliancesViewMode: localPreferences.appliancesViewMode || 'card',
     vehiclesViewMode: localPreferences.vehiclesViewMode || 'card',
-    contractorsViewMode: localPreferences.contractorsViewMode || 'card',
+    companiesViewMode: localPreferences.companiesViewMode || 'card',
     customRooms: localPreferences.customRooms || [],
     hiddenDefaultRooms: localPreferences.hiddenDefaultRooms || [],
     customVehicleTypes: localPreferences.customVehicleTypes || [],
     hiddenDefaultVehicleTypes: localPreferences.hiddenDefaultVehicleTypes || [],
-    customContractorTypes: localPreferences.customContractorTypes || [],
-    hiddenDefaultContractorTypes: localPreferences.hiddenDefaultContractorTypes || [],
+    customCompanyTypes: localPreferences.customCompanyTypes || [],
+    hiddenDefaultCompanyTypes: localPreferences.hiddenDefaultCompanyTypes || [],
     customSubscriptionTypes: localPreferences.customSubscriptionTypes || [],
     hiddenDefaultSubscriptionTypes: localPreferences.hiddenDefaultSubscriptionTypes || [],
     customHomeFeatures: localPreferences.customHomeFeatures || [],
@@ -742,7 +742,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         getDashboardCardOrder,
         setAppliancesViewMode,
         setVehiclesViewMode,
-        setContractorsViewMode,
+        setCompaniesViewMode,
         addCustomRoom,
         removeCustomRoom,
         hideDefaultRoom,
@@ -751,10 +751,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         removeCustomVehicleType,
         hideDefaultVehicleType,
         restoreDefaultVehicleType,
-        addCustomContractorType,
-        removeCustomContractorType,
-        hideDefaultContractorType,
-        restoreDefaultContractorType,
+        addCustomCompanyType,
+        removeCustomCompanyType,
+        hideDefaultCompanyType,
+        restoreDefaultCompanyType,
         addCustomSubscriptionType,
         removeCustomSubscriptionType,
         hideDefaultSubscriptionType,

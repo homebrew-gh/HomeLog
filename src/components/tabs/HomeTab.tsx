@@ -30,7 +30,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
-import { useContractors } from '@/hooks/useContractors';
+import { useCompanies } from '@/hooks/useCompanies';
 import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
@@ -47,7 +47,7 @@ const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
   vehicles: Car,
   subscriptions: CreditCard,
   warranties: Shield,
-  contractors: Users,
+  companies: Users,
   projects: FolderKanban,
 };
 
@@ -55,7 +55,7 @@ const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
 type WidgetId = 
   | 'appliances'
   | 'vehicles' 
-  | 'contractors'
+  | 'companies'
   | 'home-maintenance'
   | 'vehicle-maintenance'
   | 'subscriptions'
@@ -75,7 +75,7 @@ interface WidgetConfig {
 const WIDGET_CONFIGS: WidgetConfig[] = [
   { id: 'appliances', tabId: 'appliances', label: 'Appliances', icon: Package, colSpan: 1 },
   { id: 'vehicles', tabId: 'vehicles', label: 'Vehicles', icon: Car, colSpan: 1 },
-  { id: 'contractors', tabId: 'contractors', label: 'Contractors & Services', icon: Users, colSpan: 1 },
+  { id: 'companies', tabId: 'companies', label: 'Companies & Services', icon: Users, colSpan: 1 },
   { id: 'home-maintenance', tabId: 'maintenance', label: 'Home Maintenance', icon: Home, colSpan: 1 },
   { id: 'vehicle-maintenance', tabId: 'maintenance', label: 'Vehicle Maintenance', icon: Car, colSpan: 1 },
   { id: 'subscriptions', tabId: 'subscriptions', label: 'Subscriptions', icon: CreditCard, colSpan: 1 },
@@ -96,7 +96,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const { preferences } = useTabPreferences();
   const { data: appliances = [], isLoading: isLoadingAppliances } = useAppliances();
   const { data: vehicles = [], isLoading: isLoadingVehicles } = useVehicles();
-  const { data: contractors = [], isLoading: isLoadingContractors } = useContractors();
+  const { data: companies = [], isLoading: isLoadingCompanies } = useCompanies();
   const { data: maintenance = [], isLoading: isLoadingMaintenance } = useMaintenance();
   const { data: completions = [] } = useMaintenanceCompletions();
   const applianceMaintenance = useApplianceMaintenance();
@@ -122,7 +122,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   // This creates the iOS-style "fake randomness" effect
   const [animationParams] = useState<Map<WidgetId, { delay: number; duration: number }>>(() => {
     const params = new Map<WidgetId, { delay: number; duration: number }>();
-    const allWidgets: WidgetId[] = ['appliances', 'vehicles', 'contractors', 'home-maintenance', 'vehicle-maintenance', 'subscriptions', 'warranties', 'projects'];
+    const allWidgets: WidgetId[] = ['appliances', 'vehicles', 'companies', 'home-maintenance', 'vehicle-maintenance', 'subscriptions', 'warranties', 'projects'];
     allWidgets.forEach(widget => {
       // Random negative delay (-0.06s to -0.94s) to offset animation start
       // Random duration (0.275s to 0.41s) for slight speed variation (25% slower than original)
@@ -243,12 +243,12 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     };
   });
 
-// Get unique contractor types from contractors
-  const usedContractorTypes = useMemo(() => {
+// Get unique company types from companies
+  const usedCompanyTypes = useMemo(() => {
     const types = new Set<string>();
-    contractors.forEach(contractor => {
-      if (contractor.serviceType) {
-        types.add(contractor.serviceType);
+    companies.forEach(company => {
+      if (company.serviceType) {
+        types.add(company.serviceType);
       }
     });
     return Array.from(types).sort((a, b) => {
@@ -256,7 +256,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       if (b === 'Uncategorized' || b === 'Other') return -1;
       return a.localeCompare(b);
     });
-  }, [contractors]);
+  }, [companies]);
 
   // Get ordered list of active widgets based on active tabs
   const activeWidgets = useMemo((): WidgetId[] => {
@@ -736,23 +736,23 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                     </WidgetCard>
                   );
                   
-                case 'contractors':
+                case 'companies':
                   return (
                     <WidgetCard
-                      title="Contractors & Services"
+                      title="Companies & Services"
                       icon={Users}
-                      onClick={() => !isEditMode && onNavigateToTab('contractors')}
-                      isLoading={isLoadingContractors}
+                      onClick={() => !isEditMode && onNavigateToTab('companies')}
+                      isLoading={isLoadingCompanies}
                       clickable={!isEditMode}
                     >
-                      {contractors.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No contractors added yet</p>
-                      ) : usedContractorTypes.length === 0 ? (
+                      {companies.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No companies added yet</p>
+                      ) : usedCompanyTypes.length === 0 ? (
                         <p className="text-muted-foreground text-sm">No service types assigned yet</p>
                       ) : (
                         <div className="flex flex-wrap gap-2">
-                          {usedContractorTypes.slice(0, 6).map(type => {
-                            const count = contractors.filter(c => c.serviceType === type).length;
+                          {usedCompanyTypes.slice(0, 6).map(type => {
+                            const count = companies.filter(c => c.serviceType === type).length;
                             return (
                               <button
                                 key={type}
@@ -762,7 +762,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                                     return;
                                   }
                                   e.stopPropagation();
-                                  onNavigateToTab('contractors', `type-${type}`);
+                                  onNavigateToTab('companies', `type-${type}`);
                                 }}
                                 disabled={isEditMode}
                                 className={cn(
@@ -778,9 +778,9 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                               </button>
                             );
                           })}
-                          {usedContractorTypes.length > 6 && (
+                          {usedCompanyTypes.length > 6 && (
                             <span className="text-sm text-muted-foreground self-center">
-                              +{usedContractorTypes.length - 6} more
+                              +{usedCompanyTypes.length - 6} more
                             </span>
                           )}
                         </div>

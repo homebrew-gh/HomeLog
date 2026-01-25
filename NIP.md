@@ -144,9 +144,9 @@ Custom vehicle types can also be used.
 
 ---
 
-## Kind 37003: Contractor/Service Provider
+## Kind 37003: Company/Service Provider
 
-An addressable event representing a contractor or service provider.
+An addressable event representing a company or service provider.
 
 ### Format
 
@@ -156,8 +156,8 @@ An addressable event representing a contractor or service provider.
   "content": "",
   "tags": [
     ["d", "<unique-identifier>"],
-    ["alt", "Contractor: <name>"],
-    ["name", "<business or contractor name>"],
+    ["alt", "Company: <name>"],
+    ["name", "<business or company name>"],
     ["service_type", "<service type>"],
     ["contact_name", "<primary contact person>"],
     ["phone", "<phone number>"],
@@ -180,9 +180,9 @@ An addressable event representing a contractor or service provider.
 
 | Tag | Required | Description |
 |-----|----------|-------------|
-| `d` | Yes | Unique identifier (UUID) for the contractor |
+| `d` | Yes | Unique identifier (UUID) for the company |
 | `alt` | Yes | Human-readable description (NIP-31) |
-| `name` | Yes | Business or contractor name |
+| `name` | Yes | Business or company name |
 | `service_type` | Yes | Type of service (see Service Types below) |
 | `contact_name` | No | Primary contact person |
 | `phone` | No | Phone number |
@@ -192,7 +192,7 @@ An addressable event representing a contractor or service provider.
 | `city` | No | City |
 | `state` | No | State |
 | `zip_code` | No | Zip/postal code |
-| `license_number` | No | Contractor license number |
+| `license_number` | No | License number |
 | `insurance_info` | No | Insurance provider and policy details |
 | `rating` | No | Rating from 1-5 stars |
 | `invoice` | No | Invoice/receipt with format: url, date (MM/DD/YYYY), amount (optional), description (optional). Can have multiple. |
@@ -239,6 +239,8 @@ Custom service types can also be used.
 
 Invoice files are considered sensitive documents and should only be uploaded to private/trusted media servers. The application enforces this by requiring a private Blossom server to be configured before allowing invoice uploads.
 
+Note: This kind was previously called "Contractor/Service Provider" and has been renamed to "Company/Service Provider" for broader applicability.
+
 ---
 
 ## Kind 30229: Maintenance Schedule
@@ -272,7 +274,7 @@ An addressable event representing a maintenance schedule for an appliance or veh
 |-----|----------|-------------|
 | `d` | Yes | Unique identifier (UUID) for the maintenance schedule |
 | `alt` | Yes | Human-readable description (NIP-31) |
-| `a` | Conditional | Reference to an appliance (kind 32627), vehicle (kind 32628), or contractor (kind 37003). At least one appliance, vehicle, or home feature reference is required. Contractor reference is optional. |
+| `a` | Conditional | Reference to an appliance (kind 32627), vehicle (kind 32628), or company (kind 37003). At least one appliance, vehicle, or home feature reference is required. Company reference is optional. |
 | `description` | Yes | Description of the maintenance task |
 | `part_number` | No | Part number for replacement parts |
 | `frequency` | Yes | Numeric frequency value |
@@ -283,8 +285,8 @@ An addressable event representing a maintenance schedule for an appliance or veh
 
 - Each maintenance schedule references either an appliance OR a vehicle, not both
 - Vehicle maintenance can optionally include a mileage interval in addition to time-based frequency
-- The `a` tag marker indicates whether the reference is to an "appliance", "vehicle", or "contractor"
-- A contractor/service provider reference can be optionally added to link the maintenance task to a service provider from the Company/Service tab
+- The `a` tag marker indicates whether the reference is to an "appliance", "vehicle", or "company"
+- A company/service provider reference can be optionally added to link the maintenance task to a service provider from the Company/Service tab
 
 ### Due Date Calculation
 

@@ -1,7 +1,7 @@
 import { useAppliances } from './useAppliances';
 import { useMaintenance } from './useMaintenance';
 import { useVehicles } from './useVehicles';
-import { useContractors } from './useContractors';
+import { useCompanies } from './useCompanies';
 import type { TabId } from '@/contexts/TabPreferencesContext';
 
 export interface TabDataInfo {
@@ -18,7 +18,7 @@ export function useTabData(tabId: TabId): TabDataInfo {
   const { data: appliances = [] } = useAppliances();
   const { data: maintenance = [] } = useMaintenance();
   const { data: vehicles = [] } = useVehicles();
-  const { data: contractors = [] } = useContractors();
+  const { data: companies = [] } = useCompanies();
 
   switch (tabId) {
     case 'appliances':
@@ -45,12 +45,12 @@ export function useTabData(tabId: TabId): TabDataInfo {
         itemNamePlural: 'vehicles',
       };
 
-    case 'contractors':
+    case 'companies':
       return {
-        hasData: contractors.length > 0,
-        count: contractors.length,
-        itemName: 'contractor',
-        itemNamePlural: 'contractors',
+        hasData: companies.length > 0,
+        count: companies.length,
+        itemName: 'company',
+        itemNamePlural: 'companies',
       };
 
     // These tabs don't have data yet (coming soon)
@@ -95,7 +95,7 @@ export function useAllTabsData(tabIds: TabId[]): Record<TabId, TabDataInfo> {
   const { data: appliances = [] } = useAppliances();
   const { data: maintenance = [] } = useMaintenance();
   const { data: vehicles = [] } = useVehicles();
-  const { data: contractors = [] } = useContractors();
+  const { data: companies = [] } = useCompanies();
 
   const result: Record<string, TabDataInfo> = {};
 
@@ -128,12 +128,12 @@ export function useAllTabsData(tabIds: TabId[]): Record<TabId, TabDataInfo> {
         };
         break;
 
-      case 'contractors':
+      case 'companies':
         result[tabId] = {
-          hasData: contractors.length > 0,
-          count: contractors.length,
-          itemName: 'contractor',
-          itemNamePlural: 'contractors',
+          hasData: companies.length > 0,
+          count: companies.length,
+          itemName: 'company',
+          itemNamePlural: 'companies',
         };
         break;
 

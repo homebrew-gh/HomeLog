@@ -24,7 +24,7 @@ import {
   VehiclesTab,
   SubscriptionsTab,
   WarrantiesTab,
-  ContractorsTab,
+  CompaniesTab,
   ProjectsTab,
 } from '@/components/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -146,8 +146,8 @@ const Index = () => {
         return <SubscriptionsTab />;
       case 'warranties':
         return <WarrantiesTab />;
-      case 'contractors':
-        return <ContractorsTab />;
+      case 'companies':
+        return <CompaniesTab scrollTarget={scrollTarget} />;
       case 'projects':
         return <ProjectsTab />;
       default:
@@ -260,7 +260,7 @@ const Index = () => {
                 Welcome to Home Log
               </h1>
               <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-                Keep track of home appliances, vehicle maintenance, general home maintenance, contractors/service providers, subscriptions, warranties, and future home projects. Caring for your home has never been easier or more organized!
+                Keep track of home appliances, vehicle maintenance, general home maintenance, companies/service providers, subscriptions, warranties, and future home projects. Caring for your home has never been easier or more organized!
               </p>
             </div>
 
@@ -270,7 +270,7 @@ const Index = () => {
                   <Package className="h-10 w-10 text-sky-500 mx-auto mb-3" />
                   <h3 className="font-semibold mb-2">Track Everything</h3>
                   <p className="text-sm text-muted-foreground">
-                    Appliances, vehicles, warranties, and contractors all in one place.
+                    Appliances, vehicles, warranties, and companies all in one place.
                   </p>
                 </CardContent>
               </Card>

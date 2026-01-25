@@ -10,7 +10,7 @@ export type EncryptableCategory =
   | 'maintenance'
   | 'subscriptions'
   | 'warranties'
-  | 'contractors'
+  | 'companies'
   | 'projects';
 
 /**
@@ -28,7 +28,7 @@ export interface EncryptionSettings {
   maintenance: boolean;
   subscriptions: boolean;
   warranties: boolean;
-  contractors: boolean;
+  companies: boolean;
   projects: boolean;
 }
 
@@ -42,7 +42,7 @@ export interface CategoryRelayConfig {
   maintenance: CategoryRelaySettings;
   subscriptions: CategoryRelaySettings;
   warranties: CategoryRelaySettings;
-  contractors: CategoryRelaySettings;
+  companies: CategoryRelaySettings;
   projects: CategoryRelaySettings;
 }
 
@@ -68,7 +68,7 @@ const DEFAULT_ENCRYPTION_SETTINGS: EncryptionSettings = {
   maintenance: true,
   subscriptions: true,
   warranties: true,
-  contractors: false,
+  companies: false,
   projects: false,
 };
 
@@ -78,7 +78,7 @@ const DEFAULT_CATEGORY_RELAY_CONFIG: CategoryRelayConfig = {
   maintenance: {},
   subscriptions: {},
   warranties: {},
-  contractors: {},
+  companies: {},
   projects: {},
 };
 
@@ -115,8 +115,8 @@ export const CATEGORY_INFO: Record<EncryptableCategory, {
     description: 'Warranty information and expiration dates',
     recommendEncryption: true,
   },
-  contractors: {
-    label: 'Contractors/Services',
+  companies: {
+    label: 'Companies/Services',
     description: 'Service provider contacts - keep unencrypted for future sharing',
     recommendEncryption: false,
   },
@@ -211,7 +211,7 @@ export function EncryptionProvider({ children }: { children: ReactNode }) {
       maintenance: enabled,
       subscriptions: enabled,
       warranties: enabled,
-      contractors: enabled,
+      companies: enabled,
       projects: enabled,
     });
   }, [setSettings]);

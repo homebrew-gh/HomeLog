@@ -7,7 +7,7 @@ import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
-import { CONTRACTOR_KIND, type Contractor, type Invoice } from '@/lib/types';
+import { COMPANY_KIND, type Company, type Invoice } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 
 // Encrypted content marker
@@ -33,10 +33,10 @@ function parseInvoiceTags(event: NostrEvent): Invoice[] {
 }
 
 // Data stored in encrypted content
-type ContractorData = Omit<Contractor, 'id' | 'pubkey' | 'createdAt'>;
+type CompanyData = Omit<Company, 'id' | 'pubkey' | 'createdAt'>;
 
-// Parse a Nostr event into a Contractor object (plaintext version)
-function parseContractorPlaintext(event: NostrEvent): Contractor | null {
+// Parse a Nostr event into a Company object (plaintext version)
+function parseCompanyPlaintext(event: NostrEvent): Company | null {
   const id = getTagValue(event, 'd');
   const name = getTagValue(event, 'name');
   const serviceType = getTagValue(event, 'service_type');
@@ -67,11 +67,11 @@ function parseContractorPlaintext(event: NostrEvent): Contractor | null {
   };
 }
 
-// Parse encrypted contractor from content
-async function parseContractorEncrypted(
+// Parse encrypted company from content
+async function parseCompanyEncrypted(
   event: NostrEvent,
-  decryptFn: (content: string) => Promise<ContractorData>
-): Promise<Contractor | null> {
+  decryptFn: (content: string) => Promise<CompanyData>
+): Promise<Company | null> {
   const id = getTagValue(event, 'd');
   if (!id) return null;
 
@@ -84,13 +84,13 @@ async function parseContractorEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
-    console.error('[Contractors] Failed to decrypt contractor:', id, error);
+    console.error('[Companies] Failed to decrypt company:', id, error);
     return null;
   }
 }
 
-// Extract deleted contractor IDs from kind 5 events
-function getDeletedContractorIds(deletionEvents: NostrEvent[], pubkey: string): Set<string> {
+// Extract deleted company IDs from kind 5 events
+function getDeletedCompanyIds(deletionEvents: NostrEvent[], pubkey: string): Set<string> {
   const deletedIds = new Set<string>();
 
   for (const event of deletionEvents) {
@@ -98,7 +98,7 @@ function getDeletedContractorIds(deletionEvents: NostrEvent[], pubkey: string): 
       if (tag[0] === 'a') {
         // Parse "kind:pubkey:d-tag" format
         const parts = tag[1].split(':');
-        if (parts.length >= 3 && parts[0] === String(CONTRACTOR_KIND) && parts[1] === pubkey) {
+        if (parts.length >= 3 && parts[0] === String(COMPANY_KIND) && parts[1] === pubkey) {
           deletedIds.add(parts[2]);
         }
       }
@@ -108,49 +108,49 @@ function getDeletedContractorIds(deletionEvents: NostrEvent[], pubkey: string): 
   return deletedIds;
 }
 
-// Parse events into contractors
-async function parseEventsToContractors(
+// Parse events into companies
+async function parseEventsToCompanies(
   events: NostrEvent[],
   pubkey: string,
   decryptForCategory: <T>(content: string) => Promise<T>
-): Promise<Contractor[]> {
-  // Separate contractor events from deletion events
-  const contractorEvents = events.filter(e => e.kind === CONTRACTOR_KIND);
+): Promise<Company[]> {
+  // Separate company events from deletion events
+  const companyEvents = events.filter(e => e.kind === COMPANY_KIND);
   const deletionEvents = events.filter(e => e.kind === 5);
 
-  // Get the set of deleted contractor IDs
-  const deletedIds = getDeletedContractorIds(deletionEvents, pubkey);
+  // Get the set of deleted company IDs
+  const deletedIds = getDeletedCompanyIds(deletionEvents, pubkey);
 
-  const contractors: Contractor[] = [];
+  const companies: Company[] = [];
   
-  for (const event of contractorEvents) {
+  for (const event of companyEvents) {
     const id = getTagValue(event, 'd');
     if (!id || deletedIds.has(id)) continue;
 
     // Check if content is encrypted
     if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
       // Decrypt and parse
-      const contractor = await parseContractorEncrypted(
+      const company = await parseCompanyEncrypted(
         event,
-        (content) => decryptForCategory<ContractorData>(content)
+        (content) => decryptForCategory<CompanyData>(content)
       );
-      if (contractor) {
-        contractors.push(contractor);
+      if (company) {
+        companies.push(company);
       }
     } else {
       // Parse plaintext from tags
-      const contractor = parseContractorPlaintext(event);
-      if (contractor) {
-        contractors.push(contractor);
+      const company = parseCompanyPlaintext(event);
+      if (company) {
+        companies.push(company);
       }
     }
   }
 
   // Sort by creation date (newest first)
-  return contractors.sort((a, b) => b.createdAt - a.createdAt);
+  return companies.sort((a, b) => b.createdAt - a.createdAt);
 }
 
-export function useContractors() {
+export function useCompanies() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
@@ -159,22 +159,22 @@ export function useContractors() {
 
   // Main query - loads from cache first
   const query = useQuery({
-    queryKey: ['contractors', user?.pubkey],
+    queryKey: ['companies', user?.pubkey],
     queryFn: async () => {
       if (!user?.pubkey) return [];
 
-      console.log('[useContractors] Loading from cache for pubkey:', user.pubkey);
+      console.log('[useCompanies] Loading from cache for pubkey:', user.pubkey);
 
       // Load from cache first (instant)
-      const cachedEvents = await getCachedEvents([CONTRACTOR_KIND, 5], user.pubkey);
+      const cachedEvents = await getCachedEvents([COMPANY_KIND, 5], user.pubkey);
       
       if (cachedEvents.length > 0) {
-        console.log('[useContractors] Found cached events:', cachedEvents.length);
-        const contractors = await parseEventsToContractors(cachedEvents, user.pubkey, decryptForCategory);
-        return contractors;
+        console.log('[useCompanies] Found cached events:', cachedEvents.length);
+        const companies = await parseEventsToCompanies(cachedEvents, user.pubkey, decryptForCategory);
+        return companies;
       }
 
-      console.log('[useContractors] No cache, waiting for relay sync...');
+      console.log('[useCompanies] No cache, waiting for relay sync...');
       return [];
     },
     enabled: !!user?.pubkey,
@@ -187,31 +187,31 @@ export function useContractors() {
 
     const syncWithRelays = async () => {
       isSyncing.current = true;
-      console.log('[useContractors] Starting background relay sync...');
+      console.log('[useCompanies] Starting background relay sync...');
 
       try {
         const signal = AbortSignal.timeout(15000);
         
         const events = await nostr.query(
           [
-            { kinds: [CONTRACTOR_KIND], authors: [user.pubkey] },
+            { kinds: [COMPANY_KIND], authors: [user.pubkey] },
             { kinds: [5], authors: [user.pubkey] },
           ],
           { signal }
         );
 
-        console.log('[useContractors] Relay sync received events:', events.length);
+        console.log('[useCompanies] Relay sync received events:', events.length);
 
         if (events.length > 0) {
           await cacheEvents(events);
         }
 
-        const contractors = await parseEventsToContractors(events, user.pubkey, decryptForCategory);
-        queryClient.setQueryData(['contractors', user.pubkey], contractors);
+        const companies = await parseEventsToCompanies(events, user.pubkey, decryptForCategory);
+        queryClient.setQueryData(['companies', user.pubkey], companies);
         
-        console.log('[useContractors] Background sync complete, contractors:', contractors.length);
+        console.log('[useCompanies] Background sync complete, companies:', companies.length);
       } catch (error) {
-        console.error('[useContractors] Background sync failed:', error);
+        console.error('[useCompanies] Background sync failed:', error);
       } finally {
         isSyncing.current = false;
       }
@@ -224,35 +224,35 @@ export function useContractors() {
   return query;
 }
 
-export function useContractorById(id: string | undefined) {
-  const { data: contractors } = useContractors();
-  return contractors?.find(c => c.id === id);
+export function useCompanyById(id: string | undefined) {
+  const { data: companies } = useCompanies();
+  return companies?.find(c => c.id === id);
 }
 
-export function useContractorActions() {
+export function useCompanyActions() {
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
   const { encryptForCategory, shouldEncrypt } = useEncryption();
   const { isEncryptionEnabled } = useEncryptionSettings();
 
-  const createContractor = async (data: Omit<Contractor, 'id' | 'pubkey' | 'createdAt'>) => {
+  const createCompany = async (data: Omit<Company, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
 
     const id = crypto.randomUUID();
-    const useEncryption = isEncryptionEnabled('contractors');
+    const useEncryption = isEncryptionEnabled('companies');
 
     // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', useEncryption ? 'Encrypted Home Log contractor data' : `Contractor: ${data.name}`],
+      ['alt', useEncryption ? 'Encrypted Home Log company data' : `Company: ${data.name}`],
     ];
 
     let content = '';
 
-    if (useEncryption && shouldEncrypt('contractors')) {
+    if (useEncryption && shouldEncrypt('companies')) {
       // Store data in encrypted content
-      content = await encryptForCategory('contractors', data);
+      content = await encryptForCategory('companies', data);
     } else {
       // Store data in plaintext tags
       tags.push(['name', data.name]);
@@ -283,7 +283,7 @@ export function useContractorActions() {
     }
 
     const event = await publishEvent({
-      kind: CONTRACTOR_KIND,
+      kind: COMPANY_KIND,
       content,
       tags,
     });
@@ -292,27 +292,27 @@ export function useContractorActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['contractors'] });
+    await queryClient.invalidateQueries({ queryKey: ['companies'] });
 
     return id;
   };
 
-  const updateContractor = async (id: string, data: Omit<Contractor, 'id' | 'pubkey' | 'createdAt'>) => {
+  const updateCompany = async (id: string, data: Omit<Company, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
 
-    const useEncryption = isEncryptionEnabled('contractors');
+    const useEncryption = isEncryptionEnabled('companies');
 
     // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', useEncryption ? 'Encrypted Home Log contractor data' : `Contractor: ${data.name}`],
+      ['alt', useEncryption ? 'Encrypted Home Log company data' : `Company: ${data.name}`],
     ];
 
     let content = '';
 
-    if (useEncryption && shouldEncrypt('contractors')) {
+    if (useEncryption && shouldEncrypt('companies')) {
       // Store data in encrypted content
-      content = await encryptForCategory('contractors', data);
+      content = await encryptForCategory('companies', data);
     } else {
       // Store data in plaintext tags
       tags.push(['name', data.name]);
@@ -343,7 +343,7 @@ export function useContractorActions() {
     }
 
     const event = await publishEvent({
-      kind: CONTRACTOR_KIND,
+      kind: COMPANY_KIND,
       content,
       tags,
     });
@@ -352,32 +352,32 @@ export function useContractorActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['contractors'] });
+    await queryClient.invalidateQueries({ queryKey: ['companies'] });
   };
 
-  const deleteContractor = async (id: string) => {
+  const deleteCompany = async (id: string) => {
     if (!user) throw new Error('Must be logged in');
 
     // Publish a deletion request (kind 5)
     const event = await publishEvent({
       kind: 5,
-      content: 'Deleted contractor',
+      content: 'Deleted company',
       tags: [
-        ['a', `${CONTRACTOR_KIND}:${user.pubkey}:${id}`],
+        ['a', `${COMPANY_KIND}:${user.pubkey}:${id}`],
       ],
     });
 
     if (event) {
       await cacheEvents([event]);
-      await deleteCachedEventByAddress(CONTRACTOR_KIND, user.pubkey, id);
+      await deleteCachedEventByAddress(COMPANY_KIND, user.pubkey, id);
     }
 
     // Small delay to allow the deletion event to propagate to relays
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // Force refetch to get updated data including the deletion event
-    await queryClient.refetchQueries({ queryKey: ['contractors'] });
+    await queryClient.refetchQueries({ queryKey: ['companies'] });
   };
 
-  return { createContractor, updateContractor, deleteContractor };
+  return { createCompany, updateCompany, deleteCompany };
 }

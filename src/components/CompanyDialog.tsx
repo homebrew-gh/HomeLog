@@ -9,11 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { useContractorActions } from '@/hooks/useContractors';
-import { useContractorTypes } from '@/hooks/useContractorTypes';
+import { useCompanyActions } from '@/hooks/useCompanies';
+import { useCompanyTypes } from '@/hooks/useCompanyTypes';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
-import type { Contractor, Invoice } from '@/lib/types';
+import type { Company, Invoice } from '@/lib/types';
 
 // VCF Parser - extracts contact information from vCard format
 interface VcfData {
@@ -142,16 +142,16 @@ function getTodayFormatted(): string {
   return `${month}/${day}/${year}`;
 }
 
-interface ContractorDialogProps {
+interface CompanyDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  contractor?: Contractor; // If provided, we're editing
+  company?: Company; // If provided, we're editing
   initialData?: Partial<VcfData>; // Initial data from VCF import
 }
 
-export function ContractorDialog({ isOpen, onClose, contractor, initialData }: ContractorDialogProps) {
-  const { createContractor, updateContractor } = useContractorActions();
-  const { allContractorTypes, addCustomContractorType } = useContractorTypes();
+export function CompanyDialog({ isOpen, onClose, company, initialData }: CompanyDialogProps) {
+  const { createCompany, updateCompany } = useCompanyActions();
+  const { allCompanyTypes, addCustomCompanyType } = useCompanyTypes();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
   const { mutateAsync: deleteFile, isPending: isDeleting } = useDeleteFile();
   const canUploadFiles = useCanUploadFiles();
@@ -189,31 +189,31 @@ export function ContractorDialog({ isOpen, onClose, contractor, initialData }: C
 
   const invoiceInputRef = useRef<HTMLInputElement>(null);
 
-  const isEditing = !!contractor;
+  const isEditing = !!company;
 
   // Reset form when dialog opens
   useEffect(() => {
     if (isOpen) {
-      if (contractor) {
+      if (company) {
         setFormData({
-          serviceType: contractor.serviceType,
-          name: contractor.name,
-          contactName: contractor.contactName || '',
-          phone: contractor.phone || '',
-          email: contractor.email || '',
-          website: contractor.website || '',
-          address: contractor.address || '',
-          city: contractor.city || '',
-          state: contractor.state || '',
-          zipCode: contractor.zipCode || '',
-          licenseNumber: contractor.licenseNumber || '',
-          insuranceInfo: contractor.insuranceInfo || '',
-          invoices: contractor.invoices || [],
-          rating: contractor.rating,
-          notes: contractor.notes || '',
+          serviceType: company.serviceType,
+          name: company.name,
+          contactName: company.contactName || '',
+          phone: company.phone || '',
+          email: company.email || '',
+          website: company.website || '',
+          address: company.address || '',
+          city: company.city || '',
+          state: company.state || '',
+          zipCode: company.zipCode || '',
+          licenseNumber: company.licenseNumber || '',
+          insuranceInfo: company.insuranceInfo || '',
+          invoices: company.invoices || [],
+          rating: company.rating,
+          notes: company.notes || '',
         });
-        setShowAddress(!!(contractor.address || contractor.city || contractor.state || contractor.zipCode));
-        setShowBusiness(!!(contractor.licenseNumber || contractor.insuranceInfo));
+        setShowAddress(!!(company.address || company.city || company.state || company.zipCode));
+        setShowBusiness(!!(company.licenseNumber || company.insuranceInfo));
       } else if (initialData) {
         // Pre-populate from VCF import
         setFormData({
@@ -265,7 +265,7 @@ export function ContractorDialog({ isOpen, onClose, contractor, initialData }: C
         description: '',
       });
     }
-  }, [isOpen, contractor, initialData]);
+  }, [isOpen, company, initialData]);
 
   const handleInvoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -351,7 +351,7 @@ export function ContractorDialog({ isOpen, onClose, contractor, initialData }: C
 
   const handleAddType = () => {
     if (newType.trim()) {
-      addCustomContractorType(newType.trim());
+      addCustomCompanyType(newType.trim());
       setFormData(prev => ({ ...prev, serviceType: newType.trim() }));
       setNewType('');
       setShowAddType(false);
@@ -371,7 +371,7 @@ export function ContractorDialog({ isOpen, onClose, contractor, initialData }: C
     if (!formData.name.trim()) {
       toast({
         title: 'Name required',
-        description: 'Please enter a contractor or business name.',
+        description: 'Please enter a company or business name.',
         variant: 'destructive',
       });
       return;
@@ -379,24 +379,24 @@ export function ContractorDialog({ isOpen, onClose, contractor, initialData }: C
 
     setIsSubmitting(true);
     try {
-      if (isEditing && contractor) {
-        await updateContractor(contractor.id, formData);
+      if (isEditing && company) {
+        await updateCompany(company.id, formData);
         toast({
-          title: 'Contractor updated',
-          description: 'Contractor information has been updated successfully.',
+          title: 'Company updated',
+          description: 'Company information has been updated successfully.',
         });
       } else {
-        await createContractor(formData);
+        await createCompany(formData);
         toast({
-          title: 'Contractor added',
-          description: 'Contractor has been added successfully.',
+          title: 'Company added',
+          description: 'Company has been added successfully.',
         });
       }
       onClose();
     } catch {
       toast({
         title: 'Error',
-        description: `Failed to ${isEditing ? 'update' : 'add'} contractor. Please try again.`,
+        description: `Failed to ${isEditing ? 'update' : 'add'} company. Please try again.`,
         variant: 'destructive',
       });
     } finally {
@@ -455,7 +455,7 @@ export function ContractorDialog({ isOpen, onClose, contractor, initialData }: C
                     <SelectValue placeholder="Select a service type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {allContractorTypes.map((type) => (
+                    {allCompanyTypes.map((type) => (
                       <SelectItem key={type} value={type}>
                         {type}
                       </SelectItem>
@@ -469,9 +469,9 @@ export function ContractorDialog({ isOpen, onClose, contractor, initialData }: C
             )}
           </div>
 
-          {/* Business/Contractor Name */}
+          {/* Business/Company Name */}
           <div className="space-y-2">
-            <Label htmlFor="name">Business/Contractor Name *</Label>
+            <Label htmlFor="name">Business/Company Name *</Label>
             <Input
               id="name"
               value={formData.name}
@@ -760,7 +760,7 @@ export function ContractorDialog({ isOpen, onClose, contractor, initialData }: C
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleRemoveInvoice(index, false)}>
                           <X className="h-4 w-4 mr-2" />
-                          Remove from contractor
+                          Remove from company
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => handleRemoveInvoice(index, true)}
@@ -784,7 +784,7 @@ export function ContractorDialog({ isOpen, onClose, contractor, initialData }: C
               id="notes"
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Additional notes about this contractor..."
+              placeholder="Additional notes about this company..."
               rows={3}
             />
           </div>
@@ -804,6 +804,6 @@ export function ContractorDialog({ isOpen, onClose, contractor, initialData }: C
   );
 }
 
-// Export VCF parser for use in ContractorsTab
+// Export VCF parser for use in CompaniesTab
 export { parseVcf };
 export type { VcfData };

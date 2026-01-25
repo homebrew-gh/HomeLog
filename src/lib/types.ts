@@ -69,7 +69,7 @@ export interface MaintenanceSchedule {
   applianceId?: string; // Optional - for appliance maintenance
   vehicleId?: string; // Optional - for vehicle maintenance
   homeFeature?: string; // Optional - for home feature maintenance (e.g., "Chimney", "Gutters")
-  contractorId?: string; // Optional - reference to a contractor/service provider
+  companyId?: string; // Optional - reference to a company/service provider
   description: string;
   partNumber?: string;
   frequency: number;
@@ -140,8 +140,8 @@ export const FUEL_TYPES = [
   { value: 'other', label: 'Other' },
 ] as const;
 
-// Contractor/Service Provider Types
-export const DEFAULT_CONTRACTOR_TYPES = [
+// Company/Service Provider Types
+export const DEFAULT_COMPANY_TYPES = [
   'Plumber',
   'Electrician',
   'HVAC',
@@ -160,7 +160,7 @@ export const DEFAULT_CONTRACTOR_TYPES = [
   'Other',
 ] as const;
 
-export type DefaultContractorType = typeof DEFAULT_CONTRACTOR_TYPES[number];
+export type DefaultCompanyType = typeof DEFAULT_COMPANY_TYPES[number];
 
 // Subscription Types
 export const DEFAULT_SUBSCRIPTION_TYPES = [
@@ -187,7 +187,7 @@ export interface Invoice {
   description?: string;
 }
 
-export interface Contractor {
+export interface Company {
   id: string;
   serviceType: string;
   // Basic info
@@ -218,6 +218,6 @@ export interface Contractor {
 // Kind numbers for our custom events
 export const APPLIANCE_KIND = 32627;
 export const VEHICLE_KIND = 32628;
-export const CONTRACTOR_KIND = 37003;
+export const COMPANY_KIND = 37003;
 export const MAINTENANCE_KIND = 30229;
 export const MAINTENANCE_COMPLETION_KIND = 9413;
