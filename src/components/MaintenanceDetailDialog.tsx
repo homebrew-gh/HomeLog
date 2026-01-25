@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check } from 'lucide-react';
+import { Calendar, Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check, Car, Gauge, TreePine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { useApplianceById } from '@/hooks/useAppliances';
+import { useVehicleById } from '@/hooks/useVehicles';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletionActions, useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
 import { toast } from '@/hooks/useToast';
@@ -33,13 +34,18 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
   const { deleteMaintenance } = useMaintenanceActions();
   const { createCompletion } = useMaintenanceCompletionActions();
   const appliance = useApplianceById(maintenance.applianceId);
+  const vehicle = useVehicleById(maintenance.vehicleId);
   const completions = useCompletionsByMaintenance(maintenance.id);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Determine if this is vehicle maintenance
+  const isVehicleMaintenance = !!maintenance.vehicleId;
+
   // Completion form state
   const [showCompletionForm, setShowCompletionForm] = useState(false);
   const [completionDate, setCompletionDate] = useState('');
+  const [completionMileage, setCompletionMileage] = useState('');
   const [useToday, setUseToday] = useState(false);
   const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
 
@@ -48,11 +54,12 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
     if (isOpen) {
       setShowCompletionForm(false);
       setCompletionDate('');
+      setCompletionMileage('');
       setUseToday(false);
     }
   }, [isOpen]);
 
-  const purchaseDate = appliance?.purchaseDate || '';
+  const purchaseDate = isVehicleMaintenance ? (vehicle?.purchaseDate || '') : (appliance?.purchaseDate || '');
 
   // Get the most recent completion date (completions are already sorted newest first)
   const lastCompletionDate = completions.length > 0 ? completions[0].completedDate : undefined;
@@ -120,13 +127,18 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
 
     setIsSubmittingCompletion(true);
     try {
-      await createCompletion(maintenance.id, dateToUse);
+      // Pass mileage only if it's vehicle maintenance and a value was entered
+      const mileageValue = isVehicleMaintenance && completionMileage.trim() ? completionMileage.trim() : undefined;
+      await createCompletion(maintenance.id, dateToUse, mileageValue);
+      
+      const mileageInfo = mileageValue ? ` at ${Number(mileageValue).toLocaleString()} miles` : '';
       toast({
         title: 'Maintenance completed',
-        description: `Marked as completed on ${dateToUse}.`,
+        description: `Marked as completed on ${dateToUse}${mileageInfo}.`,
       });
       setShowCompletionForm(false);
       setCompletionDate('');
+      setCompletionMileage('');
       setUseToday(false);
     } catch {
       toast({
@@ -183,7 +195,20 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {appliance && (
+            {/* Show Vehicle info for vehicle maintenance */}
+            {isVehicleMaintenance && vehicle && (
+              <div className="flex items-start gap-3">
+                <Car className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Vehicle</p>
+                  <p>{vehicle.name}</p>
+                  <p className="text-sm text-muted-foreground">{vehicle.vehicleType}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Show Appliance info for appliance maintenance */}
+            {!isVehicleMaintenance && appliance && (
               <div className="flex items-start gap-3">
                 <Package className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
@@ -192,6 +217,17 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
                   {appliance.room && (
                     <p className="text-sm text-muted-foreground">{appliance.room}</p>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Show Home Feature info */}
+            {!isVehicleMaintenance && maintenance.homeFeature && (
+              <div className="flex items-start gap-3">
+                <TreePine className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Home Feature</p>
+                  <p>{maintenance.homeFeature}</p>
                 </div>
               </div>
             )}
@@ -218,8 +254,21 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
               <div className="flex items-start gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Appliance Install Date</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {isVehicleMaintenance ? 'Vehicle Purchase Date' : 'Appliance Install Date'}
+                  </p>
                   <p>{purchaseDate}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Show mileage interval for vehicle maintenance */}
+            {isVehicleMaintenance && maintenance.mileageInterval && (
+              <div className="flex items-start gap-3">
+                <Gauge className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Mileage Interval</p>
+                  <p>Every {maintenance.mileageInterval.toLocaleString()} miles</p>
                 </div>
               </div>
             )}
@@ -303,6 +352,25 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
                     Today ({getTodayFormatted()})
                   </Label>
                 </div>
+
+                {/* Mileage input for vehicle maintenance */}
+                {isVehicleMaintenance && (
+                  <div className="space-y-2">
+                    <Label htmlFor="completionMileage" className="text-sm flex items-center gap-2">
+                      <Gauge className="h-4 w-4" />
+                      Current Mileage (optional)
+                    </Label>
+                    <Input
+                      id="completionMileage"
+                      type="number"
+                      min="0"
+                      value={completionMileage}
+                      onChange={(e) => setCompletionMileage(e.target.value)}
+                      placeholder="e.g., 45000"
+                      disabled={isSubmittingCompletion}
+                    />
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   <Button

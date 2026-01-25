@@ -17,6 +17,8 @@ function getTagValue(event: NostrEvent, tagName: string): string | undefined {
 function parseCompletion(event: NostrEvent): MaintenanceCompletion | null {
   const id = event.id;
   const completedDate = getTagValue(event, 'completed_date');
+  const mileageAtCompletion = getTagValue(event, 'mileage_at_completion');
+  const notes = getTagValue(event, 'notes');
   
   // Get maintenance reference from 'a' tag
   const aTag = event.tags.find(([name]) => name === 'a')?.[1];
@@ -28,6 +30,8 @@ function parseCompletion(event: NostrEvent): MaintenanceCompletion | null {
     id,
     maintenanceId,
     completedDate,
+    mileageAtCompletion,
+    notes,
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
@@ -162,7 +166,12 @@ export function useMaintenanceCompletionActions() {
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
 
-  const createCompletion = async (maintenanceId: string, completedDate: string) => {
+  const createCompletion = async (
+    maintenanceId: string, 
+    completedDate: string, 
+    mileageAtCompletion?: string,
+    notes?: string
+  ) => {
     if (!user) throw new Error('Must be logged in');
 
     const tags: string[][] = [
@@ -170,6 +179,16 @@ export function useMaintenanceCompletionActions() {
       ['alt', `Maintenance completed on ${completedDate}`],
       ['completed_date', completedDate],
     ];
+
+    // Add optional mileage tag
+    if (mileageAtCompletion) {
+      tags.push(['mileage_at_completion', mileageAtCompletion]);
+    }
+
+    // Add optional notes tag
+    if (notes) {
+      tags.push(['notes', notes]);
+    }
 
     const event = await publishEvent({
       kind: MAINTENANCE_COMPLETION_KIND,

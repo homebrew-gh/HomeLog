@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine } from 'lucide-react';
+import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -477,7 +477,7 @@ function VehicleMaintenanceItem({
         </button>
       </div>
 
-      {/* Completion History */}
+      {/* Completion History - Vehicle maintenance shows mileage */}
       {hasCompletions && showHistory && (
         <div className="ml-8 pl-4 border-l-2 border-green-200 dark:border-green-800 space-y-1 bg-white dark:bg-slate-800 rounded-r-lg py-2 pr-2">
           <p className="text-xs font-medium text-green-700 dark:text-green-300 py-1">
@@ -486,12 +486,21 @@ function VehicleMaintenanceItem({
           {completions.map((completion) => (
             <div
               key={completion.id}
-              className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-900 text-sm"
+              className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-900 text-sm flex-wrap"
             >
-              <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <Calendar className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
               <span className="text-green-800 dark:text-green-200">
-                Completed on {completion.completedDate}
+                {completion.completedDate}
               </span>
+              {completion.mileageAtCompletion && (
+                <>
+                  <span className="text-green-600 dark:text-green-400">•</span>
+                  <Gauge className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                  <span className="text-green-800 dark:text-green-200">
+                    {Number(completion.mileageAtCompletion).toLocaleString()} mi
+                  </span>
+                </>
+              )}
             </div>
           ))}
         </div>
