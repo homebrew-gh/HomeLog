@@ -242,10 +242,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     };
   });
 
-  const overdueCount = maintenanceWithStatus.filter(m => m.isOverdue).length;
-  const dueSoonCount = maintenanceWithStatus.filter(m => m.isDueSoon && !m.isOverdue).length;
-
-  // Get unique contractor types from contractors
+// Get unique contractor types from contractors
   const usedContractorTypes = useMemo(() => {
     const types = new Set<string>();
     contractors.forEach(contractor => {
@@ -598,108 +595,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
         </Card>
       )}
 
-      {/* Quick Stats */}
-      {hasActiveTabs && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Appliances count */}
-          {preferences.activeTabs.includes('appliances') && (
-            <Card 
-              className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => onNavigateToTab('appliances')}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-900">
-                    <Package className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-                  </div>
-                  <div>
-                    {isLoadingAppliances ? (
-                      <Skeleton className="h-6 w-8" />
-                    ) : (
-                      <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                        {appliances.length}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Appliances</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Maintenance overview */}
-          {preferences.activeTabs.includes('maintenance') && (
-            <Card 
-              className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => onNavigateToTab('maintenance')}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-900">
-                    <Wrench className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-                  </div>
-                  <div>
-                    {isLoadingMaintenance ? (
-                      <Skeleton className="h-6 w-8" />
-                    ) : (
-                      <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                        {maintenance.length}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Schedules</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Overdue items */}
-          {preferences.activeTabs.includes('maintenance') && overdueCount > 0 && (
-            <Card 
-              className="bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => onNavigateToTab('maintenance')}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-red-200 dark:bg-red-900">
-                    <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                      {overdueCount}
-                    </p>
-                    <p className="text-xs text-red-600/70 dark:text-red-400/70">Overdue</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Due soon items */}
-          {preferences.activeTabs.includes('maintenance') && dueSoonCount > 0 && (
-            <Card 
-              className="bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => onNavigateToTab('maintenance')}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-200 dark:bg-amber-900">
-                    <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                      {dueSoonCount}
-                    </p>
-                    <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Due Soon</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Dashboard widgets - uniform grid of draggable cards */}
+{/* Dashboard widgets - uniform grid of draggable cards */}
       {hasActiveTabs && (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
           {activeWidgets.map((widgetId, index) => {
