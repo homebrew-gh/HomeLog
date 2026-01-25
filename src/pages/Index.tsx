@@ -212,14 +212,10 @@ const Index = () => {
                       Color Theme
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Settings</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setRoomManagementOpen(true)}>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Rooms
-                    </DropdownMenuItem>
+                    <DropdownMenuLabel>Nostr Relays</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => openRelayManagement('media')}>
                       <Cloud className="h-4 w-4 mr-2" />
-                      Media Servers
+                      Configure
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Help</DropdownMenuLabel>
