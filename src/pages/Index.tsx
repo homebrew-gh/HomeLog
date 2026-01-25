@@ -177,11 +177,11 @@ const Index = () => {
                     <DropdownMenuLabel>Settings</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => setRoomManagementOpen(true)}>
                       <Settings className="h-4 w-4 mr-2" />
-                      Manage Rooms
+                      Rooms
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setVehicleTypeManagementOpen(true)}>
                       <Car className="h-4 w-4 mr-2" />
-                      Manage Vehicle Types
+                      Vehicle Types
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setSubscriptionTypeManagementOpen(true)}>
                       <CreditCard className="h-4 w-4 mr-2" />
@@ -201,7 +201,7 @@ const Index = () => {
                     <DropdownMenuLabel>Server Settings</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => openRelayManagement('relays')}>
                       <Wifi className="h-4 w-4 mr-2" />
-                      Manage Relays
+                      Relays
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openRelayManagement('media')}>
                       <Cloud className="h-4 w-4 mr-2" />
