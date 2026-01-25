@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Info, Home, Car, Plus, TreePine } from 'lucide-react';
+import { Calendar, Info, Home, Car, Plus, TreePine, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,7 @@ import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
 import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate } from '@/hooks/useMaintenance';
-import { useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
+import { useCompletionsByMaintenance, useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
 import { toast } from '@/hooks/useToast';
 import { FREQUENCY_UNITS, type MaintenanceSchedule } from '@/lib/types';
 
@@ -30,6 +30,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
   const { data: vehicles = [] } = useVehicles();
   const { allHomeFeatures, addCustomHomeFeature } = useCustomHomeFeatures();
   const { createMaintenance, updateMaintenance } = useMaintenanceActions();
+  const { createCompletion } = useMaintenanceCompletionActions();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomFeatureInput, setShowCustomFeatureInput] = useState(false);
@@ -44,6 +45,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
     frequency: '',
     frequencyUnit: 'months' as MaintenanceSchedule['frequencyUnit'],
     mileageInterval: '',
+    lastCompletedDate: '', // Optional initial completion date
   });
 
   const isEditing = !!maintenance;
@@ -59,12 +61,19 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
   const lastCompletionDate = completions.length > 0 ? completions[0].completedDate : undefined;
 
   // Calculate preview of next due date
-  const previewDueDate = purchaseDate && formData.frequency
+  // For new maintenance, use the lastCompletedDate from the form if provided
+  // For editing, use the actual last completion date from records
+  const effectiveLastCompletion = isEditing ? lastCompletionDate : (formData.lastCompletedDate || undefined);
+  
+  // For preview, use lastCompletedDate if available, otherwise use purchaseDate or today
+  const previewBaseDateStr = formData.lastCompletedDate || purchaseDate || new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  
+  const previewDueDate = formData.frequency
     ? calculateNextDueDate(
-        purchaseDate,
+        previewBaseDateStr,
         parseInt(formData.frequency, 10),
         formData.frequencyUnit,
-        isEditing ? lastCompletionDate : undefined
+        effectiveLastCompletion
       )
     : null;
 
@@ -83,6 +92,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           frequency: maintenance.frequency.toString(),
           frequencyUnit: maintenance.frequencyUnit,
           mileageInterval: maintenance.mileageInterval?.toString() || '',
+          lastCompletedDate: '', // Not editable when editing - use the completion records
         });
       } else {
         setFormData({
@@ -94,6 +104,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           frequency: '',
           frequencyUnit: 'months',
           mileageInterval: '',
+          lastCompletedDate: '',
         });
       }
     }
@@ -200,7 +211,18 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           description: 'Your maintenance schedule has been updated.',
         });
       } else {
-        await createMaintenance(data);
+        const maintenanceId = await createMaintenance(data);
+        
+        // If a last completed date was provided, create an initial completion record
+        if (formData.lastCompletedDate) {
+          try {
+            await createCompletion(maintenanceId, formData.lastCompletedDate);
+          } catch (completionError) {
+            console.error('Failed to create initial completion record:', completionError);
+            // Don't fail the whole operation if completion creation fails
+          }
+        }
+        
         toast({
           title: 'Maintenance added',
           description: 'Your maintenance schedule has been added.',
@@ -449,6 +471,44 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
               />
               <p className="text-xs text-muted-foreground">
                 Optional: Track maintenance by mileage in addition to time
+              </p>
+            </div>
+          )}
+
+          {/* Last Completed Date (only for new maintenance) */}
+          {!isEditing && (
+            <div className="space-y-2">
+              <Label htmlFor="lastCompletedDate" className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                Last Completed Date (optional)
+              </Label>
+              <Input
+                id="lastCompletedDate"
+                type="date"
+                value={formData.lastCompletedDate ? 
+                  // Convert MM/DD/YYYY to YYYY-MM-DD for date input
+                  (() => {
+                    const parts = formData.lastCompletedDate.split('/');
+                    if (parts.length === 3) {
+                      return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                    }
+                    return formData.lastCompletedDate;
+                  })() : ''
+                }
+                onChange={(e) => {
+                  // Convert YYYY-MM-DD to MM/DD/YYYY
+                  const value = e.target.value;
+                  if (value) {
+                    const [year, month, day] = value.split('-');
+                    setFormData(prev => ({ ...prev, lastCompletedDate: `${month}/${day}/${year}` }));
+                  } else {
+                    setFormData(prev => ({ ...prev, lastCompletedDate: '' }));
+                  }
+                }}
+                max={new Date().toISOString().split('T')[0]} // Can't be in the future
+              />
+              <p className="text-xs text-muted-foreground">
+                When was this task last completed? This will be used to calculate the next due date.
               </p>
             </div>
           )}
