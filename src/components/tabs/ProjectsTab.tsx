@@ -6,12 +6,12 @@ export function ProjectsTab() {
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <FolderKanban className="h-6 w-6 text-sky-600 dark:text-sky-400" />
+        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <FolderKanban className="h-6 w-6 text-primary" />
           Projects
         </h2>
         <Button
-          className="bg-sky-600 hover:bg-sky-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
           disabled
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -19,10 +19,10 @@ export function ProjectsTab() {
         </Button>
       </div>
 
-      <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 border-dashed">
+      <Card className="bg-card border-border border-dashed">
         <CardContent className="py-12 text-center">
-          <FolderKanban className="h-12 w-12 text-sky-300 dark:text-sky-700 mx-auto mb-4" />
-          <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">
+          <FolderKanban className="h-12 w-12 text-primary/30 mx-auto mb-4" />
+          <h3 className="font-semibold text-foreground mb-2">
             Coming Soon
           </h3>
           <p className="text-muted-foreground mb-4 max-w-md mx-auto">

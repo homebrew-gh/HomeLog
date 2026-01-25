@@ -153,9 +153,9 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
                     onClick={onAddTabClick}
                     className={cn(
                       "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg",
-                      "text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-slate-800",
-                      "border border-dashed border-sky-300 dark:border-sky-700",
-                      "transition-all duration-200 hover:border-sky-400 dark:hover:border-sky-600"
+                      "text-primary hover:bg-primary/10",
+                      "border border-dashed border-primary/30",
+                      "transition-all duration-200 hover:border-primary/50"
                     )}
                   >
                     <Plus className="h-4 w-4" />
@@ -192,7 +192,7 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
                 >
                   {/* Drop indicator */}
                   {isDragOver && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-0.5 h-8 bg-sky-500 rounded-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-0.5 h-8 bg-primary rounded-full" />
                   )}
 
                   <Button
@@ -202,8 +202,8 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
                     className={cn(
                       "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg transition-all duration-200",
                       isActive
-                        ? "bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 shadow-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-800",
+                        ? "bg-primary/10 text-primary shadow-sm"
+                        : "text-muted-foreground hover:bg-primary/5 hover:text-primary",
                       canEdit && "cursor-grab active:cursor-grabbing"
                     )}
                   >
@@ -246,8 +246,8 @@ export function TabNavigation({ onAddTabClick }: TabNavigationProps) {
                   "flex-shrink-0 gap-1.5 px-3 py-2 h-auto rounded-lg ml-2",
                   "transition-all duration-200",
                   isEditMode
-                    ? "bg-sky-600 text-white hover:bg-sky-700"
-                    : "text-slate-500 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-800 hover:text-sky-600 dark:hover:text-sky-400"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                 )}
               >
                 {isEditMode ? (

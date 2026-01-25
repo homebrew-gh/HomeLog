@@ -136,14 +136,14 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
     <section className="space-y-8">
       {/* Page Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <Wrench className="h-6 w-6 text-sky-600 dark:text-sky-400" />
+        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Wrench className="h-6 w-6 text-primary" />
           Maintenance
         </h2>
       </div>
 
       {isLoading ? (
-        <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-6 space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-4">
@@ -162,23 +162,23 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
           {/* Home/Appliance Maintenance Section */}
           <Card 
             ref={homeMaintenanceRef}
-            className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700"
+            className="bg-card border-border"
           >
-            <CardHeader className="pb-3 bg-gradient-to-r from-sky-50 to-transparent dark:from-sky-900/30 dark:to-transparent">
+            <CardHeader className="pb-3 bg-gradient-to-r from-primary/10 to-transparent">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900">
-                    <Home className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <Home className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-lg text-slate-700 dark:text-slate-200">Home Maintenance</span>
-                  <Badge variant="secondary" className="ml-2 bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
+                  <span className="text-lg text-foreground">Home Maintenance</span>
+                  <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary">
                     {applianceMaintenance.length}
                   </Badge>
                 </div>
                 <Button
                   onClick={() => handleAddMaintenance('appliance')}
                   size="sm"
-                  className="bg-sky-600 hover:bg-sky-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add
@@ -207,23 +207,23 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
           {/* Vehicle Maintenance Section */}
           <Card 
             ref={vehicleMaintenanceRef}
-            className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700"
+            className="bg-card border-border"
           >
-            <CardHeader className="pb-3 bg-gradient-to-r from-sky-50 to-transparent dark:from-sky-900/30 dark:to-transparent">
+            <CardHeader className="pb-3 bg-gradient-to-r from-primary/10 to-transparent">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900">
-                    <Car className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <Car className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-lg text-slate-700 dark:text-slate-200">Vehicle Maintenance</span>
-                  <Badge variant="secondary" className="ml-2 bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
+                  <span className="text-lg text-foreground">Vehicle Maintenance</span>
+                  <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary">
                     {vehicleMaintenance.length}
                   </Badge>
                 </div>
                 <Button
                   onClick={() => handleAddMaintenance('vehicle')}
                   size="sm"
-                  className="bg-sky-600 hover:bg-sky-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   disabled={vehicles.length === 0}
                 >
                   <Plus className="h-4 w-4 mr-1" />
@@ -332,7 +332,7 @@ function MaintenanceItem({
               e.stopPropagation();
               setShowHistory(!showHistory);
             }}
-            className="p-2 hover:bg-sky-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
           >
             {showHistory ? (
               <ChevronDown className="h-4 w-4 text-slate-500" />
@@ -352,7 +352,7 @@ function MaintenanceItem({
               ? 'hover:bg-red-100 dark:hover:bg-red-800'
               : dueSoon
                 ? 'hover:bg-amber-100 dark:hover:bg-amber-800'
-                : 'hover:bg-sky-50 dark:hover:bg-slate-700'
+                : 'hover:bg-primary/5'
           }`}
         >
           <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
@@ -362,7 +362,7 @@ function MaintenanceItem({
                 ? 'bg-amber-200 dark:bg-amber-900'
                 : isHomeFeatureOnly
                   ? 'bg-green-200 dark:bg-green-900'
-                  : 'bg-sky-200 dark:bg-sky-900'
+                  : 'bg-primary/20'
           }`}>
             {overdue ? (
               <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
@@ -371,12 +371,12 @@ function MaintenanceItem({
             ) : isHomeFeatureOnly ? (
               <TreePine className="h-5 w-5 text-green-600 dark:text-green-400" />
             ) : (
-              <Wrench className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              <Wrench className="h-5 w-5 text-primary" />
             )}
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
+            <p className="font-medium text-foreground truncate">
               {displayName}
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
@@ -468,7 +468,7 @@ function VehicleMaintenanceItem({
               e.stopPropagation();
               setShowHistory(!showHistory);
             }}
-            className="p-2 hover:bg-sky-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
           >
             {showHistory ? (
               <ChevronDown className="h-4 w-4 text-slate-500" />
@@ -488,7 +488,7 @@ function VehicleMaintenanceItem({
               ? 'hover:bg-red-100 dark:hover:bg-red-800'
               : dueSoon
                 ? 'hover:bg-amber-100 dark:hover:bg-amber-800'
-                : 'hover:bg-sky-50 dark:hover:bg-slate-700'
+                : 'hover:bg-primary/5'
           }`}
         >
           <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
@@ -496,19 +496,19 @@ function VehicleMaintenanceItem({
               ? 'bg-red-200 dark:bg-red-900'
               : dueSoon
                 ? 'bg-amber-200 dark:bg-amber-900'
-                : 'bg-sky-200 dark:bg-sky-900'
+                : 'bg-primary/20'
           }`}>
             {overdue ? (
               <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
             ) : dueSoon ? (
               <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             ) : (
-              <Car className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              <Car className="h-5 w-5 text-primary" />
             )}
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
+            <p className="font-medium text-foreground truncate">
               {vehicle?.name || 'Unknown Vehicle'}
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400 truncate">

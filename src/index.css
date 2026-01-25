@@ -581,11 +581,19 @@
   }
 }
 
-/* Theme-aware gradient backgrounds */
+/* Theme-aware gradient backgrounds and colors */
 @layer utilities {
   .bg-theme-gradient {
     background: linear-gradient(
       to bottom,
+      hsl(var(--theme-gradient-from)),
+      hsl(var(--theme-gradient-to))
+    );
+  }
+  
+  .bg-theme-gradient-card {
+    background: linear-gradient(
+      to bottom right,
       hsl(var(--theme-gradient-from)),
       hsl(var(--theme-gradient-to))
     );
@@ -597,6 +605,50 @@
   
   .text-theme-heading {
     color: hsl(var(--theme-text-color));
+  }
+  
+  /* Theme-aware backgrounds for interactive elements */
+  .bg-theme-light {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+  
+  .bg-theme-light-hover:hover {
+    background-color: hsl(var(--primary) / 0.15);
+  }
+  
+  .bg-theme-medium {
+    background-color: hsl(var(--primary) / 0.2);
+  }
+  
+  .border-theme {
+    border-color: hsl(var(--primary) / 0.3);
+  }
+  
+  .border-theme-light {
+    border-color: hsl(var(--primary) / 0.2);
+  }
+  
+  /* Theme-aware hover states */
+  .hover\:bg-theme-light:hover {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+  
+  .hover\:text-theme:hover {
+    color: hsl(var(--primary));
+  }
+  
+  .hover\:border-theme:hover {
+    border-color: hsl(var(--primary) / 0.5);
+  }
+  
+  /* Active states */
+  .active\:bg-theme-medium:active {
+    background-color: hsl(var(--primary) / 0.25);
+  }
+  
+  /* Group hover variants */
+  .group-hover\:text-theme:is(:where(.group):hover *) {
+    color: hsl(var(--primary));
   }
 }
 

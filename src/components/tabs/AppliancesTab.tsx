@@ -100,8 +100,8 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <Package className="h-6 w-6 text-sky-600 dark:text-sky-400" />
+        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Package className="h-6 w-6 text-primary" />
           Appliances
         </h2>
         <div className="flex items-center gap-2">
@@ -134,7 +134,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
               setEditingAppliance(undefined);
               setDialogOpen(true);
             }}
-            className="bg-sky-600 hover:bg-sky-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Appliance
@@ -144,7 +144,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
 
       {isLoading ? (
         viewMode === 'list' ? (
-          <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+          <Card className="bg-card border-border">
             <CardContent className="p-6 space-y-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="space-y-2">
@@ -160,7 +160,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
         ) : (
           <div className="space-y-6">
             {[1, 2].map((i) => (
-              <Card key={i} className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+              <Card key={i} className="bg-card border-border">
                 <CardHeader className="pb-3">
                   <Skeleton className="h-6 w-32" />
                 </CardHeader>
@@ -176,9 +176,9 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
           </div>
         )
       ) : appliances.length === 0 ? (
-        <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 border-dashed">
+        <Card className="bg-card border-border border-dashed">
           <CardContent className="py-12 text-center">
-            <Package className="h-12 w-12 text-sky-300 dark:text-sky-700 mx-auto mb-4" />
+            <Package className="h-12 w-12 text-primary/30 mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">
               No appliances added yet. Start tracking your home equipment!
             </p>
@@ -188,7 +188,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
                 setDialogOpen(true);
               }}
               variant="outline"
-              className="border-sky-300 hover:bg-sky-50 dark:border-sky-700 dark:hover:bg-sky-900"
+              className="border-primary/30 hover:bg-primary/10"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Your First Appliance
@@ -197,7 +197,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
         </Card>
       ) : viewMode === 'list' ? (
         /* List View */
-        <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-4">
             {appliancesByRoom.sortedRooms.map((room) => (
               <div
@@ -209,17 +209,17 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
                 onOpenChange={() => toggleRoom(room)}
                 className="mb-2 last:mb-0"
               >
-                <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-sky-100 dark:hover:bg-slate-700 transition-colors">
+                <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-primary/10 transition-colors">
                   {collapsedRooms.has(room) ? (
-                    <ChevronRight className="h-4 w-4 text-slate-500" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <Home className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  <Home className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-foreground">
                     {room}
                   </span>
-                  <Badge variant="secondary" className="ml-auto bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
+                  <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary">
                     {appliancesByRoom.grouped[room].length}
                   </Badge>
                 </CollapsibleTrigger>
@@ -229,13 +229,13 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
                       <button
                         key={appliance.id}
                         onClick={() => setViewingAppliance(appliance)}
-                        className="flex items-center gap-2 w-full p-2 rounded-lg text-left hover:bg-sky-50 dark:hover:bg-slate-700 transition-colors group"
+                        className="flex items-center gap-2 w-full p-2 rounded-lg text-left hover:bg-primary/5 transition-colors group"
                       >
-                        <span className="text-slate-600 dark:text-slate-300 group-hover:text-sky-700 dark:group-hover:text-sky-300">
+                        <span className="text-muted-foreground group-hover:text-primary">
                           {appliance.model}
                         </span>
                         {appliance.manufacturer && (
-                          <span className="text-sm text-slate-400 dark:text-slate-500">
+                          <span className="text-sm text-muted-foreground/70">
                             - {appliance.manufacturer}
                           </span>
                         )}
@@ -255,15 +255,15 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
             <Card 
               key={room} 
               ref={(el) => { roomRefs.current[room] = el; }}
-              className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 overflow-hidden"
+              className="bg-card border-border overflow-hidden"
             >
-              <CardHeader className="pb-3 bg-gradient-to-r from-sky-50 to-transparent dark:from-sky-900/30 dark:to-transparent">
+              <CardHeader className="pb-3 bg-gradient-to-r from-primary/10 to-transparent">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <div className="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900">
-                    <Home className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <Home className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-slate-700 dark:text-slate-200">{room}</span>
-                  <Badge variant="secondary" className="ml-auto bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
+                  <span className="text-foreground">{room}</span>
+                  <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary">
                     {appliancesByRoom.grouped[room].length} {appliancesByRoom.grouped[room].length === 1 ? 'item' : 'items'}
                   </Badge>
                 </CardTitle>
@@ -316,17 +316,17 @@ function ApplianceCard({ appliance, onClick }: ApplianceCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group relative flex flex-col p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 hover:border-sky-300 dark:hover:border-sky-700 hover:shadow-md transition-all duration-200 text-left"
+      className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200 text-left"
     >
       {/* Icon */}
       <div className="flex items-start justify-between mb-3">
-        <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-900/50 group-hover:bg-sky-200 dark:group-hover:bg-sky-800 transition-colors">
-          <Package className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+        <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+          <Package className="h-5 w-5 text-primary" />
         </div>
       </div>
 
       {/* Model/Name */}
-      <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1 line-clamp-2 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition-colors">
+      <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
         {appliance.model}
       </h3>
 
@@ -347,7 +347,7 @@ function ApplianceCard({ appliance, onClick }: ApplianceCardProps) {
       )}
 
       {/* Hover indicator */}
-      <div className="absolute inset-0 rounded-xl ring-2 ring-sky-500 ring-opacity-0 group-hover:ring-opacity-20 transition-all pointer-events-none" />
+      <div className="absolute inset-0 rounded-xl ring-2 ring-primary ring-opacity-0 group-hover:ring-opacity-20 transition-all pointer-events-none" />
     </button>
   );
 }

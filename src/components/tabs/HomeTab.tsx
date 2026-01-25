@@ -572,7 +572,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
             "fixed right-4 top-40 z-40 gap-1.5 px-3 py-2 h-auto rounded-lg shadow-lg",
             isEditMode
               ? "bg-rose-600 text-white hover:bg-rose-700 border border-rose-700"
-              : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-slate-700 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700"
+              : "bg-card text-muted-foreground hover:bg-primary/10 hover:text-primary border border-border"
           )}
         >
           {isEditMode ? (
@@ -589,8 +589,8 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       {/* Welcome / Dashboard Header */}
       <div className="flex items-center justify-center py-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">
-            <Home className="h-6 w-6 text-sky-600 dark:text-sky-400" />
+          <h2 className="text-2xl font-bold text-foreground flex items-center justify-center gap-2">
+            <Home className="h-6 w-6 text-primary" />
             Dashboard
           </h2>
           <p className="text-muted-foreground mt-1">
@@ -601,12 +601,12 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
 
       {/* No tabs added yet */}
       {!hasActiveTabs && (
-        <Card className="bg-gradient-to-br from-sky-50 to-sky-100 dark:from-slate-800 dark:to-slate-900 border-sky-200 dark:border-slate-700">
+        <Card className="bg-theme-gradient-card border-border">
           <CardContent className="py-12 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-200 dark:bg-sky-800 mb-4">
-              <Sparkles className="h-8 w-8 text-sky-600 dark:text-sky-300" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4">
+              <Sparkles className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">
+            <h3 className="text-xl font-semibold text-foreground mb-2">
               Get Started
             </h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
@@ -614,7 +614,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
             </p>
             <Button
               onClick={onAddTab}
-              className="bg-sky-600 hover:bg-sky-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               Add Your First Section
             </Button>
@@ -672,13 +672,13 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                                 }}
                                 disabled={isEditMode}
                                 className={cn(
-                                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 transition-colors",
-                                  !isEditMode && "hover:bg-sky-200 dark:hover:bg-sky-800/50"
+                                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary transition-colors",
+                                  !isEditMode && "hover:bg-primary/20"
                                 )}
                               >
                                 <Home className="h-3.5 w-3.5" />
                                 {room}
-                                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-sky-200/50 dark:bg-sky-800/50">
+                                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-primary/20">
                                   {count}
                                 </Badge>
                               </button>
@@ -719,13 +719,13 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                                 }}
                                 disabled={isEditMode}
                                 className={cn(
-                                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 transition-colors",
-                                  !isEditMode && "hover:bg-sky-200 dark:hover:bg-sky-800/50"
+                                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary transition-colors",
+                                  !isEditMode && "hover:bg-primary/20"
                                 )}
                               >
                                 <Car className="h-3.5 w-3.5" />
                                 {type}
-                                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-sky-200/50 dark:bg-sky-800/50">
+                                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-primary/20">
                                   {count}
                                 </Badge>
                               </button>
@@ -766,13 +766,13 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                                 }}
                                 disabled={isEditMode}
                                 className={cn(
-                                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 transition-colors",
-                                  !isEditMode && "hover:bg-sky-200 dark:hover:bg-sky-800/50"
+                                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary transition-colors",
+                                  !isEditMode && "hover:bg-primary/20"
                                 )}
                               >
                                 <Users className="h-3.5 w-3.5" />
                                 {type}
-                                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-sky-200/50 dark:bg-sky-800/50">
+                                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-primary/20">
                                   {count}
                                 </Badge>
                               </button>
@@ -938,7 +938,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
               <div key={widgetId} className="break-inside-avoid">
                 {/* Drop indicator before this card */}
                 {showDropBefore && (
-                  <div className="h-1 bg-sky-500 dark:bg-sky-400 rounded-full mb-4 mx-2 animate-pulse" />
+                  <div className="h-1 bg-primary rounded-full mb-4 mx-2 animate-pulse" />
                 )}
                 <div
                   ref={(el) => {
@@ -973,8 +973,8 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                         className={cn(
                           "p-1 rounded-md transition-colors",
                           index === 0
-                            ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600"
-                            : "bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 active:bg-sky-200 dark:active:bg-sky-800"
+                            ? "bg-muted text-muted-foreground/30"
+                            : "bg-primary/10 text-primary active:bg-primary/20"
                         )}
                       >
                         <ChevronUp className="h-4 w-4" />
@@ -988,16 +988,16 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                         className={cn(
                           "p-1 rounded-md transition-colors",
                           index === activeWidgets.length - 1
-                            ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600"
-                            : "bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 active:bg-sky-200 dark:active:bg-sky-800"
+                            ? "bg-muted text-muted-foreground/30"
+                            : "bg-primary/10 text-primary active:bg-primary/20"
                         )}
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>
                     </div>
                     {/* Drag handle - always visible */}
-                    <div className="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900">
-                      <GripVertical className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                    <div className="p-1.5 rounded-lg bg-primary/10">
+                      <GripVertical className="h-4 w-4 text-primary" />
                     </div>
                   </div>
                 )}
@@ -1009,7 +1009,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
           {/* Drop indicator at the end of the list */}
           {dropIndex !== null && draggedWidget && dropIndex === activeWidgets.length - 1 && activeWidgets.indexOf(draggedWidget) < activeWidgets.length - 1 && (
             <div className="break-inside-avoid">
-              <div className="h-1 bg-sky-500 dark:bg-sky-400 rounded-full mx-2 animate-pulse" />
+              <div className="h-1 bg-primary rounded-full mx-2 animate-pulse" />
             </div>
           )}
         </div>
@@ -1026,7 +1026,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       {/* Floating dragged widget that follows cursor */}
       {draggedWidget && dragPosition && draggedWidgetSize && (
         <div
-          className="dashboard-card-dragging rounded-xl bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 overflow-hidden"
+          className="dashboard-card-dragging rounded-xl bg-card border border-border overflow-hidden"
           style={{
             left: dragPosition.x - dragOffset.x,
             top: dragPosition.y - dragOffset.y,
@@ -1043,8 +1043,8 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                 const IconComponent = config.icon;
                 return (
                   <>
-                    <IconComponent className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-                    <span className="font-semibold text-slate-800 dark:text-slate-100">
+                    <IconComponent className="h-5 w-5 text-primary" />
+                    <span className="font-semibold text-foreground">
                       {config.label}
                     </span>
                   </>
@@ -1074,7 +1074,7 @@ interface WidgetCardProps {
 function WidgetCard({ title, icon: Icon, onClick, isLoading, badge, clickable = true, children }: WidgetCardProps) {
   return (
     <Card 
-      className={`bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 transition-shadow ${
+      className={`bg-card border-border transition-shadow ${
         clickable ? 'cursor-pointer hover:shadow-md group' : ''
       }`}
       onClick={clickable ? onClick : undefined}
@@ -1082,7 +1082,7 @@ function WidgetCard({ title, icon: Icon, onClick, isLoading, badge, clickable = 
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
-            <Icon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            <Icon className="h-5 w-5 text-primary" />
             <span>{title}</span>
             {badge && (
               <Badge variant={badge.variant} className="text-xs">
@@ -1091,7 +1091,7 @@ function WidgetCard({ title, icon: Icon, onClick, isLoading, badge, clickable = 
             )}
           </div>
           {clickable && (
-            <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors" />
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           )}
         </CardTitle>
       </CardHeader>
@@ -1127,7 +1127,7 @@ function FriendAvatar({ pubkey }: { pubkey: string }) {
               {picture ? (
                 <AvatarImage src={picture} alt={displayName} />
               ) : null}
-              <AvatarFallback className="bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 text-xs">
+              <AvatarFallback className="bg-primary/10 text-primary text-xs">
                 {displayName.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -1151,10 +1151,10 @@ interface FriendsUsingHomeLogProps {
 function FriendsUsingHomeLog({ friends, isLoading }: FriendsUsingHomeLogProps) {
   if (isLoading) {
     return (
-      <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+      <Card className="bg-card border-border">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            <UserCheck className="h-5 w-5 text-primary" />
             <span>Friends Using Home Log</span>
           </CardTitle>
         </CardHeader>
@@ -1171,10 +1171,10 @@ function FriendsUsingHomeLog({ friends, isLoading }: FriendsUsingHomeLogProps) {
 
   if (friends.length === 0) {
     return (
-      <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+      <Card className="bg-card border-border">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            <UserCheck className="h-5 w-5 text-primary" />
             <span>Friends Using Home Log</span>
           </CardTitle>
         </CardHeader>
@@ -1188,10 +1188,10 @@ function FriendsUsingHomeLog({ friends, isLoading }: FriendsUsingHomeLogProps) {
   }
 
   return (
-    <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+    <Card className="bg-card border-border">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <UserCheck className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+          <UserCheck className="h-5 w-5 text-primary" />
           <span>Friends Using Home Log</span>
           <Badge variant="secondary" className="text-xs">
             {friends.length}
@@ -1204,7 +1204,7 @@ function FriendsUsingHomeLog({ friends, isLoading }: FriendsUsingHomeLogProps) {
             <FriendAvatar key={friend.pubkey} pubkey={friend.pubkey} />
           ))}
           {friends.length > 12 && (
-            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 text-xs font-medium">
+            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary text-xs font-medium">
               +{friends.length - 12}
             </div>
           )}
