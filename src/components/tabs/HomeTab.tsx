@@ -597,7 +597,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
 
 {/* Dashboard widgets - uniform grid of draggable cards */}
       {hasActiveTabs && (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 items-start">
           {activeWidgets.map((widgetId, index) => {
             const config = getWidgetConfig(widgetId);
             if (!config) return null;
