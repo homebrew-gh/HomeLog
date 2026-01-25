@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Lock, Unlock, Shield, AlertTriangle, RotateCcw, Eye, EyeOff, Search, CheckCircle2, XCircle, Loader2, Wifi, ChevronDown, ChevronRight } from 'lucide-react';
 import { useNostr } from '@nostrify/react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -14,7 +14,9 @@ import { useAppContext } from '@/hooks/useAppContext';
 import { 
   useEncryptionSettings, 
   CATEGORY_INFO, 
-  type EncryptableCategory 
+  type EncryptableCategory,
+  type CategoryRelayConfig,
+  type EncryptionSettings,
 } from '@/contexts/EncryptionContext';
 import { APPLIANCE_KIND, VEHICLE_KIND, MAINTENANCE_KIND } from '@/lib/types';
 
@@ -51,13 +53,17 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
   const { user } = useCurrentUser();
   const { config } = useAppContext();
   const { 
-    settings, 
-    setEncryptionEnabled, 
-    resetToDefaults,
-    isRelayEnabledForCategory,
-    setRelayEnabledForCategory,
+    settings: savedSettings, 
+    categoryRelayConfig: savedCategoryRelayConfig,
+    setEncryptionEnabled: persistEncryptionEnabled, 
+    resetToDefaults: persistResetToDefaults,
+    setRelayEnabledForCategory: persistRelayEnabledForCategory,
     isPrivateRelay,
   } = useEncryptionSettings();
+
+  // Local state for editing - only saved when user clicks Save
+  const [localSettings, setLocalSettings] = useState<EncryptionSettings>(savedSettings);
+  const [localCategoryRelayConfig, setLocalCategoryRelayConfig] = useState<CategoryRelayConfig>(savedCategoryRelayConfig);
 
   // Trust but Verify state
   const [verifyState, setVerifyState] = useState<VerificationState>({ status: 'idle' });
@@ -65,6 +71,90 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
   
   // Track which categories have their relay list expanded
   const [expandedCategories, setExpandedCategories] = useState<Set<EncryptableCategory>>(new Set());
+
+  // Sync local state when dialog opens or saved settings change
+  useEffect(() => {
+    if (isOpen) {
+      setLocalSettings(savedSettings);
+      setLocalCategoryRelayConfig(savedCategoryRelayConfig);
+    }
+  }, [isOpen, savedSettings, savedCategoryRelayConfig]);
+
+  // Local setters that update local state only
+  const setEncryptionEnabled = useCallback((category: EncryptableCategory, enabled: boolean) => {
+    setLocalSettings(prev => ({
+      ...prev,
+      [category]: enabled,
+    }));
+  }, []);
+
+  const isRelayEnabledForCategory = useCallback((category: EncryptableCategory, relayUrl: string): boolean => {
+    const categoryConfig = localCategoryRelayConfig[category];
+    if (categoryConfig && relayUrl in categoryConfig) {
+      return categoryConfig[relayUrl];
+    }
+    // Default: all relays are enabled
+    return true;
+  }, [localCategoryRelayConfig]);
+
+  const setRelayEnabledForCategory = useCallback((category: EncryptableCategory, relayUrl: string, enabled: boolean) => {
+    setLocalCategoryRelayConfig(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [relayUrl]: enabled,
+      },
+    }));
+  }, []);
+
+  const resetToDefaults = useCallback(() => {
+    setLocalSettings({
+      appliances: true,
+      vehicles: true,
+      maintenance: true,
+      subscriptions: true,
+      warranties: true,
+      companies: false,
+      projects: false,
+    });
+    setLocalCategoryRelayConfig({
+      appliances: {},
+      vehicles: {},
+      maintenance: {},
+      subscriptions: {},
+      warranties: {},
+      companies: {},
+      projects: {},
+    });
+  }, []);
+
+  // Save all settings to persistent storage
+  const handleSave = useCallback(() => {
+    // Save encryption settings
+    CATEGORY_ORDER.forEach(category => {
+      if (localSettings[category] !== savedSettings[category]) {
+        persistEncryptionEnabled(category, localSettings[category]);
+      }
+    });
+
+    // Save relay settings for each category
+    CATEGORY_ORDER.forEach(category => {
+      const localConfig = localCategoryRelayConfig[category];
+      const savedConfig = savedCategoryRelayConfig[category];
+      
+      // Save any changed relay settings
+      Object.entries(localConfig).forEach(([relayUrl, enabled]) => {
+        if (savedConfig[relayUrl] !== enabled) {
+          persistRelayEnabledForCategory(category, relayUrl, enabled);
+        }
+      });
+    });
+
+    onClose();
+  }, [localSettings, localCategoryRelayConfig, savedSettings, savedCategoryRelayConfig, persistEncryptionEnabled, persistRelayEnabledForCategory, onClose]);
+
+  // Use local settings for display
+  const settings = localSettings;
 
   const encryptedCount = Object.values(settings).filter(Boolean).length;
   const totalCount = Object.keys(settings).length;
@@ -579,10 +669,10 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
             )}
           </div>
 
-          {/* Close Button */}
+          {/* Save Button */}
           <div className="flex justify-end pt-2">
-            <Button onClick={onClose}>
-              Done
+            <Button onClick={handleSave}>
+              Save
             </Button>
           </div>
         </div>
