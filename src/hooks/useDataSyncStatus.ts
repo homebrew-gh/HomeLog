@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { 
   APPLIANCE_KIND, 
   VEHICLE_KIND, 
@@ -21,6 +21,40 @@ export function useDataSyncStatus() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const syncStarted = useRef(false);
+  
+  // Track whether we've checked the cache (this happens instantly before relay sync)
+  const [cacheChecked, setCacheChecked] = useState(false);
+  const [hasCachedData, setHasCachedData] = useState(false);
+  
+  // Check cache status immediately when user becomes available
+  useEffect(() => {
+    if (!user?.pubkey) {
+      setCacheChecked(false);
+      setHasCachedData(false);
+      return;
+    }
+    
+    // Check cache instantly (IndexedDB is very fast)
+    const checkCache = async () => {
+      const cachedAppliances = await getCachedEvents([APPLIANCE_KIND], user.pubkey);
+      const cachedVehicles = await getCachedEvents([VEHICLE_KIND], user.pubkey);
+      const cachedMaintenance = await getCachedEvents([MAINTENANCE_KIND], user.pubkey);
+      const cachedCompanies = await getCachedEvents([COMPANY_KIND], user.pubkey);
+      const cachedSubscriptions = await getCachedEvents([SUBSCRIPTION_KIND], user.pubkey);
+      
+      const hasAny = 
+        cachedAppliances.length > 0 ||
+        cachedVehicles.length > 0 ||
+        cachedMaintenance.length > 0 ||
+        cachedCompanies.length > 0 ||
+        cachedSubscriptions.length > 0;
+      
+      setHasCachedData(hasAny);
+      setCacheChecked(true);
+    };
+    
+    checkCache();
+  }, [user?.pubkey]);
 
   // Main sync query - fetches all data types in one efficient request
   const { data: syncStatus, isLoading: isSyncing, isFetched } = useQuery({
@@ -30,6 +64,7 @@ export function useDataSyncStatus() {
         return { 
           synced: false, 
           hasAnyData: false,
+          hadCachedData: false,
           categories: {
             appliances: { synced: false, count: 0 },
             vehicles: { synced: false, count: 0 },
@@ -138,6 +173,9 @@ export function useDataSyncStatus() {
     isSyncing: !syncStatus?.synced && isSyncing,
     isSynced: syncStatus?.synced ?? false,
     hasAnyData: syncStatus?.hasAnyData ?? false,
+    // These are available immediately after cache check (before relay sync)
+    cacheChecked,
+    hasCachedData,
     categories: syncStatus?.categories ?? {
       appliances: { synced: false, count: 0 },
       vehicles: { synced: false, count: 0 },

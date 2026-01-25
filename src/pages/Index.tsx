@@ -48,7 +48,7 @@ const Index = () => {
   const { user } = useCurrentUser();
   const { isProfileLoading } = useLoggedInAccounts();
   const { preferences, setActiveTab } = useTabPreferences();
-  const { isSyncing: isDataSyncing, isSynced: isDataSynced } = useDataSyncStatus();
+  const { isSyncing: isDataSyncing, isSynced: isDataSynced, cacheChecked, hasCachedData } = useDataSyncStatus();
   
   // Apply color theme to document root
   useApplyColorTheme();
@@ -98,15 +98,21 @@ const Index = () => {
     }
   }, [user]);
 
-  // Initial loading state - only for authentication and basic profile
-  // This should be very brief (< 1 second)
+  // Initial loading state:
+  // 1. Profile is still loading, OR
+  // 2. Minimum time hasn't elapsed (prevents jarring flashes), OR
+  // 3. Cache hasn't been checked yet, OR
+  // 4. No cached data AND sync hasn't completed (first-time user experience)
   const isInitialLoading = user && (
     isProfileLoading || 
-    (!minTimeElapsed && loadingStartTime.current !== null)
+    (!minTimeElapsed && loadingStartTime.current !== null) ||
+    !cacheChecked ||
+    (!hasCachedData && !isDataSynced)
   );
   
   // Data sync is happening in background - show indicator but don't block UI
-  const isBackgroundSyncing = user && isDataSyncing && !isDataSynced;
+  // Only show this when we have cached data to display while syncing
+  const isBackgroundSyncing = user && isDataSyncing && !isDataSynced && hasCachedData;
 
   // Dialog states
   const [roomManagementOpen, setRoomManagementOpen] = useState(false);
@@ -259,11 +265,19 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {isInitialLoading ? (
-          // Brief initial loading while authenticating
+          // Initial loading - shows during auth, cache check, or first sync
           <LoadingAnimation 
             size="md"
-            message="Signing in..."
-            subMessage="Connecting to your account"
+            message={
+              isProfileLoading || !cacheChecked
+                ? "Signing in..."
+                : "Loading your data..."
+            }
+            subMessage={
+              isProfileLoading || !cacheChecked
+                ? "Connecting to your account"
+                : "Syncing with Nostr relays"
+            }
           />
         ) : !user ? (
           // Not logged in - Welcome screen
