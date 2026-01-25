@@ -5,6 +5,7 @@ export interface Appliance {
   model: string;
   manufacturer: string;
   purchaseDate: string; // MM/DD/YYYY format
+  price?: string; // Purchase price (e.g., "$599.99")
   room: string;
   receiptUrl?: string;
   manualUrl?: string;

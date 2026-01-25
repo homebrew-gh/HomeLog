@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ExternalLink, FileText, Image, Calendar, Factory, Home, Edit, Trash2 } from 'lucide-react';
+import { ExternalLink, FileText, Image, Calendar, Factory, Home, Edit, Trash2, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -90,6 +90,16 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDe
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Purchase Date</p>
                   <p>{appliance.purchaseDate}</p>
+                </div>
+              </div>
+            )}
+
+            {appliance.price && (
+              <div className="flex items-start gap-3">
+                <DollarSign className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Price</p>
+                  <p>{appliance.price}</p>
                 </div>
               </div>
             )}

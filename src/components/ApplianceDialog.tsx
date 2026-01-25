@@ -45,6 +45,7 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
     model: '',
     manufacturer: '',
     purchaseDate: '',
+    price: '',
     room: '',
     receiptUrl: '',
     manualUrl: '',
@@ -63,6 +64,7 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
           model: appliance.model,
           manufacturer: appliance.manufacturer,
           purchaseDate: appliance.purchaseDate,
+          price: appliance.price || '',
           room: appliance.room,
           receiptUrl: appliance.receiptUrl || '',
           manualUrl: appliance.manualUrl || '',
@@ -72,6 +74,7 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
           model: '',
           manufacturer: '',
           purchaseDate: '',
+          price: '',
           room: '',
           receiptUrl: '',
           manualUrl: '',
@@ -268,6 +271,17 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
                 Today ({getTodayFormatted()})
               </Label>
             </div>
+          </div>
+
+          {/* Price */}
+          <div className="space-y-2">
+            <Label htmlFor="price">Price</Label>
+            <Input
+              id="price"
+              value={formData.price}
+              onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+              placeholder="e.g., $599.99"
+            />
           </div>
 
           {/* Room Selection */}

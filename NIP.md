@@ -18,6 +18,7 @@ An addressable event representing a home appliance.
     ["model", "<appliance model name>"],
     ["manufacturer", "<manufacturer name>"],
     ["purchase_date", "<MM/DD/YYYY>"],
+    ["price", "<purchase price>"],
     ["room", "<room name>"],
     ["receipt_url", "<url to receipt file>"],
     ["manual_url", "<url to manual file>"]
@@ -34,6 +35,7 @@ An addressable event representing a home appliance.
 | `model` | Yes | Model name/number of the appliance |
 | `manufacturer` | No | Manufacturer name |
 | `purchase_date` | No | Purchase date in MM/DD/YYYY format |
+| `price` | No | Purchase price (e.g., "$599.99") |
 | `room` | No | Room where the appliance is installed |
 | `receipt_url` | No | URL to uploaded purchase receipt |
 | `manual_url` | No | URL to uploaded electronic manual |

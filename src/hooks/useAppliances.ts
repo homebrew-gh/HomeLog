@@ -23,6 +23,7 @@ interface ApplianceData {
   model: string;
   manufacturer: string;
   purchaseDate: string;
+  price?: string;
   room: string;
   receiptUrl?: string;
   manualUrl?: string;
@@ -40,6 +41,7 @@ function parseAppliancePlaintext(event: NostrEvent): Appliance | null {
     model,
     manufacturer: getTagValue(event, 'manufacturer') || '',
     purchaseDate: getTagValue(event, 'purchase_date') || '',
+    price: getTagValue(event, 'price'),
     room: getTagValue(event, 'room') || '',
     receiptUrl: getTagValue(event, 'receipt_url'),
     manualUrl: getTagValue(event, 'manual_url'),
@@ -63,6 +65,7 @@ async function parseApplianceEncrypted(
       model: data.model,
       manufacturer: data.manufacturer || '',
       purchaseDate: data.purchaseDate || '',
+      price: data.price,
       room: data.room || '',
       receiptUrl: data.receiptUrl,
       manualUrl: data.manualUrl,
@@ -251,6 +254,7 @@ export function useApplianceActions() {
         model: data.model,
         manufacturer: data.manufacturer,
         purchaseDate: data.purchaseDate,
+        price: data.price,
         room: data.room,
         receiptUrl: data.receiptUrl,
         manualUrl: data.manualUrl,
@@ -261,6 +265,7 @@ export function useApplianceActions() {
       tags.push(['model', data.model]);
       if (data.manufacturer) tags.push(['manufacturer', data.manufacturer]);
       if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
+      if (data.price) tags.push(['price', data.price]);
       if (data.room) tags.push(['room', data.room]);
       if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
       if (data.manualUrl) tags.push(['manual_url', data.manualUrl]);
@@ -302,6 +307,7 @@ export function useApplianceActions() {
         model: data.model,
         manufacturer: data.manufacturer,
         purchaseDate: data.purchaseDate,
+        price: data.price,
         room: data.room,
         receiptUrl: data.receiptUrl,
         manualUrl: data.manualUrl,
@@ -312,6 +318,7 @@ export function useApplianceActions() {
       tags.push(['model', data.model]);
       if (data.manufacturer) tags.push(['manufacturer', data.manufacturer]);
       if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
+      if (data.price) tags.push(['price', data.price]);
       if (data.room) tags.push(['room', data.room]);
       if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
       if (data.manualUrl) tags.push(['manual_url', data.manualUrl]);
