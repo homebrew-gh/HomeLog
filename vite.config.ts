@@ -12,6 +12,13 @@ export default defineConfig(() => ({
   plugins: [
     react(),
   ],
+  build: {
+    // Disable source maps to reduce bundle size
+    // This is important for staying under Vercel's 10MB deployment limit
+    sourcemap: false,
+    // Increase chunk size warning limit (optional)
+    chunkSizeWarningLimit: 1000,
+  },
   test: {
     globals: true,
     environment: 'jsdom',

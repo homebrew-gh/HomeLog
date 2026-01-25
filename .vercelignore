@@ -1,0 +1,7 @@
+# Ignore source maps to reduce deployment size
+*.map
+
+# Ignore development files
+node_modules
+.git
+*.log
