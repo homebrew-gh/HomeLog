@@ -435,9 +435,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
   const setActiveTab = useCallback((tabId: TabId) => {
     // Throttle tab changes to prevent rapid switching from causing issues
+    // 300ms gives enough time for the previous tab's queries to settle
     const now = Date.now();
-    if (now - lastTabChangeRef.current < 100) {
-      return; // Ignore if less than 100ms since last change
+    if (now - lastTabChangeRef.current < 300) {
+      return; // Ignore if less than 300ms since last change
     }
     lastTabChangeRef.current = now;
     

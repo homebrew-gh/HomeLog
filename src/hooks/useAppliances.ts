@@ -165,6 +165,7 @@ export function useAppliances() {
     staleTime: Infinity, // Data comes from IndexedDB cache, no need to refetch
     gcTime: Infinity, // Keep in memory for the session
     refetchOnWindowFocus: false,
+    refetchOnMount: false, // Don't refetch when component remounts - use cached data
   });
 
   return query;
