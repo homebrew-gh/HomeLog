@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check, Car, Gauge, TreePine } from 'lucide-react';
+import { Calendar, Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check, Car, Gauge, TreePine, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,11 +64,22 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
   // Get the most recent completion date (completions are already sorted newest first)
   const lastCompletionDate = completions.length > 0 ? completions[0].completedDate : undefined;
 
-  const nextDueDate = calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate);
-  const overdue = purchaseDate ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
-  const dueSoon = purchaseDate ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
+  // Check if this is log-only maintenance
+  const isLogOnly = maintenance.isLogOnly;
+
+  // Only calculate due dates for scheduled (non-log-only) maintenance
+  const nextDueDate = !isLogOnly && maintenance.frequency && maintenance.frequencyUnit
+    ? calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate)
+    : null;
+  const overdue = !isLogOnly && purchaseDate && maintenance.frequency && maintenance.frequencyUnit
+    ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate)
+    : false;
+  const dueSoon = !isLogOnly && purchaseDate && maintenance.frequency && maintenance.frequencyUnit
+    ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate)
+    : false;
 
   const getFrequencyLabel = () => {
+    if (!maintenance.frequency || !maintenance.frequencyUnit) return '';
     const unit = maintenance.frequencyUnit;
     const freq = maintenance.frequency;
     const unitLabel = freq === 1 ? unit.slice(0, -1) : unit;
@@ -171,26 +182,33 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
         <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
-              <Wrench className="h-5 w-5" />
+              {isLogOnly ? (
+                <ClipboardList className="h-5 w-5 text-blue-600" />
+              ) : (
+                <Wrench className="h-5 w-5" />
+              )}
               <span>{maintenance.description}</span>
-              {overdue && (
+              {isLogOnly ? (
+                <Badge variant="secondary" className="ml-auto bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  <ClipboardList className="h-3 w-3 mr-1" />
+                  Log Only
+                </Badge>
+              ) : overdue ? (
                 <Badge variant="destructive" className="ml-auto">
                   <AlertTriangle className="h-3 w-3 mr-1" />
                   Overdue
                 </Badge>
-              )}
-              {dueSoon && !overdue && (
+              ) : dueSoon ? (
                 <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                   <Clock className="h-3 w-3 mr-1" />
                   Due Soon
                 </Badge>
-              )}
-              {!overdue && !dueSoon && nextDueDate && (
+              ) : nextDueDate ? (
                 <Badge variant="secondary" className="ml-auto bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                   <CheckCircle className="h-3 w-3 mr-1" />
                   On Track
                 </Badge>
-              )}
+              ) : null}
             </DialogTitle>
           </DialogHeader>
 
@@ -232,13 +250,27 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
               </div>
             )}
 
-            <div className="flex items-start gap-3">
-              <Clock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Frequency</p>
-                <p>{getFrequencyLabel()}</p>
+            {/* Frequency - only for scheduled maintenance */}
+            {!isLogOnly && maintenance.frequency && maintenance.frequencyUnit && (
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Frequency</p>
+                  <p>{getFrequencyLabel()}</p>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Log Only indicator */}
+            {isLogOnly && (
+              <div className="flex items-start gap-3">
+                <ClipboardList className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Tracking Type</p>
+                  <p className="text-blue-600 dark:text-blue-400">Log Only - No recurring schedule</p>
+                </div>
+              </div>
+            )}
 
             {maintenance.partNumber && (
               <div className="flex items-start gap-3">
@@ -262,8 +294,8 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
               </div>
             )}
 
-            {/* Show mileage interval for vehicle maintenance */}
-            {isVehicleMaintenance && maintenance.mileageInterval && (
+            {/* Show mileage interval for scheduled vehicle maintenance */}
+            {isVehicleMaintenance && !isLogOnly && maintenance.mileageInterval && (
               <div className="flex items-start gap-3">
                 <Gauge className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
@@ -273,41 +305,59 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
               </div>
             )}
 
-            <div className={`flex items-start gap-3 p-3 rounded-lg ${
-              overdue
-                ? 'bg-red-50 dark:bg-red-950/30'
-                : dueSoon
-                  ? 'bg-amber-50 dark:bg-amber-950/30'
-                  : 'bg-green-50 dark:bg-green-950/30'
-            }`}>
-              <Calendar className={`h-5 w-5 shrink-0 mt-0.5 ${
+            {/* Due Date section - only for scheduled maintenance */}
+            {!isLogOnly && nextDueDate && (
+              <div className={`flex items-start gap-3 p-3 rounded-lg ${
                 overdue
-                  ? 'text-red-600 dark:text-red-400'
+                  ? 'bg-red-50 dark:bg-red-950/30'
                   : dueSoon
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-green-600 dark:text-green-400'
-              }`} />
-              <div>
-                <p className={`text-sm font-medium ${
+                    ? 'bg-amber-50 dark:bg-amber-950/30'
+                    : 'bg-green-50 dark:bg-green-950/30'
+              }`}>
+                <Calendar className={`h-5 w-5 shrink-0 mt-0.5 ${
                   overdue
-                    ? 'text-red-700 dark:text-red-300'
+                    ? 'text-red-600 dark:text-red-400'
                     : dueSoon
-                      ? 'text-amber-700 dark:text-amber-300'
-                      : 'text-green-700 dark:text-green-300'
-                }`}>
-                  Next Due Date
-                </p>
-                <p className={`font-semibold ${
-                  overdue
-                    ? 'text-red-900 dark:text-red-100'
-                    : dueSoon
-                      ? 'text-amber-900 dark:text-amber-100'
-                      : 'text-green-900 dark:text-green-100'
-                }`}>
-                  {formatDueDate(nextDueDate)}
-                </p>
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-green-600 dark:text-green-400'
+                }`} />
+                <div>
+                  <p className={`text-sm font-medium ${
+                    overdue
+                      ? 'text-red-700 dark:text-red-300'
+                      : dueSoon
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-green-700 dark:text-green-300'
+                  }`}>
+                    Next Due Date
+                  </p>
+                  <p className={`font-semibold ${
+                    overdue
+                      ? 'text-red-900 dark:text-red-100'
+                      : dueSoon
+                        ? 'text-amber-900 dark:text-amber-100'
+                        : 'text-green-900 dark:text-green-100'
+                  }`}>
+                    {formatDueDate(nextDueDate)}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Last Completed section - for log-only maintenance */}
+            {isLogOnly && (
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                <Calendar className="h-5 w-5 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                <div>
+                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                    Last Completed
+                  </p>
+                  <p className="font-semibold text-blue-900 dark:text-blue-100">
+                    {lastCompletionDate || 'No records yet'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Mark as Completed Section */}
             {!showCompletionForm ? (

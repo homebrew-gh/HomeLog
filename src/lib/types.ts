@@ -71,10 +71,11 @@ export interface MaintenanceSchedule {
   companyId?: string; // Optional - reference to a company/service provider
   description: string;
   partNumber?: string;
-  frequency: number;
-  frequencyUnit: 'days' | 'weeks' | 'months' | 'years';
+  frequency?: number; // Optional for log-only maintenance
+  frequencyUnit?: 'days' | 'weeks' | 'months' | 'years'; // Optional for log-only maintenance
   // Additional fields for mileage-based maintenance
   mileageInterval?: number; // e.g., every 5000 miles
+  isLogOnly?: boolean; // If true, this is log-only tracking without a recurring schedule
   isArchived?: boolean; // Whether this maintenance is archived
   pubkey: string;
   createdAt: number;

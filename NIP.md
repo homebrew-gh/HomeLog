@@ -257,7 +257,8 @@ An addressable event representing a maintenance schedule for an appliance or veh
     ["part_number", "<part number>"],
     ["frequency", "<number>"],
     ["frequency_unit", "days|weeks|months|years"],
-    ["mileage_interval", "<miles>"]
+    ["mileage_interval", "<miles>"],
+    ["is_log_only", "true"]
   ]
 }
 ```
@@ -271,9 +272,10 @@ An addressable event representing a maintenance schedule for an appliance or veh
 | `a` | Conditional | Reference to an appliance (kind 32627), vehicle (kind 32628), or company (kind 37003). At least one appliance, vehicle, or home feature reference is required. Company reference is optional. |
 | `description` | Yes | Description of the maintenance task |
 | `part_number` | No | Part number for replacement parts |
-| `frequency` | Yes | Numeric frequency value |
-| `frequency_unit` | Yes | Unit of frequency: days, weeks, months, or years |
-| `mileage_interval` | No | Mileage interval for vehicle maintenance (e.g., every 5000 miles) |
+| `frequency` | Conditional | Numeric frequency value. Required unless `is_log_only` is true. |
+| `frequency_unit` | Conditional | Unit of frequency: days, weeks, months, or years. Required unless `is_log_only` is true. |
+| `mileage_interval` | No | Mileage interval for vehicle maintenance (e.g., every 5000 miles). Only applicable for scheduled maintenance. |
+| `is_log_only` | No | If "true", this is log-only maintenance with no recurring schedule |
 
 ### Notes
 
@@ -282,9 +284,24 @@ An addressable event representing a maintenance schedule for an appliance or veh
 - The `a` tag marker indicates whether the reference is to an "appliance", "vehicle", or "company"
 - A company/service provider reference can be optionally added to link the maintenance task to a service provider from the Company/Service tab
 
+### Log-Only Maintenance
+
+Vehicle maintenance supports a "log-only" mode for tasks that don't have a recurring schedule. This is useful for tracking irregular maintenance like:
+- Tire rotation when needed
+- Brake pad replacement
+- Battery replacement
+- Window tinting
+- Any ad-hoc maintenance
+
+When `is_log_only` is "true":
+- The `frequency` and `frequency_unit` tags are omitted
+- No due dates are calculated
+- The UI displays "Last completed: <date>" instead of a due date
+- Users can still record completion events to track when the task was performed
+
 ### Due Date Calculation
 
-The next maintenance due date is calculated by:
+For scheduled (non-log-only) maintenance, the next due date is calculated by:
 1. Taking the `purchase_date` from the referenced appliance (kind 32627) or vehicle (kind 32628) event
 2. Adding the maintenance `frequency` × `frequency_unit` to get the first due date
 3. For subsequent due dates, continue adding the frequency interval

@@ -43,12 +43,18 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
 
   // Get home feature if present
   const homeFeature = getTagValue(event, 'home_feature');
+  
+  // Check if this is log-only maintenance
+  const isLogOnly = getTagValue(event, 'is_log_only') === 'true';
 
   // Must have at least one: applianceId, vehicleId, or homeFeature
-  if (!id || !description || !frequency || !frequencyUnit || (!applianceId && !vehicleId && !homeFeature)) return null;
+  if (!id || !description || (!applianceId && !vehicleId && !homeFeature)) return null;
+
+  // For non-log-only maintenance, frequency is required
+  if (!isLogOnly && (!frequency || !frequencyUnit)) return null;
 
   const validUnits = ['days', 'weeks', 'months', 'years'];
-  if (!validUnits.includes(frequencyUnit)) return null;
+  if (!isLogOnly && frequencyUnit && !validUnits.includes(frequencyUnit)) return null;
 
   const mileageInterval = getTagValue(event, 'mileage_interval');
 
@@ -60,9 +66,10 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
     companyId,
     description,
     partNumber: getTagValue(event, 'part_number'),
-    frequency: parseInt(frequency, 10),
+    frequency: frequency ? parseInt(frequency, 10) : undefined,
     frequencyUnit: frequencyUnit as MaintenanceSchedule['frequencyUnit'],
     mileageInterval: mileageInterval ? parseInt(mileageInterval, 10) : undefined,
+    isLogOnly,
     isArchived: getTagValue(event, 'is_archived') === 'true',
     pubkey: event.pubkey,
     createdAt: event.created_at,
@@ -278,11 +285,20 @@ export function useMaintenanceActions() {
     const id = crypto.randomUUID();
     const tags: string[][] = [
       ['d', id],
-      ['alt', `Maintenance schedule: ${data.description}`],
+      ['alt', data.isLogOnly ? `Maintenance log: ${data.description}` : `Maintenance schedule: ${data.description}`],
       ['description', data.description],
-      ['frequency', data.frequency.toString()],
-      ['frequency_unit', data.frequencyUnit],
     ];
+
+    // Add frequency tags only for scheduled (non-log-only) maintenance
+    if (!data.isLogOnly && data.frequency && data.frequencyUnit) {
+      tags.push(['frequency', data.frequency.toString()]);
+      tags.push(['frequency_unit', data.frequencyUnit]);
+    }
+
+    // Mark as log-only if applicable
+    if (data.isLogOnly) {
+      tags.push(['is_log_only', 'true']);
+    }
 
     // Add reference to appliance or vehicle
     if (data.applianceId) {
@@ -327,11 +343,20 @@ export function useMaintenanceActions() {
 
     const tags: string[][] = [
       ['d', id],
-      ['alt', `Maintenance schedule: ${data.description}`],
+      ['alt', data.isLogOnly ? `Maintenance log: ${data.description}` : `Maintenance schedule: ${data.description}`],
       ['description', data.description],
-      ['frequency', data.frequency.toString()],
-      ['frequency_unit', data.frequencyUnit],
     ];
+
+    // Add frequency tags only for scheduled (non-log-only) maintenance
+    if (!data.isLogOnly && data.frequency && data.frequencyUnit) {
+      tags.push(['frequency', data.frequency.toString()]);
+      tags.push(['frequency_unit', data.frequencyUnit]);
+    }
+
+    // Mark as log-only if applicable
+    if (data.isLogOnly) {
+      tags.push(['is_log_only', 'true']);
+    }
 
     // Add reference to appliance or vehicle
     if (data.applianceId) {

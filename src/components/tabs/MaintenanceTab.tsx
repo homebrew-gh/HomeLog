@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus, Archive, ArrowLeft } from 'lucide-react';
+import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus, Archive, ArrowLeft, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,6 +24,11 @@ function getMaintenanceDueDate(
   vehicles: Vehicle[],
   completions: MaintenanceCompletion[]
 ): Date | null {
+  // Log-only maintenance has no due date
+  if (maintenance.isLogOnly || !maintenance.frequency || !maintenance.frequencyUnit) {
+    return null;
+  }
+
   // Get the purchase date based on type
   let purchaseDate = '';
   
@@ -524,20 +529,30 @@ function VehicleMaintenanceItem({
   // Get the most recent completion date
   const lastCompletionDate = completions.length > 0 ? completions[0].completedDate : undefined;
 
-  const nextDueDate = calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate);
-  const overdue = purchaseDate ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
-  const dueSoon = purchaseDate ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate) : false;
+  // For log-only maintenance, don't calculate due dates
+  const isLogOnly = maintenance.isLogOnly;
+  const nextDueDate = !isLogOnly && maintenance.frequency && maintenance.frequencyUnit
+    ? calculateNextDueDate(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate)
+    : null;
+  const overdue = !isLogOnly && purchaseDate && maintenance.frequency && maintenance.frequencyUnit
+    ? isOverdue(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate)
+    : false;
+  const dueSoon = !isLogOnly && purchaseDate && maintenance.frequency && maintenance.frequencyUnit
+    ? isDueSoon(purchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate)
+    : false;
 
   const hasCompletions = completions.length > 0;
 
   return (
     <div className="space-y-1">
       <div className={`flex items-center gap-2 rounded-lg transition-colors ${
-        overdue
-          ? 'bg-red-50 dark:bg-red-900'
-          : dueSoon
-            ? 'bg-amber-50 dark:bg-amber-900'
-            : 'bg-white dark:bg-slate-800'
+        isLogOnly
+          ? 'bg-blue-50 dark:bg-blue-950'
+          : overdue
+            ? 'bg-red-50 dark:bg-red-900'
+            : dueSoon
+              ? 'bg-amber-50 dark:bg-amber-900'
+              : 'bg-white dark:bg-slate-800'
       }`}>
         {/* Chevron for completion history */}
         {hasCompletions && (
@@ -562,21 +577,27 @@ function VehicleMaintenanceItem({
           className={`flex items-center gap-4 flex-1 p-3 rounded-lg text-left transition-colors ${
             hasCompletions ? '' : 'ml-2'
           } ${
-            overdue
-              ? 'hover:bg-red-100 dark:hover:bg-red-800'
-              : dueSoon
-                ? 'hover:bg-amber-100 dark:hover:bg-amber-800'
-                : 'hover:bg-primary/5'
+            isLogOnly
+              ? 'hover:bg-blue-100 dark:hover:bg-blue-900'
+              : overdue
+                ? 'hover:bg-red-100 dark:hover:bg-red-800'
+                : dueSoon
+                  ? 'hover:bg-amber-100 dark:hover:bg-amber-800'
+                  : 'hover:bg-primary/5'
           }`}
         >
           <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-            overdue
-              ? 'bg-red-200 dark:bg-red-900'
-              : dueSoon
-                ? 'bg-amber-200 dark:bg-amber-900'
-                : 'bg-primary/20'
+            isLogOnly
+              ? 'bg-blue-200 dark:bg-blue-900'
+              : overdue
+                ? 'bg-red-200 dark:bg-red-900'
+                : dueSoon
+                  ? 'bg-amber-200 dark:bg-amber-900'
+                  : 'bg-primary/20'
           }`}>
-            {overdue ? (
+            {isLogOnly ? (
+              <ClipboardList className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            ) : overdue ? (
               <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
             ) : dueSoon ? (
               <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
@@ -595,24 +616,43 @@ function VehicleMaintenanceItem({
           </div>
 
           <div className="text-right shrink-0">
-            <p className={`text-sm font-medium ${
-              overdue
-                ? 'text-red-600 dark:text-red-400'
-                : dueSoon
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-slate-600 dark:text-slate-300'
-            }`}>
-              {overdue ? 'Overdue' : dueSoon ? 'Due Soon' : 'Due'}
-            </p>
-            <p className={`text-sm ${
-              overdue
-                ? 'text-red-500 dark:text-red-500'
-                : dueSoon
-                  ? 'text-amber-500 dark:text-amber-500'
-                  : 'text-slate-500 dark:text-slate-400'
-            }`}>
-              {formatDueDate(nextDueDate)}
-            </p>
+            {isLogOnly ? (
+              <>
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                  Log Only
+                </p>
+                {lastCompletionDate ? (
+                  <p className="text-sm text-blue-500 dark:text-blue-500">
+                    Last: {lastCompletionDate}
+                  </p>
+                ) : (
+                  <p className="text-sm text-slate-400 dark:text-slate-500">
+                    No records yet
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className={`text-sm font-medium ${
+                  overdue
+                    ? 'text-red-600 dark:text-red-400'
+                    : dueSoon
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-slate-600 dark:text-slate-300'
+                }`}>
+                  {overdue ? 'Overdue' : dueSoon ? 'Due Soon' : 'Due'}
+                </p>
+                <p className={`text-sm ${
+                  overdue
+                    ? 'text-red-500 dark:text-red-500'
+                    : dueSoon
+                      ? 'text-amber-500 dark:text-amber-500'
+                      : 'text-slate-500 dark:text-slate-400'
+                }`}>
+                  {formatDueDate(nextDueDate)}
+                </p>
+              </>
+            )}
           </div>
         </button>
       </div>
