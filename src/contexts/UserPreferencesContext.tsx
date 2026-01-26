@@ -239,6 +239,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     queryFn: async (c) => {
       if (!user?.pubkey) return null;
 
+      // Small delay to allow relay connections to establish after relay list changes
+      // This ensures we query the new relays, not the old ones
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Use shorter timeout since we have local storage as fallback
       // This is a background sync, not blocking UI
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
