@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useCallback, useState, type ReactNode } from 'react';
 import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -224,7 +224,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   );
 
   // Track if we've synced from remote on this session
-  const hasSyncedFromRemote = useRef(false);
+  // Using state instead of ref so changes trigger re-render
+  const [hasSyncedFromRemote, setHasSyncedFromRemote] = useState(false);
   const lastSyncedPubkey = useRef<string | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -280,26 +281,26 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user?.pubkey) {
       // User logged out, reset sync state
-      hasSyncedFromRemote.current = false;
+      setHasSyncedFromRemote(false);
       lastSyncedPubkey.current = null;
       return;
     }
 
     // Check if we need to sync (new user or different user)
     if (lastSyncedPubkey.current !== user.pubkey) {
-      hasSyncedFromRemote.current = false;
+      setHasSyncedFromRemote(false);
       lastSyncedPubkey.current = user.pubkey;
     }
 
     // If we have remote preferences and haven't synced yet, use them
-    if (isFetched && !hasSyncedFromRemote.current) {
+    if (isFetched && !hasSyncedFromRemote) {
       if (remotePreferences) {
         console.log('Syncing preferences from Nostr relay');
         setLocalPreferences(remotePreferences);
       }
-      hasSyncedFromRemote.current = true;
+      setHasSyncedFromRemote(true);
     }
-  }, [user?.pubkey, remotePreferences, isFetched, setLocalPreferences]);
+  }, [user?.pubkey, remotePreferences, isFetched, setLocalPreferences, hasSyncedFromRemote]);
 
   // Save preferences to Nostr (debounced)
   const saveToNostr = useCallback(
@@ -858,8 +859,13 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // "hasLocalData" means the user has actually customized their preferences
   // (not just using defaults), OR we've already synced from remote.
   const hasRealLocalData = localPreferences.activeTabs.length > 0;
-  const needsRemoteSync = !!user?.pubkey && !hasRealLocalData && !hasSyncedFromRemote.current;
-  const isActuallyLoading = needsRemoteSync && (isLoadingRemote || !isFetched);
+  
+  // Loading if:
+  // 1. User is logged in, AND
+  // 2. No local tabs (needs to fetch from remote), AND
+  // 3. Haven't synced from remote yet
+  const needsRemoteSync = !!user?.pubkey && !hasRealLocalData;
+  const isActuallyLoading = needsRemoteSync && !hasSyncedFromRemote;
 
   return (
     <UserPreferencesContext.Provider
