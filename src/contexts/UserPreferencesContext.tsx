@@ -227,7 +227,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
   // Track the active tab separately as transient UI state
   // This prevents Nostr publishes on every tab switch
-  const [activeTab, setActiveTabState] = useState<TabId>(localPreferences.activeTab || 'home');
+  // Always default to 'home' on initial load for consistent UX
+  const [activeTab, setActiveTabState] = useState<TabId>('home');
 
   // Track if we've synced from remote on this session
   // Using state instead of ref so changes trigger re-render
@@ -314,28 +315,12 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     lastSyncedRelayTimestamp.current = config.relayMetadata.updatedAt;
   }, [user?.pubkey, config.relayMetadata.updatedAt]);
 
-  // Sync activeTab state when localPreferences.activeTab changes (e.g., from local storage load)
-  useEffect(() => {
-    if (localPreferences.activeTab && localPreferences.activeTab !== activeTab) {
-      // Only sync if the stored tab is valid (either 'home' or in activeTabs)
-      const isValidTab = localPreferences.activeTab === 'home' || 
-        localPreferences.activeTabs.includes(localPreferences.activeTab);
-      if (isValidTab) {
-        setActiveTabState(localPreferences.activeTab);
-      }
-    }
-  }, []); // Only run on mount
-
-  // Apply remote preferences when fetched
+  // Apply remote preferences when fetched (but don't change activeTab - always start on home)
   useEffect(() => {
     if (isFetched && !hasSyncedFromRemote && user?.pubkey) {
       if (remotePreferences) {
         console.log('[UserPreferences] Syncing preferences from Nostr relay');
         setLocalPreferences(remotePreferences);
-        // Also sync the active tab from remote
-        if (remotePreferences.activeTab) {
-          setActiveTabState(remotePreferences.activeTab);
-        }
       }
       setHasSyncedFromRemote(true);
     }
