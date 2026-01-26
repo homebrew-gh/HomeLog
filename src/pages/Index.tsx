@@ -86,8 +86,11 @@ const Index = () => {
   );
   
   // Determine loading message based on current state
-  const loadingMessage = isProfileLoading ? "Signing in..." : "Loading your data...";
-  const loadingSubMessage = isProfileLoading ? "Connecting to your account" : "Fetching from Nostr relays";
+  // Show "Loading your data..." if we're waiting for data (even if profile is also loading)
+  // This is more informative since data fetch is usually what takes time
+  const isWaitingForData = !cacheChecked || (!hasCachedData && !isDataSynced);
+  const loadingMessage = isWaitingForData ? "Loading your data..." : "Signing in...";
+  const loadingSubMessage = isWaitingForData ? "Fetching from Nostr relays" : "Connecting to your account";
   
   // Data sync is happening in background - show indicator but don't block UI
   // Only show this for users who HAVE cached data (so they're not blocked by the main loading)
