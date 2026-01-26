@@ -13,9 +13,12 @@ export function useLocalStorage<T>(
     deserialize: (value: string) => T;
   }
 ) {
-  // Memoize serializer functions to prevent unnecessary re-renders
+  // Memoize serializer functions and default value to prevent unnecessary re-renders
   const serializerRef = useRef(serializer);
   serializerRef.current = serializer;
+  
+  // Store defaultValue in a ref to avoid dependency issues
+  const defaultValueRef = useRef(defaultValue);
 
   const serialize = useCallback((value: T): string => {
     return serializerRef.current?.serialize?.(value) ?? JSON.stringify(value);
@@ -25,28 +28,31 @@ export function useLocalStorage<T>(
     return serializerRef.current?.deserialize?.(value) ?? JSON.parse(value);
   }, []);
 
-  // Read from localStorage on every render to ensure we have the latest value
+  // Read from localStorage - uses ref for defaultValue to maintain stable reference
   const readFromStorage = useCallback((): T => {
     try {
       const item = localStorage.getItem(key);
       if (item === null) {
-        return defaultValue;
+        return defaultValueRef.current;
       }
       return deserialize(item);
     } catch (error) {
       console.warn(`Failed to load ${key} from localStorage:`, error);
-      return defaultValue;
+      return defaultValueRef.current;
     }
-  }, [key, defaultValue, deserialize]);
+  }, [key, deserialize]);
 
-  // Initialize state from localStorage
-  const [state, setState] = useState<T>(readFromStorage);
+  // Initialize state from localStorage (only runs once due to lazy initialization)
+  const [state, setState] = useState<T>(() => readFromStorage());
 
-  // Re-read from storage on mount to handle browser restarts
-  // This ensures we always have the latest value from localStorage
+  // Only re-read from storage when the key changes (not on every render)
+  const prevKeyRef = useRef(key);
   useEffect(() => {
-    const storedValue = readFromStorage();
-    setState(storedValue);
+    if (prevKeyRef.current !== key) {
+      prevKeyRef.current = key;
+      const storedValue = readFromStorage();
+      setState(storedValue);
+    }
   }, [key, readFromStorage]);
 
   // setValue function that properly handles functional updates
