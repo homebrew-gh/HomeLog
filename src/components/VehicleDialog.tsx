@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Shield, CreditCard } from 'lucide-react';
+import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Shield, CreditCard, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { VehicleMaintenanceWizard } from '@/components/VehicleMaintenanceWizard';
 import { useVehicleActions } from '@/hooks/useVehicles';
 import { useVehicleTypes } from '@/hooks/useVehicleTypes';
 import { useWarrantyActions } from '@/hooks/useWarranties';
@@ -65,6 +66,11 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
   // Options to create linked events
   const [createWarrantyEvent, setCreateWarrantyEvent] = useState(false);
   const [createSubscriptionEvent, setCreateSubscriptionEvent] = useState(false);
+  
+  // Maintenance wizard state
+  const [showMaintenanceWizard, setShowMaintenanceWizard] = useState(false);
+  const [savedVehicleId, setSavedVehicleId] = useState<string | null>(null);
+  const [savedVehicleName, setSavedVehicleName] = useState<string>('');
 
   const [formData, setFormData] = useState({
     vehicleType: '',
@@ -311,7 +317,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (openMaintenanceWizard: boolean = false) => {
     if (!formData.vehicleType) {
       toast({
         title: 'Vehicle type required',
@@ -425,7 +431,14 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
         }
       }
 
-      onClose();
+      // If openMaintenanceWizard is true, show the wizard instead of closing
+      if (openMaintenanceWizard && !isEditing) {
+        setSavedVehicleId(vehicleId);
+        setSavedVehicleName(formData.name);
+        setShowMaintenanceWizard(true);
+      } else {
+        onClose();
+      }
     } catch {
       toast({
         title: 'Error',
@@ -437,7 +450,15 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
     }
   };
 
+  const handleMaintenanceWizardClose = () => {
+    setShowMaintenanceWizard(false);
+    setSavedVehicleId(null);
+    setSavedVehicleName('');
+    onClose();
+  };
+
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
@@ -1087,16 +1108,40 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           </div>
         </div>
 
-        {/* Action Buttons - Bottom Left */}
-        <div className="flex justify-start gap-2 pt-4 border-t">
-          <Button onClick={handleSubmit} disabled={isSubmitting || isUploading}>
-            {isSubmitting ? 'Saving...' : 'Save'}
-          </Button>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Discard
-          </Button>
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3 pt-4 border-t">
+          {/* Primary actions row */}
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => handleSubmit(false)} disabled={isSubmitting || isUploading}>
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+            {!isEditing && (
+              <Button 
+                variant="secondary" 
+                onClick={() => handleSubmit(true)} 
+                disabled={isSubmitting || isUploading}
+              >
+                <Wrench className="h-4 w-4 mr-2" />
+                Save & Add Maintenance
+              </Button>
+            )}
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+              Discard
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Maintenance Wizard Dialog */}
+    {savedVehicleId && (
+      <VehicleMaintenanceWizard
+        isOpen={showMaintenanceWizard}
+        onClose={handleMaintenanceWizardClose}
+        vehicleId={savedVehicleId}
+        vehicleName={savedVehicleName}
+      />
+    )}
+    </>
   );
 }
