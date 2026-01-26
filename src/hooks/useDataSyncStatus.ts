@@ -98,7 +98,7 @@ export function useDataSyncStatus() {
 
   // Main sync query - fetches all data types in one efficient request
   const { data: syncStatus, isLoading: isSyncing } = useQuery({
-    queryKey: ['data-sync-status', user?.pubkey, cacheResult?.hasAny],
+    queryKey: ['data-sync-status', user?.pubkey],
     queryFn: async ({ signal }) => {
       if (!user?.pubkey) {
         return { 
@@ -223,7 +223,8 @@ export function useDataSyncStatus() {
   });
 
   return {
-    isSyncing: !syncStatus?.synced && isSyncing,
+    // Syncing if query is loading OR query hasn't even started yet (waiting for cache check)
+    isSyncing: isSyncing || (!syncStatus?.synced && !cacheChecked),
     isSynced: syncStatus?.synced ?? false,
     hasAnyData: syncStatus?.hasAnyData ?? false,
     // These are available immediately after cache check (before relay sync)
