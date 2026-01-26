@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
+import { useAppContext } from './useAppContext';
 import { useEffect, useState, useRef } from 'react';
 import { 
   APPLIANCE_KIND, 
@@ -40,6 +41,7 @@ interface CacheCheckResult {
 export function useDataSyncStatus() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const { config } = useAppContext();
   const queryClient = useQueryClient();
   const hasInvalidated = useRef(false);
   
@@ -47,10 +49,10 @@ export function useDataSyncStatus() {
   const [cacheChecked, setCacheChecked] = useState(false);
   const [cacheResult, setCacheResult] = useState<CacheCheckResult | null>(null);
   
-  // Reset invalidation flag when user changes
+  // Reset invalidation flag when user or relays change
   useEffect(() => {
     hasInvalidated.current = false;
-  }, [user?.pubkey]);
+  }, [user?.pubkey, config.relayMetadata.updatedAt]);
 
   // Check cache status immediately when user becomes available
   useEffect(() => {
@@ -97,8 +99,9 @@ export function useDataSyncStatus() {
   }, [user?.pubkey]);
 
   // Main sync query - fetches all data types in one efficient request
+  // Include relay updatedAt in query key so we re-fetch when relays change
   const { data: syncStatus, isLoading: isSyncing } = useQuery({
-    queryKey: ['data-sync-status', user?.pubkey],
+    queryKey: ['data-sync-status', user?.pubkey, config.relayMetadata.updatedAt],
     queryFn: async ({ signal }) => {
       if (!user?.pubkey) {
         return { 
@@ -116,6 +119,9 @@ export function useDataSyncStatus() {
           }
         };
       }
+
+      // Small delay to allow relay connections to establish after relay list changes
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Reuse cache check result from state instead of re-reading IndexedDB
       const hasAnyCachedData = cacheResult?.hasAny ?? false;
