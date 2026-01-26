@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive } from 'lucide-react';
@@ -44,10 +44,6 @@ import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
 import { useApplyColorTheme } from '@/hooks/useColorTheme';
 import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
 
-// Minimum loading time in milliseconds for initial profile loading
-// This just prevents jarring flashes for returning users
-const MIN_LOADING_TIME_MS = 300;
-
 const Index = () => {
   useSeoMeta({
     title: 'Home Log - Home Ownership Management',
@@ -57,70 +53,16 @@ const Index = () => {
   const { user } = useCurrentUser();
   const { isProfileLoading } = useLoggedInAccounts();
   const { preferences, setActiveTab } = useTabPreferences();
-  const { isSyncing: isDataSyncing, isSynced: isDataSynced, cacheChecked, hasCachedData } = useDataSyncStatus();
+  const { isSyncing: isDataSyncing, isSynced: isDataSynced, hasCachedData } = useDataSyncStatus();
   
   // Apply color theme to document root
   useApplyColorTheme();
 
-  // Track minimum loading time for initial auth/profile load only
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
-  const loadingStartTime = useRef<number | null>(null);
-
-  // Start timer when user logs in and profile loading begins
-  useEffect(() => {
-    if (user && isProfileLoading) {
-      // Only set start time if we haven't already
-      if (loadingStartTime.current === null) {
-        loadingStartTime.current = Date.now();
-        setMinTimeElapsed(false);
-      }
-    }
-  }, [user, isProfileLoading]);
-
-  // Check if minimum time has elapsed once profile loading completes
-  useEffect(() => {
-    if (user && !isProfileLoading && loadingStartTime.current !== null) {
-      const elapsed = Date.now() - loadingStartTime.current;
-      const remaining = MIN_LOADING_TIME_MS - elapsed;
-      
-      if (remaining <= 0) {
-        // Minimum time already elapsed
-        setMinTimeElapsed(true);
-        loadingStartTime.current = null;
-      } else {
-        // Wait for remaining time
-        const timer = setTimeout(() => {
-          setMinTimeElapsed(true);
-          loadingStartTime.current = null;
-        }, remaining);
-        
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [user, isProfileLoading]);
-
-  // Reset state when user logs out
-  useEffect(() => {
-    if (!user) {
-      loadingStartTime.current = null;
-      setMinTimeElapsed(false);
-    }
-  }, [user]);
-
-  // Initial loading state:
-  // 1. Profile is still loading, OR
-  // 2. Minimum time hasn't elapsed (prevents jarring flashes), OR
-  // 3. Cache hasn't been checked yet, OR
-  // 4. No cached data AND sync hasn't completed (first-time user experience)
-  const isInitialLoading = user && (
-    isProfileLoading || 
-    (!minTimeElapsed && loadingStartTime.current !== null) ||
-    !cacheChecked ||
-    (!hasCachedData && !isDataSynced)
-  );
+  // Simple loading state - only show loading animation while profile is being fetched
+  // Data loading is handled by skeleton states in individual components
+  const isInitialLoading = user && isProfileLoading;
   
   // Data sync is happening in background - show indicator but don't block UI
-  // Only show this when we have cached data to display while syncing
   const isBackgroundSyncing = user && isDataSyncing && !isDataSynced && hasCachedData;
 
   // Dialog states
@@ -294,19 +236,11 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {isInitialLoading ? (
-          // Initial loading - shows during auth, cache check, or first sync
+          // Initial loading - shows only during profile fetch
           <LoadingAnimation 
             size="md"
-            message={
-              isProfileLoading || !cacheChecked
-                ? "Signing in..."
-                : "Loading your data..."
-            }
-            subMessage={
-              isProfileLoading || !cacheChecked
-                ? "Connecting to your account"
-                : "Syncing with Nostr relays"
-            }
+            message="Signing in..."
+            subMessage="Connecting to your account"
           />
         ) : !user ? (
           // Not logged in - Welcome screen
