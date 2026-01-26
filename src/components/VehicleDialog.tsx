@@ -33,12 +33,12 @@ interface VehicleDialogProps {
 
 // Type-specific field configurations
 const TYPE_FIELDS: Record<string, string[]> = {
-  'Personal Vehicle': ['make', 'model', 'year', 'vin', 'licensePlate', 'mileage', 'fuelType', 'registration', 'insurance'],
-  'Recreational': ['make', 'model', 'year', 'vin', 'licensePlate', 'mileage', 'fuelType', 'registration', 'insurance'],
+  'Personal Vehicle': ['make', 'model', 'year', 'licensePlate', 'mileage', 'fuelType', 'registration'],
+  'Recreational': ['make', 'model', 'year', 'licensePlate', 'mileage', 'fuelType', 'registration'],
   'Farm Machinery': ['make', 'model', 'year', 'serialNumber', 'engineHours', 'fuelType'],
-  'Business Vehicle': ['make', 'model', 'year', 'vin', 'licensePlate', 'mileage', 'fuelType', 'registration', 'insurance'],
-  'Boat': ['make', 'model', 'year', 'hullId', 'registrationNumber', 'engineHours', 'fuelType', 'registration', 'insurance'],
-  'Plane': ['make', 'model', 'year', 'tailNumber', 'hobbsTime', 'fuelType', 'registration', 'insurance'],
+  'Business Vehicle': ['make', 'model', 'year', 'licensePlate', 'mileage', 'fuelType', 'registration'],
+  'Boat': ['make', 'model', 'year', 'hullId', 'registrationNumber', 'engineHours', 'fuelType', 'registration'],
+  'Plane': ['make', 'model', 'year', 'tailNumber', 'hobbsTime', 'fuelType', 'registration'],
 };
 
 // Default fields for custom types
@@ -55,7 +55,6 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
   const [showAddType, setShowAddType] = useState(false);
   const [newType, setNewType] = useState('');
   const [useTodayDate, setUseTodayDate] = useState(false);
-  const [showInsurance, setShowInsurance] = useState(false);
   const [showWarranty, setShowWarranty] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -66,14 +65,10 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
     year: '',
     purchaseDate: '',
     purchasePrice: '',
-    vin: '',
     licensePlate: '',
     mileage: '',
     fuelType: '',
     registrationExpiry: '',
-    insuranceProvider: '',
-    insurancePolicyNumber: '',
-    insuranceExpiry: '',
     hullId: '',
     registrationNumber: '',
     engineHours: '',
@@ -113,14 +108,10 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           year: vehicle.year || '',
           purchaseDate: vehicle.purchaseDate || '',
           purchasePrice: vehicle.purchasePrice || '',
-          vin: vehicle.vin || '',
           licensePlate: vehicle.licensePlate || '',
           mileage: vehicle.mileage || '',
           fuelType: vehicle.fuelType || '',
           registrationExpiry: vehicle.registrationExpiry || '',
-          insuranceProvider: vehicle.insuranceProvider || '',
-          insurancePolicyNumber: vehicle.insurancePolicyNumber || '',
-          insuranceExpiry: vehicle.insuranceExpiry || '',
           hullId: vehicle.hullId || '',
           registrationNumber: vehicle.registrationNumber || '',
           engineHours: vehicle.engineHours || '',
@@ -133,7 +124,6 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           documentsUrls: vehicle.documentsUrls || [],
           notes: vehicle.notes || '',
         });
-        setShowInsurance(!!(vehicle.insuranceProvider || vehicle.insurancePolicyNumber || vehicle.insuranceExpiry));
         setShowWarranty(!!(vehicle.warrantyUrl || vehicle.warrantyExpiry));
       } else {
         setFormData({
@@ -144,14 +134,10 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           year: '',
           purchaseDate: '',
           purchasePrice: '',
-          vin: '',
           licensePlate: '',
           mileage: '',
           fuelType: '',
           registrationExpiry: '',
-          insuranceProvider: '',
-          insurancePolicyNumber: '',
-          insuranceExpiry: '',
           hullId: '',
           registrationNumber: '',
           engineHours: '',
@@ -164,7 +150,6 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           documentsUrls: [],
           notes: '',
         });
-        setShowInsurance(false);
         setShowWarranty(false);
       }
       setShowAddType(false);
@@ -451,19 +436,6 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
                 </div>
               )}
 
-              {/* VIN */}
-              {visibleFields.includes('vin') && (
-                <div className="space-y-2">
-                  <Label htmlFor="vin">VIN</Label>
-                  <Input
-                    id="vin"
-                    value={formData.vin}
-                    onChange={(e) => setFormData(prev => ({ ...prev, vin: e.target.value }))}
-                    placeholder="Vehicle Identification Number"
-                  />
-                </div>
-              )}
-
               {/* Serial Number (Farm Machinery) */}
               {visibleFields.includes('serialNumber') && (
                 <div className="space-y-2">
@@ -631,45 +603,6 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
               placeholder="$0.00"
             />
           </div>
-
-          {/* Insurance Section (collapsible) */}
-          {visibleFields.includes('insurance') && (
-            <Collapsible open={showInsurance} onOpenChange={setShowInsurance}>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors">
-                {showInsurance ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                <span className="font-medium">Insurance Information</span>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-4 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="insuranceProvider">Insurance Provider</Label>
-                  <Input
-                    id="insuranceProvider"
-                    value={formData.insuranceProvider}
-                    onChange={(e) => setFormData(prev => ({ ...prev, insuranceProvider: e.target.value }))}
-                    placeholder="Insurance company name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="insurancePolicyNumber">Policy Number</Label>
-                  <Input
-                    id="insurancePolicyNumber"
-                    value={formData.insurancePolicyNumber}
-                    onChange={(e) => setFormData(prev => ({ ...prev, insurancePolicyNumber: e.target.value }))}
-                    placeholder="Policy number"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="insuranceExpiry">Insurance Expiry (MM/DD/YYYY)</Label>
-                  <Input
-                    id="insuranceExpiry"
-                    value={formData.insuranceExpiry}
-                    onChange={(e) => setFormData(prev => ({ ...prev, insuranceExpiry: e.target.value }))}
-                    placeholder="MM/DD/YYYY"
-                  />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
 
           {/* Warranty Section (collapsible) */}
           <Collapsible open={showWarranty} onOpenChange={setShowWarranty}>

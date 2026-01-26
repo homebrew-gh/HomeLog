@@ -36,15 +36,11 @@ export interface Vehicle {
   purchaseDate?: string; // MM/DD/YYYY format
   purchasePrice?: string;
   // Vehicle-specific fields
-  vin?: string; // VIN for cars/trucks
   licensePlate?: string;
   mileage?: string;
   fuelType?: string;
-  // Registration/Insurance
+  // Registration
   registrationExpiry?: string; // MM/DD/YYYY format
-  insuranceProvider?: string;
-  insurancePolicyNumber?: string;
-  insuranceExpiry?: string; // MM/DD/YYYY format
   // Boat-specific fields
   hullId?: string; // HIN for boats
   registrationNumber?: string;

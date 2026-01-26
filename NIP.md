@@ -76,14 +76,10 @@ An addressable event representing a vehicle (car, truck, boat, plane, farm machi
     ["year", "<year>"],
     ["purchase_date", "<MM/DD/YYYY>"],
     ["purchase_price", "<price>"],
-    ["vin", "<VIN>"],
     ["license_plate", "<plate>"],
     ["mileage", "<mileage>"],
     ["fuel_type", "<fuel type>"],
     ["registration_expiry", "<MM/DD/YYYY>"],
-    ["insurance_provider", "<provider>"],
-    ["insurance_policy_number", "<policy number>"],
-    ["insurance_expiry", "<MM/DD/YYYY>"],
     ["hull_id", "<HIN for boats>"],
     ["registration_number", "<registration for boats>"],
     ["engine_hours", "<hours>"],
@@ -112,14 +108,10 @@ An addressable event representing a vehicle (car, truck, boat, plane, farm machi
 | `year` | No | Model year |
 | `purchase_date` | No | Purchase date in MM/DD/YYYY format |
 | `purchase_price` | No | Purchase price |
-| `vin` | No | Vehicle Identification Number (cars/trucks) |
 | `license_plate` | No | License plate number |
 | `mileage` | No | Current mileage |
 | `fuel_type` | No | Fuel type (gasoline, diesel, electric, etc.) |
 | `registration_expiry` | No | Registration expiration date |
-| `insurance_provider` | No | Insurance company name |
-| `insurance_policy_number` | No | Insurance policy number |
-| `insurance_expiry` | No | Insurance expiration date |
 | `hull_id` | No | Hull Identification Number (boats) |
 | `registration_number` | No | Boat/aircraft registration number |
 | `engine_hours` | No | Engine hours (boats, farm machinery) |

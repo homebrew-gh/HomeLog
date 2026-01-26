@@ -152,16 +152,6 @@ export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete
             )}
 
             {/* Identification Numbers */}
-            {vehicle.vin && (
-              <div className="flex items-start gap-3">
-                <Hash className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">VIN</p>
-                  <p className="font-mono text-sm">{vehicle.vin}</p>
-                </div>
-              </div>
-            )}
-
             {vehicle.serialNumber && (
               <div className="flex items-start gap-3">
                 <Hash className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
@@ -256,53 +246,25 @@ export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete
               </>
             )}
 
-            {/* Registration & Insurance */}
-            {(vehicle.registrationExpiry || vehicle.insuranceProvider || vehicle.insuranceExpiry) && (
+            {/* Registration */}
+            {vehicle.registrationExpiry && (
               <>
                 <Separator />
-                {vehicle.registrationExpiry && (
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-muted-foreground">Registration Expiry</p>
-                      <div className="flex items-center gap-2">
-                        <p>{vehicle.registrationExpiry}</p>
-                        {isExpired(vehicle.registrationExpiry) && (
-                          <Badge variant="destructive">Expired</Badge>
-                        )}
-                        {isExpiringSoon(vehicle.registrationExpiry) && (
-                          <Badge className="bg-amber-100 text-amber-700">Expiring Soon</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {(vehicle.insuranceProvider || vehicle.insuranceExpiry) && (
-                  <div className="flex items-start gap-3">
-                    <Shield className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-muted-foreground">Insurance</p>
-                      {vehicle.insuranceProvider && (
-                        <p>{vehicle.insuranceProvider}</p>
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground">Registration Expiry</p>
+                    <div className="flex items-center gap-2">
+                      <p>{vehicle.registrationExpiry}</p>
+                      {isExpired(vehicle.registrationExpiry) && (
+                        <Badge variant="destructive">Expired</Badge>
                       )}
-                      {vehicle.insurancePolicyNumber && (
-                        <p className="text-sm text-muted-foreground">Policy: {vehicle.insurancePolicyNumber}</p>
-                      )}
-                      {vehicle.insuranceExpiry && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-sm">Expires: {vehicle.insuranceExpiry}</span>
-                          {isExpired(vehicle.insuranceExpiry) && (
-                            <Badge variant="destructive">Expired</Badge>
-                          )}
-                          {isExpiringSoon(vehicle.insuranceExpiry) && (
-                            <Badge className="bg-amber-100 text-amber-700">Expiring Soon</Badge>
-                          )}
-                        </div>
+                      {isExpiringSoon(vehicle.registrationExpiry) && (
+                        <Badge className="bg-amber-100 text-amber-700">Expiring Soon</Badge>
                       )}
                     </div>
                   </div>
-                )}
+                </div>
               </>
             )}
 

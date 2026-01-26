@@ -767,16 +767,6 @@ function VehicleDetailContent({ id }: { id: string }) {
                 </div>
               )}
 
-              {vehicle.vin && (
-                <div className="flex items-start gap-3">
-                  <Hash className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">VIN</p>
-                    <p className="font-mono text-sm">{vehicle.vin}</p>
-                  </div>
-                </div>
-              )}
-
               {vehicle.licensePlate && (
                 <div className="flex items-start gap-3">
                   <CreditCard className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
@@ -866,49 +856,24 @@ function VehicleDetailContent({ id }: { id: string }) {
           </Card>
         </section>
 
-        {/* Registration & Insurance Section */}
-        {(vehicle.registrationExpiry || vehicle.insuranceProvider || vehicle.insuranceExpiry) && (
+        {/* Registration Section */}
+        {vehicle.registrationExpiry && (
           <section>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  Registration & Insurance
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Registration
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {vehicle.registrationExpiry && (
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Registration Expiry</p>
-                      <p>{vehicle.registrationExpiry}</p>
-                    </div>
+              <CardContent>
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Registration Expiry</p>
+                    <p>{vehicle.registrationExpiry}</p>
                   </div>
-                )}
-
-                {vehicle.insuranceProvider && (
-                  <div className="flex items-start gap-3">
-                    <Shield className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Insurance Provider</p>
-                      <p>{vehicle.insuranceProvider}</p>
-                      {vehicle.insurancePolicyNumber && (
-                        <p className="text-sm text-muted-foreground">Policy: {vehicle.insurancePolicyNumber}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {vehicle.insuranceExpiry && (
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Insurance Expiry</p>
-                      <p>{vehicle.insuranceExpiry}</p>
-                    </div>
-                  </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </section>

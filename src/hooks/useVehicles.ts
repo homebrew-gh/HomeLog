@@ -46,14 +46,10 @@ function parseVehiclePlaintext(event: NostrEvent): Vehicle | null {
     year: getTagValue(event, 'year'),
     purchaseDate: getTagValue(event, 'purchase_date'),
     purchasePrice: getTagValue(event, 'purchase_price'),
-    vin: getTagValue(event, 'vin'),
     licensePlate: getTagValue(event, 'license_plate'),
     mileage: getTagValue(event, 'mileage'),
     fuelType: getTagValue(event, 'fuel_type'),
     registrationExpiry: getTagValue(event, 'registration_expiry'),
-    insuranceProvider: getTagValue(event, 'insurance_provider'),
-    insurancePolicyNumber: getTagValue(event, 'insurance_policy_number'),
-    insuranceExpiry: getTagValue(event, 'insurance_expiry'),
     hullId: getTagValue(event, 'hull_id'),
     registrationNumber: getTagValue(event, 'registration_number'),
     engineHours: getTagValue(event, 'engine_hours'),
@@ -268,14 +264,10 @@ export function useVehicleActions() {
       if (data.year) tags.push(['year', data.year]);
       if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
       if (data.purchasePrice) tags.push(['purchase_price', data.purchasePrice]);
-      if (data.vin) tags.push(['vin', data.vin]);
       if (data.licensePlate) tags.push(['license_plate', data.licensePlate]);
       if (data.mileage) tags.push(['mileage', data.mileage]);
       if (data.fuelType) tags.push(['fuel_type', data.fuelType]);
       if (data.registrationExpiry) tags.push(['registration_expiry', data.registrationExpiry]);
-      if (data.insuranceProvider) tags.push(['insurance_provider', data.insuranceProvider]);
-      if (data.insurancePolicyNumber) tags.push(['insurance_policy_number', data.insurancePolicyNumber]);
-      if (data.insuranceExpiry) tags.push(['insurance_expiry', data.insuranceExpiry]);
       if (data.hullId) tags.push(['hull_id', data.hullId]);
       if (data.registrationNumber) tags.push(['registration_number', data.registrationNumber]);
       if (data.engineHours) tags.push(['engine_hours', data.engineHours]);
@@ -335,14 +327,10 @@ export function useVehicleActions() {
       if (data.year) tags.push(['year', data.year]);
       if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
       if (data.purchasePrice) tags.push(['purchase_price', data.purchasePrice]);
-      if (data.vin) tags.push(['vin', data.vin]);
       if (data.licensePlate) tags.push(['license_plate', data.licensePlate]);
       if (data.mileage) tags.push(['mileage', data.mileage]);
       if (data.fuelType) tags.push(['fuel_type', data.fuelType]);
       if (data.registrationExpiry) tags.push(['registration_expiry', data.registrationExpiry]);
-      if (data.insuranceProvider) tags.push(['insurance_provider', data.insuranceProvider]);
-      if (data.insurancePolicyNumber) tags.push(['insurance_policy_number', data.insurancePolicyNumber]);
-      if (data.insuranceExpiry) tags.push(['insurance_expiry', data.insuranceExpiry]);
       if (data.hullId) tags.push(['hull_id', data.hullId]);
       if (data.registrationNumber) tags.push(['registration_number', data.registrationNumber]);
       if (data.engineHours) tags.push(['engine_hours', data.engineHours]);
