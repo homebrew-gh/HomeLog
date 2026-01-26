@@ -170,7 +170,8 @@ export function useCompanies() {
       return [];
     },
     enabled: !!user?.pubkey,
-    staleTime: Infinity,
+    staleTime: 0, // Always refetch on mount to pick up cache changes
+    gcTime: 0, // Don't keep stale data between sessions
   });
 
   return query;
