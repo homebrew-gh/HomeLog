@@ -1,7 +1,5 @@
-import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
@@ -159,75 +157,31 @@ async function parseEventsToWarranties(
 }
 
 export function useWarranties() {
-  const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
-  const queryClient = useQueryClient();
-  const isSyncing = useRef(false);
 
-  // Main query - loads from cache first
+  // Main query - loads from cache only
+  // Background sync is handled centrally by useDataSyncStatus
   const query = useQuery({
     queryKey: ['warranties', user?.pubkey],
     queryFn: async () => {
       if (!user?.pubkey) return [];
 
-      console.log('[useWarranties] Loading from cache for pubkey:', user.pubkey);
-
-      // Load from cache first (instant)
+      // Load from cache (populated by useDataSyncStatus)
       const cachedEvents = await getCachedEvents([WARRANTY_KIND, 5], user.pubkey);
       
       if (cachedEvents.length > 0) {
-        console.log('[useWarranties] Found cached events:', cachedEvents.length);
         const warranties = await parseEventsToWarranties(cachedEvents, user.pubkey, decryptForCategory);
         return warranties;
       }
 
-      console.log('[useWarranties] No cache, waiting for relay sync...');
       return [];
     },
     enabled: !!user?.pubkey,
     staleTime: Infinity,
+    refetchInterval: 5000, // Re-check cache every 5s to pick up synced data
+    refetchIntervalInBackground: false,
   });
-
-  // Background sync with relays
-  useEffect(() => {
-    if (!user?.pubkey || isSyncing.current) return;
-
-    const syncWithRelays = async () => {
-      isSyncing.current = true;
-      console.log('[useWarranties] Starting background relay sync...');
-
-      try {
-        const signal = AbortSignal.timeout(15000);
-        
-        const events = await nostr.query(
-          [
-            { kinds: [WARRANTY_KIND], authors: [user.pubkey] },
-            { kinds: [5], authors: [user.pubkey] },
-          ],
-          { signal }
-        );
-
-        console.log('[useWarranties] Relay sync received events:', events.length);
-
-        if (events.length > 0) {
-          await cacheEvents(events);
-        }
-
-        const warranties = await parseEventsToWarranties(events, user.pubkey, decryptForCategory);
-        queryClient.setQueryData(['warranties', user.pubkey], warranties);
-        
-        console.log('[useWarranties] Background sync complete, warranties:', warranties.length);
-      } catch (error) {
-        console.error('[useWarranties] Background sync failed:', error);
-      } finally {
-        isSyncing.current = false;
-      }
-    };
-
-    const timer = setTimeout(syncWithRelays, 100);
-    return () => clearTimeout(timer);
-  }, [user?.pubkey, nostr, queryClient, decryptForCategory]);
 
   return query;
 }

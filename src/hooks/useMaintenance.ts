@@ -1,7 +1,5 @@
-import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
@@ -161,18 +159,16 @@ function parseEventsToMaintenance(events: NostrEvent[], pubkey: string): Mainten
 }
 
 export function useMaintenance() {
-  const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const queryClient = useQueryClient();
-  const isSyncing = useRef(false);
 
-  // Main query - loads from cache first
+  // Main query - loads from cache only
+  // Background sync is handled centrally by useDataSyncStatus
   const query = useQuery({
     queryKey: ['maintenance', user?.pubkey],
     queryFn: async () => {
       if (!user?.pubkey) return [];
 
-      // Load from cache first (instant)
+      // Load from cache (populated by useDataSyncStatus)
       const cachedEvents = await getCachedEvents([MAINTENANCE_KIND, 5], user.pubkey);
       
       if (cachedEvents.length > 0) {
@@ -184,42 +180,9 @@ export function useMaintenance() {
     },
     enabled: !!user?.pubkey,
     staleTime: Infinity,
+    refetchInterval: 5000, // Re-check cache every 5s to pick up synced data
+    refetchIntervalInBackground: false,
   });
-
-  // Background sync with relays
-  useEffect(() => {
-    if (!user?.pubkey || isSyncing.current) return;
-
-    const syncWithRelays = async () => {
-      isSyncing.current = true;
-
-      try {
-        const signal = AbortSignal.timeout(15000);
-        
-        const events = await nostr.query(
-          [
-            { kinds: [MAINTENANCE_KIND], authors: [user.pubkey] },
-            { kinds: [5], authors: [user.pubkey] },
-          ],
-          { signal }
-        );
-
-        if (events.length > 0) {
-          await cacheEvents(events);
-        }
-
-        const maintenance = parseEventsToMaintenance(events, user.pubkey);
-        queryClient.setQueryData(['maintenance', user.pubkey], maintenance);
-      } catch {
-        // Background sync failed, cached data will be used
-      } finally {
-        isSyncing.current = false;
-      }
-    };
-
-    const timer = setTimeout(syncWithRelays, 100);
-    return () => clearTimeout(timer);
-  }, [user?.pubkey, nostr, queryClient]);
 
   return query;
 }

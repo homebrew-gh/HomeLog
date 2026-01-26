@@ -1,7 +1,5 @@
-import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
@@ -151,75 +149,31 @@ async function parseEventsToCompanies(
 }
 
 export function useCompanies() {
-  const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
-  const queryClient = useQueryClient();
-  const isSyncing = useRef(false);
 
-  // Main query - loads from cache first
+  // Main query - loads from cache only
+  // Background sync is handled centrally by useDataSyncStatus
   const query = useQuery({
     queryKey: ['companies', user?.pubkey],
     queryFn: async () => {
       if (!user?.pubkey) return [];
 
-      console.log('[useCompanies] Loading from cache for pubkey:', user.pubkey);
-
-      // Load from cache first (instant)
+      // Load from cache (populated by useDataSyncStatus)
       const cachedEvents = await getCachedEvents([COMPANY_KIND, 5], user.pubkey);
       
       if (cachedEvents.length > 0) {
-        console.log('[useCompanies] Found cached events:', cachedEvents.length);
         const companies = await parseEventsToCompanies(cachedEvents, user.pubkey, decryptForCategory);
         return companies;
       }
 
-      console.log('[useCompanies] No cache, waiting for relay sync...');
       return [];
     },
     enabled: !!user?.pubkey,
     staleTime: Infinity,
+    refetchInterval: 5000, // Re-check cache every 5s to pick up synced data
+    refetchIntervalInBackground: false,
   });
-
-  // Background sync with relays
-  useEffect(() => {
-    if (!user?.pubkey || isSyncing.current) return;
-
-    const syncWithRelays = async () => {
-      isSyncing.current = true;
-      console.log('[useCompanies] Starting background relay sync...');
-
-      try {
-        const signal = AbortSignal.timeout(15000);
-        
-        const events = await nostr.query(
-          [
-            { kinds: [COMPANY_KIND], authors: [user.pubkey] },
-            { kinds: [5], authors: [user.pubkey] },
-          ],
-          { signal }
-        );
-
-        console.log('[useCompanies] Relay sync received events:', events.length);
-
-        if (events.length > 0) {
-          await cacheEvents(events);
-        }
-
-        const companies = await parseEventsToCompanies(events, user.pubkey, decryptForCategory);
-        queryClient.setQueryData(['companies', user.pubkey], companies);
-        
-        console.log('[useCompanies] Background sync complete, companies:', companies.length);
-      } catch (error) {
-        console.error('[useCompanies] Background sync failed:', error);
-      } finally {
-        isSyncing.current = false;
-      }
-    };
-
-    const timer = setTimeout(syncWithRelays, 100);
-    return () => clearTimeout(timer);
-  }, [user?.pubkey, nostr, queryClient, decryptForCategory]);
 
   return query;
 }

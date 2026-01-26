@@ -1,7 +1,5 @@
-import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
@@ -141,13 +139,11 @@ async function parseEventsToAppliances(
 }
 
 export function useAppliances() {
-  const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
-  const queryClient = useQueryClient();
-  const isSyncing = useRef(false);
 
-  // Main query - loads from cache first, then syncs with relays in background
+  // Main query - loads from cache only
+  // Background sync is handled centrally by useDataSyncStatus
   const query = useQuery({
     queryKey: ['appliances', user?.pubkey],
     queryFn: async () => {
@@ -155,9 +151,7 @@ export function useAppliances() {
         return [];
       }
 
-      // Loading appliances from cache
-
-      // Load from cache first (instant)
+      // Load from cache (populated by useDataSyncStatus)
       const cachedEvents = await getCachedEvents([APPLIANCE_KIND, 5], user.pubkey);
       
       if (cachedEvents.length > 0) {
@@ -165,55 +159,13 @@ export function useAppliances() {
         return appliances;
       }
 
-      // If no cache, return empty and let the background sync populate data
       return [];
     },
     enabled: !!user?.pubkey,
-    staleTime: Infinity, // Don't auto-refetch, we handle sync manually
+    staleTime: Infinity,
+    refetchInterval: 5000, // Re-check cache every 5s to pick up synced data
+    refetchIntervalInBackground: false,
   });
-
-  // Background sync with relays
-  useEffect(() => {
-    if (!user?.pubkey || isSyncing.current) return;
-
-    const syncWithRelays = async () => {
-      isSyncing.current = true;
-
-      try {
-        const signal = AbortSignal.timeout(15000);
-        
-        const events = await nostr.query(
-          [
-            { kinds: [APPLIANCE_KIND], authors: [user.pubkey] },
-            { kinds: [5], authors: [user.pubkey] },
-          ],
-          { signal }
-        );
-
-        // Relay sync complete
-
-        // Cache the events for next time
-        if (events.length > 0) {
-          await cacheEvents(events);
-        }
-
-        // Parse and update the query data
-        const appliances = await parseEventsToAppliances(events, user.pubkey, decryptForCategory);
-        
-        // Update the query cache with fresh data
-        queryClient.setQueryData(['appliances', user.pubkey], appliances);
-      } catch {
-        // Background sync failed, cached data will be used
-        // Don't throw - we still have cached data
-      } finally {
-        isSyncing.current = false;
-      }
-    };
-
-    // Start sync after a short delay to prioritize cache loading
-    const timer = setTimeout(syncWithRelays, 100);
-    return () => clearTimeout(timer);
-  }, [user?.pubkey, nostr, queryClient, decryptForCategory]);
 
   return query;
 }

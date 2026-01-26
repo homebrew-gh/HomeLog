@@ -7,7 +7,9 @@ import {
   VEHICLE_KIND, 
   MAINTENANCE_KIND, 
   COMPANY_KIND, 
-  SUBSCRIPTION_KIND 
+  SUBSCRIPTION_KIND,
+  WARRANTY_KIND,
+  MAINTENANCE_COMPLETION_KIND,
 } from '@/lib/types';
 import { cacheEvents, getCachedEvents } from '@/lib/eventCache';
 
@@ -21,6 +23,8 @@ interface CacheCheckResult {
   maintenance: number;
   companies: number;
   subscriptions: number;
+  warranties: number;
+  completions: number;
   hasAny: boolean;
 }
 
@@ -51,12 +55,14 @@ export function useDataSyncStatus() {
     
     // Check cache instantly (IndexedDB is very fast)
     const checkCache = async () => {
-      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedSubscriptions] = await Promise.all([
+      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedSubscriptions, cachedWarranties, cachedCompletions] = await Promise.all([
         getCachedEvents([APPLIANCE_KIND], user.pubkey),
         getCachedEvents([VEHICLE_KIND], user.pubkey),
         getCachedEvents([MAINTENANCE_KIND], user.pubkey),
         getCachedEvents([COMPANY_KIND], user.pubkey),
         getCachedEvents([SUBSCRIPTION_KIND], user.pubkey),
+        getCachedEvents([WARRANTY_KIND], user.pubkey),
+        getCachedEvents([MAINTENANCE_COMPLETION_KIND], user.pubkey),
       ]);
       
       const result: CacheCheckResult = {
@@ -65,11 +71,15 @@ export function useDataSyncStatus() {
         maintenance: cachedMaintenance.length,
         companies: cachedCompanies.length,
         subscriptions: cachedSubscriptions.length,
+        warranties: cachedWarranties.length,
+        completions: cachedCompletions.length,
         hasAny: cachedAppliances.length > 0 ||
           cachedVehicles.length > 0 ||
           cachedMaintenance.length > 0 ||
           cachedCompanies.length > 0 ||
-          cachedSubscriptions.length > 0,
+          cachedSubscriptions.length > 0 ||
+          cachedWarranties.length > 0 ||
+          cachedCompletions.length > 0,
       };
       
       setCacheResult(result);
@@ -94,6 +104,8 @@ export function useDataSyncStatus() {
             maintenance: { synced: false, count: 0 },
             companies: { synced: false, count: 0 },
             subscriptions: { synced: false, count: 0 },
+            warranties: { synced: false, count: 0 },
+            completions: { synced: false, count: 0 },
           }
         };
       }
@@ -114,12 +126,12 @@ export function useDataSyncStatus() {
             { kinds: [MAINTENANCE_KIND], authors: [user.pubkey] },
             { kinds: [COMPANY_KIND], authors: [user.pubkey] },
             { kinds: [SUBSCRIPTION_KIND], authors: [user.pubkey] },
+            { kinds: [WARRANTY_KIND], authors: [user.pubkey] },
+            { kinds: [MAINTENANCE_COMPLETION_KIND], authors: [user.pubkey] },
             { kinds: [5], authors: [user.pubkey] }, // Deletion events
           ],
           { signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) }
         );
-
-        // Sync complete
 
         // Cache all events for other hooks to use
         if (events.length > 0) {
@@ -132,6 +144,8 @@ export function useDataSyncStatus() {
         const maintenanceCount = events.filter(e => e.kind === MAINTENANCE_KIND).length;
         const companyCount = events.filter(e => e.kind === COMPANY_KIND).length;
         const subscriptionCount = events.filter(e => e.kind === SUBSCRIPTION_KIND).length;
+        const warrantyCount = events.filter(e => e.kind === WARRANTY_KIND).length;
+        const completionCount = events.filter(e => e.kind === MAINTENANCE_COMPLETION_KIND).length;
 
         return {
           synced: true,
@@ -142,6 +156,8 @@ export function useDataSyncStatus() {
             maintenance: { synced: true, count: maintenanceCount },
             companies: { synced: true, count: companyCount },
             subscriptions: { synced: true, count: subscriptionCount },
+            warranties: { synced: true, count: warrantyCount },
+            completions: { synced: true, count: completionCount },
           }
         };
       } catch {
@@ -156,6 +172,8 @@ export function useDataSyncStatus() {
               maintenance: { synced: true, count: cacheResult.maintenance },
               companies: { synced: true, count: cacheResult.companies },
               subscriptions: { synced: true, count: cacheResult.subscriptions },
+              warranties: { synced: true, count: cacheResult.warranties },
+              completions: { synced: true, count: cacheResult.completions },
             }
           };
         }
@@ -170,6 +188,8 @@ export function useDataSyncStatus() {
             maintenance: { synced: true, count: 0 },
             companies: { synced: true, count: 0 },
             subscriptions: { synced: true, count: 0 },
+            warranties: { synced: true, count: 0 },
+            completions: { synced: true, count: 0 },
           }
         };
       }
@@ -193,6 +213,8 @@ export function useDataSyncStatus() {
       maintenance: { synced: false, count: 0 },
       companies: { synced: false, count: 0 },
       subscriptions: { synced: false, count: 0 },
+      warranties: { synced: false, count: 0 },
+      completions: { synced: false, count: 0 },
     },
   };
 }

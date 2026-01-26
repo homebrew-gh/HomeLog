@@ -1,7 +1,5 @@
-import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
@@ -83,74 +81,30 @@ function parseEventsToCompletions(events: NostrEvent[]): MaintenanceCompletion[]
 }
 
 export function useMaintenanceCompletions() {
-  const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const queryClient = useQueryClient();
-  const isSyncing = useRef(false);
 
-  // Main query - loads from cache first
+  // Main query - loads from cache only
+  // Background sync is handled centrally by useDataSyncStatus
   const query = useQuery({
     queryKey: ['maintenance-completions', user?.pubkey],
     queryFn: async () => {
       if (!user?.pubkey) return [];
 
-      console.log('[useMaintenanceCompletions] Loading from cache for pubkey:', user.pubkey);
-
-      // Load from cache first (instant)
+      // Load from cache (populated by useDataSyncStatus)
       const cachedEvents = await getCachedEvents([MAINTENANCE_COMPLETION_KIND, 5], user.pubkey);
       
       if (cachedEvents.length > 0) {
-        console.log('[useMaintenanceCompletions] Found cached events:', cachedEvents.length);
         const completions = parseEventsToCompletions(cachedEvents);
         return completions;
       }
 
-      console.log('[useMaintenanceCompletions] No cache, waiting for relay sync...');
       return [];
     },
     enabled: !!user?.pubkey,
     staleTime: Infinity,
+    refetchInterval: 5000, // Re-check cache every 5s to pick up synced data
+    refetchIntervalInBackground: false,
   });
-
-  // Background sync with relays
-  useEffect(() => {
-    if (!user?.pubkey || isSyncing.current) return;
-
-    const syncWithRelays = async () => {
-      isSyncing.current = true;
-      console.log('[useMaintenanceCompletions] Starting background relay sync...');
-
-      try {
-        const signal = AbortSignal.timeout(15000);
-        
-        const events = await nostr.query(
-          [
-            { kinds: [MAINTENANCE_COMPLETION_KIND], authors: [user.pubkey] },
-            { kinds: [5], authors: [user.pubkey] },
-          ],
-          { signal }
-        );
-
-        console.log('[useMaintenanceCompletions] Relay sync received events:', events.length);
-
-        if (events.length > 0) {
-          await cacheEvents(events);
-        }
-
-        const completions = parseEventsToCompletions(events);
-        queryClient.setQueryData(['maintenance-completions', user.pubkey], completions);
-        
-        console.log('[useMaintenanceCompletions] Background sync complete, completions:', completions.length);
-      } catch (error) {
-        console.error('[useMaintenanceCompletions] Background sync failed:', error);
-      } finally {
-        isSyncing.current = false;
-      }
-    };
-
-    const timer = setTimeout(syncWithRelays, 100);
-    return () => clearTimeout(timer);
-  }, [user?.pubkey, nostr, queryClient]);
 
   return query;
 }

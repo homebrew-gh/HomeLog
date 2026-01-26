@@ -1,7 +1,5 @@
-import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { useEffect, useRef } from 'react';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
@@ -151,13 +149,11 @@ async function parseEventsToVehicles(
 }
 
 export function useVehicles() {
-  const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
-  const queryClient = useQueryClient();
-  const isSyncing = useRef(false);
 
-  // Main query - loads from cache first, then syncs with relays in background
+  // Main query - loads from cache only
+  // Background sync is handled centrally by useDataSyncStatus
   const query = useQuery({
     queryKey: ['vehicles', user?.pubkey],
     queryFn: async () => {
@@ -165,63 +161,21 @@ export function useVehicles() {
         return [];
       }
 
-      console.log('[useVehicles] Loading from cache for pubkey:', user.pubkey);
-
-      // Load from cache first (instant)
+      // Load from cache (populated by useDataSyncStatus)
       const cachedEvents = await getCachedEvents([VEHICLE_KIND, 5], user.pubkey);
       
       if (cachedEvents.length > 0) {
-        console.log('[useVehicles] Found cached events:', cachedEvents.length);
         const vehicles = await parseEventsToVehicles(cachedEvents, user.pubkey, decryptForCategory);
         return vehicles;
       }
 
-      console.log('[useVehicles] No cache, waiting for relay sync...');
       return [];
     },
     enabled: !!user?.pubkey,
     staleTime: Infinity,
+    refetchInterval: 5000, // Re-check cache every 5s to pick up synced data
+    refetchIntervalInBackground: false,
   });
-
-  // Background sync with relays
-  useEffect(() => {
-    if (!user?.pubkey || isSyncing.current) return;
-
-    const syncWithRelays = async () => {
-      isSyncing.current = true;
-      console.log('[useVehicles] Starting background relay sync...');
-
-      try {
-        const signal = AbortSignal.timeout(15000);
-        
-        const events = await nostr.query(
-          [
-            { kinds: [VEHICLE_KIND], authors: [user.pubkey] },
-            { kinds: [5], authors: [user.pubkey] },
-          ],
-          { signal }
-        );
-
-        console.log('[useVehicles] Relay sync received events:', events.length);
-
-        if (events.length > 0) {
-          await cacheEvents(events);
-        }
-
-        const vehicles = await parseEventsToVehicles(events, user.pubkey, decryptForCategory);
-        queryClient.setQueryData(['vehicles', user.pubkey], vehicles);
-        
-        console.log('[useVehicles] Background sync complete, vehicles:', vehicles.length);
-      } catch (error) {
-        console.error('[useVehicles] Background sync failed:', error);
-      } finally {
-        isSyncing.current = false;
-      }
-    };
-
-    const timer = setTimeout(syncWithRelays, 100);
-    return () => clearTimeout(timer);
-  }, [user?.pubkey, nostr, queryClient, decryptForCategory]);
 
   return query;
 }
