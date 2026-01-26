@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Shield, CreditCard, Wrench } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Shield, CreditCard, Wrench, CirclePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,6 +46,26 @@ const TYPE_FIELDS: Record<string, string[]> = {
 
 // Default fields for custom types
 const DEFAULT_FIELDS = ['make', 'model', 'year', 'serialNumber', 'fuelType'];
+
+// Subscription entry type for form state
+interface SubscriptionEntry {
+  id: string; // Temporary ID for React keys
+  name: string;
+  subscriptionType: string;
+  cost: string;
+  billingFrequency: BillingFrequency;
+}
+
+// Create a new empty subscription entry
+function createEmptySubscription(): SubscriptionEntry {
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    subscriptionType: 'Vehicle',
+    cost: '',
+    billingFrequency: 'monthly',
+  };
+}
 
 export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) {
   const { createVehicle, updateVehicle } = useVehicleActions();
@@ -95,12 +115,10 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
     warrantyExpiry: '',
     documentsUrls: [] as string[],
     notes: '',
-    // Subscription fields
-    subscriptionName: '',
-    subscriptionType: 'Vehicle',
-    subscriptionCost: '',
-    subscriptionBillingFrequency: 'monthly' as BillingFrequency,
   });
+
+  // Multiple subscriptions state
+  const [subscriptions, setSubscriptions] = useState<SubscriptionEntry[]>([]);
 
   const receiptInputRef = useRef<HTMLInputElement>(null);
   const warrantyInputRef = useRef<HTMLInputElement>(null);
@@ -143,16 +161,12 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           warrantyExpiry: vehicle.warrantyExpiry || '',
           documentsUrls: vehicle.documentsUrls || [],
           notes: vehicle.notes || '',
-          // Subscription fields (not stored on vehicle, only for creation)
-          subscriptionName: '',
-          subscriptionType: 'Vehicle',
-          subscriptionCost: '',
-          subscriptionBillingFrequency: 'monthly' as BillingFrequency,
         });
         setShowWarranty(!!(vehicle.warrantyUrl || vehicle.warrantyExpiry));
         setShowSubscription(false);
         setCreateWarrantyEvent(false);
         setCreateSubscriptionEvent(false);
+        setSubscriptions([]);
       } else {
         setFormData({
           vehicleType: '',
@@ -177,16 +191,12 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           warrantyExpiry: '',
           documentsUrls: [],
           notes: '',
-          // Subscription fields
-          subscriptionName: '',
-          subscriptionType: 'Vehicle',
-          subscriptionCost: '',
-          subscriptionBillingFrequency: 'monthly' as BillingFrequency,
         });
         setShowWarranty(false);
         setShowSubscription(false);
         setCreateWarrantyEvent(false);
         setCreateSubscriptionEvent(false);
+        setSubscriptions([]);
       }
       setShowAddType(false);
       setNewType('');
@@ -317,6 +327,21 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
     }
   };
 
+  // Subscription management functions
+  const handleAddSubscription = useCallback(() => {
+    setSubscriptions(prev => [...prev, createEmptySubscription()]);
+  }, []);
+
+  const handleRemoveSubscription = useCallback((id: string) => {
+    setSubscriptions(prev => prev.filter(sub => sub.id !== id));
+  }, []);
+
+  const handleUpdateSubscription = useCallback((id: string, field: keyof SubscriptionEntry, value: string) => {
+    setSubscriptions(prev => prev.map(sub =>
+      sub.id === id ? { ...sub, [field]: value } : sub
+    ));
+  }, []);
+
   const handleSubmit = async (openMaintenanceWizard: boolean = false) => {
     if (!formData.vehicleType) {
       toast({
@@ -336,23 +361,26 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
       return;
     }
 
-    // Validate subscription fields if creating a subscription
-    if (createSubscriptionEvent) {
-      if (!formData.subscriptionName.trim()) {
-        toast({
-          title: 'Subscription name required',
-          description: 'Please enter a subscription name.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      if (!formData.subscriptionCost.trim()) {
-        toast({
-          title: 'Subscription cost required',
-          description: 'Please enter the subscription cost.',
-          variant: 'destructive',
-        });
-        return;
+    // Validate subscription fields if creating subscriptions
+    if (createSubscriptionEvent && subscriptions.length > 0) {
+      for (let i = 0; i < subscriptions.length; i++) {
+        const sub = subscriptions[i];
+        if (!sub.name.trim()) {
+          toast({
+            title: 'Subscription name required',
+            description: `Please enter a name for subscription ${i + 1}.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+        if (!sub.cost.trim()) {
+          toast({
+            title: 'Subscription cost required',
+            description: `Please enter the cost for "${sub.name}".`,
+            variant: 'destructive',
+          });
+          return;
+        }
       }
     }
 
@@ -405,27 +433,43 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
         }
       }
 
-      // Create linked subscription event if checkbox is checked
-      if (createSubscriptionEvent && formData.subscriptionName && formData.subscriptionCost && !isEditing) {
-        try {
-          await createSubscription({
-            name: formData.subscriptionName,
-            subscriptionType: formData.subscriptionType,
-            cost: formData.subscriptionCost,
-            billingFrequency: formData.subscriptionBillingFrequency,
-            linkedAssetType: 'vehicle',
-            linkedAssetId: vehicleId,
-            linkedAssetName: formData.name,
-          });
+      // Create linked subscription events if checkbox is checked and there are subscriptions
+      if (createSubscriptionEvent && subscriptions.length > 0 && !isEditing) {
+        const createdCount = { success: 0, failed: 0 };
+        
+        for (const sub of subscriptions) {
+          if (sub.name.trim() && sub.cost.trim()) {
+            try {
+              await createSubscription({
+                name: sub.name.trim(),
+                subscriptionType: sub.subscriptionType,
+                cost: sub.cost.trim(),
+                billingFrequency: sub.billingFrequency,
+                linkedAssetType: 'vehicle',
+                linkedAssetId: vehicleId,
+                linkedAssetName: formData.name,
+              });
+              createdCount.success++;
+            } catch (error) {
+              console.error('Failed to create subscription:', error);
+              createdCount.failed++;
+            }
+          }
+        }
+
+        if (createdCount.success > 0) {
           toast({
-            title: 'Subscription created',
-            description: 'A subscription record has been created in the Subscriptions tab.',
+            title: createdCount.success === 1 ? 'Subscription created' : 'Subscriptions created',
+            description: createdCount.success === 1
+              ? 'A subscription record has been created in the Subscriptions tab.'
+              : `${createdCount.success} subscription records have been created in the Subscriptions tab.`,
           });
-        } catch (error) {
-          console.error('Failed to create subscription:', error);
+        }
+        
+        if (createdCount.failed > 0) {
           toast({
             title: 'Warning',
-            description: 'Vehicle saved but failed to create subscription record.',
+            description: `Failed to create ${createdCount.failed} subscription${createdCount.failed > 1 ? 's' : ''}.`,
             variant: 'destructive',
           });
         }
@@ -860,68 +904,146 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
               <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors">
                 {showSubscription ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 <CreditCard className="h-4 w-4" />
-                <span className="font-medium">Vehicle Subscription</span>
+                <span className="font-medium">Vehicle Subscriptions</span>
+                {subscriptions.length > 0 && (
+                  <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                    {subscriptions.length}
+                  </span>
+                )}
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-4 space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Add a recurring subscription linked to this vehicle (e.g., roadside assistance, extended warranty service, maintenance plan).
+                  Add recurring subscriptions linked to this vehicle (e.g., roadside assistance, extended warranty service, maintenance plan).
                 </p>
 
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="createSubscriptionEvent"
                     checked={createSubscriptionEvent}
-                    onCheckedChange={(checked) => setCreateSubscriptionEvent(checked === true)}
+                    onCheckedChange={(checked) => {
+                      const isChecked = checked === true;
+                      setCreateSubscriptionEvent(isChecked);
+                      // Add an empty subscription when enabling if none exist
+                      if (isChecked && subscriptions.length === 0) {
+                        handleAddSubscription();
+                      }
+                    }}
                   />
                   <Label
                     htmlFor="createSubscriptionEvent"
                     className="text-sm font-normal cursor-pointer"
                   >
-                    Create a subscription record in the Subscriptions tab
+                    Create subscription records in the Subscriptions tab
                   </Label>
                 </div>
 
                 {createSubscriptionEvent && (
-                  <div className="space-y-4 pl-6 border-l-2 border-muted">
-                    <div className="space-y-2">
-                      <Label htmlFor="subscriptionName">Subscription Name *</Label>
-                      <Input
-                        id="subscriptionName"
-                        value={formData.subscriptionName}
-                        onChange={(e) => setFormData(prev => ({ ...prev, subscriptionName: e.target.value }))}
-                        placeholder="e.g., AAA Roadside Assistance"
-                      />
-                    </div>
+                  <div className="space-y-4">
+                    {subscriptions.map((sub, index) => (
+                      <div 
+                        key={sub.id} 
+                        className="space-y-3 p-3 border rounded-lg bg-muted/30 relative"
+                      >
+                        {/* Subscription header with remove button */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            Subscription {index + 1}
+                          </span>
+                          {subscriptions.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleRemoveSubscription(sub.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="subscriptionCost">Cost *</Label>
-                        <Input
-                          id="subscriptionCost"
-                          value={formData.subscriptionCost}
-                          onChange={(e) => setFormData(prev => ({ ...prev, subscriptionCost: e.target.value }))}
-                          placeholder="$0.00"
-                        />
+                        {/* Subscription Name */}
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`sub-name-${sub.id}`} className="text-xs">
+                            Subscription Name *
+                          </Label>
+                          <Input
+                            id={`sub-name-${sub.id}`}
+                            value={sub.name}
+                            onChange={(e) => handleUpdateSubscription(sub.id, 'name', e.target.value)}
+                            placeholder="e.g., AAA Roadside Assistance"
+                            className="h-9"
+                          />
+                        </div>
+
+                        {/* Cost and Billing Frequency row */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`sub-cost-${sub.id}`} className="text-xs">
+                              Cost *
+                            </Label>
+                            <Input
+                              id={`sub-cost-${sub.id}`}
+                              value={sub.cost}
+                              onChange={(e) => handleUpdateSubscription(sub.id, 'cost', e.target.value)}
+                              placeholder="$0.00"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Billing Frequency</Label>
+                            <Select
+                              value={sub.billingFrequency}
+                              onValueChange={(value) => handleUpdateSubscription(sub.id, 'billingFrequency', value)}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {BILLING_FREQUENCIES.map(({ value, label }) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Subscription Type */}
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Subscription Type</Label>
+                          <Select
+                            value={sub.subscriptionType}
+                            onValueChange={(value) => handleUpdateSubscription(sub.id, 'subscriptionType', value)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Vehicle">Vehicle</SelectItem>
+                              <SelectItem value="Streaming">Streaming</SelectItem>
+                              <SelectItem value="Software">Software</SelectItem>
+                              <SelectItem value="Health/Wellness">Health/Wellness</SelectItem>
+                              <SelectItem value="Finance">Finance</SelectItem>
+                              <SelectItem value="Home">Home</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Billing Frequency</Label>
-                        <Select
-                          value={formData.subscriptionBillingFrequency}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, subscriptionBillingFrequency: value as BillingFrequency }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {BILLING_FREQUENCIES.map(({ value, label }) => (
-                              <SelectItem key={value} value={value}>
-                                {label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                    ))}
+
+                    {/* Add Another Subscription button */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddSubscription}
+                      className="w-full"
+                    >
+                      <CirclePlus className="h-4 w-4 mr-2" />
+                      Add Another Subscription
+                    </Button>
                   </div>
                 )}
               </CollapsibleContent>
