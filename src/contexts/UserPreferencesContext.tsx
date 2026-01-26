@@ -225,10 +225,15 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     DEFAULT_PREFERENCES
   );
 
+  // Track the active tab separately as transient UI state
+  // This prevents Nostr publishes on every tab switch
+  const [activeTab, setActiveTabState] = useState<TabId>(localPreferences.activeTab || 'home');
+
   // Track if we've synced from remote on this session
   // Using state instead of ref so changes trigger re-render
   const [hasSyncedFromRemote, setHasSyncedFromRemote] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isPublishingRef = useRef(false);
 
   // Fetch preferences from Nostr (background sync)
   // Local storage is used as the primary source for instant loading
@@ -309,12 +314,28 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     lastSyncedRelayTimestamp.current = config.relayMetadata.updatedAt;
   }, [user?.pubkey, config.relayMetadata.updatedAt]);
 
+  // Sync activeTab state when localPreferences.activeTab changes (e.g., from local storage load)
+  useEffect(() => {
+    if (localPreferences.activeTab && localPreferences.activeTab !== activeTab) {
+      // Only sync if the stored tab is valid (either 'home' or in activeTabs)
+      const isValidTab = localPreferences.activeTab === 'home' || 
+        localPreferences.activeTabs.includes(localPreferences.activeTab);
+      if (isValidTab) {
+        setActiveTabState(localPreferences.activeTab);
+      }
+    }
+  }, []); // Only run on mount
+
   // Apply remote preferences when fetched
   useEffect(() => {
     if (isFetched && !hasSyncedFromRemote && user?.pubkey) {
       if (remotePreferences) {
         console.log('[UserPreferences] Syncing preferences from Nostr relay');
         setLocalPreferences(remotePreferences);
+        // Also sync the active tab from remote
+        if (remotePreferences.activeTab) {
+          setActiveTabState(remotePreferences.activeTab);
+        }
       }
       setHasSyncedFromRemote(true);
     }
@@ -324,6 +345,11 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const saveToNostr = useCallback(
     async (preferences: UserPreferences) => {
       if (!user) return;
+      
+      // Prevent concurrent publishes
+      if (isPublishingRef.current) {
+        return;
+      }
 
       // Clear any pending save
       if (saveTimeoutRef.current) {
@@ -332,6 +358,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
       // Debounce saves to avoid spamming relays
       saveTimeoutRef.current = setTimeout(async () => {
+        if (isPublishingRef.current) return;
+        isPublishingRef.current = true;
+        
         try {
           await publishEvent({
             kind: APP_DATA_KIND,
@@ -344,6 +373,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
           console.log('Preferences saved to Nostr relay');
         } catch (error) {
           console.error('Failed to save preferences to Nostr:', error);
+        } finally {
+          isPublishingRef.current = false;
         }
       }, 2000); // 2 second debounce
     },
@@ -368,6 +399,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // Tab actions
   const addTab = useCallback((tabId: TabId) => {
     if (tabId === 'home') return;
+    // Update the local activeTab state
+    setActiveTabState(tabId);
     updatePreferences((prev) => {
       if (prev.activeTabs.includes(tabId)) return prev;
       return {
@@ -379,6 +412,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   }, [updatePreferences]);
 
   const addTabs = useCallback((tabIds: TabId[]) => {
+    const firstNewTab = tabIds.find(id => id !== 'home');
+    if (firstNewTab) {
+      setActiveTabState(firstNewTab);
+    }
     updatePreferences((prev) => {
       const newTabs = tabIds.filter(
         id => id !== 'home' && !prev.activeTabs.includes(id)
@@ -394,19 +431,27 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
   const removeTab = useCallback((tabId: TabId) => {
     if (tabId === 'home') return;
+    // If removing the currently active tab, switch to home
+    if (activeTab === tabId) {
+      setActiveTabState('home');
+    }
     updatePreferences((prev) => ({
       ...prev,
       activeTabs: prev.activeTabs.filter(id => id !== tabId),
       activeTab: prev.activeTab === tabId ? 'home' : prev.activeTab,
     }));
-  }, [updatePreferences]);
+  }, [updatePreferences, activeTab]);
 
   const setActiveTab = useCallback((tabId: TabId) => {
-    updatePreferences((prev) => ({
+    // Only update local state - don't publish to Nostr for tab switches
+    // This is transient UI state that doesn't need network sync
+    setActiveTabState(tabId);
+    // Also update local storage for persistence across page reloads
+    setLocalPreferences((prev) => ({
       ...prev,
       activeTab: tabId,
     }));
-  }, [updatePreferences]);
+  }, [setLocalPreferences]);
 
   const reorderTabs = useCallback((newOrder: TabId[]) => {
     const filteredOrder = newOrder.filter(id => id !== 'home');
@@ -846,7 +891,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
   const normalizedPreferences: UserPreferences = {
     activeTabs: localPreferences.activeTabs || [],
-    activeTab: localPreferences.activeTab || 'home',
+    activeTab: activeTab,
     dashboardCardOrder: localPreferences.dashboardCardOrder || [],
     appliancesViewMode: localPreferences.appliancesViewMode || 'card',
     vehiclesViewMode: localPreferences.vehiclesViewMode || 'card',
