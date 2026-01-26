@@ -20,7 +20,9 @@ import {
   UserCheck,
   ChevronUp,
   ChevronDown,
-  DollarSign
+  DollarSign,
+  CheckCircle2,
+  Tag
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +35,7 @@ import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
+import { useWarranties, useExpiringWarranties, isWarrantyExpired, isWarrantyExpiringSoon, formatWarrantyTimeRemaining, parseWarrantyEndDate } from '@/hooks/useWarranties';
 import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
@@ -43,7 +46,7 @@ import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
 import { useCurrency } from '@/hooks/useCurrency';
 import { genUserName } from '@/lib/genUserName';
 import { parseCurrencyAmount, formatCurrency, convertCurrency } from '@/lib/currency';
-import type { MaintenanceSchedule } from '@/lib/types';
+import type { MaintenanceSchedule, Warranty } from '@/lib/types';
 
 const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
   home: Home,
@@ -103,6 +106,8 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const { data: vehicles = [], isLoading: isLoadingVehicles } = useVehicles();
   const { data: companies = [], isLoading: isLoadingCompanies } = useCompanies();
   const { data: subscriptions = [], isLoading: isLoadingSubscriptions } = useSubscriptions();
+  const { data: warranties = [], isLoading: isLoadingWarranties } = useWarranties();
+  const expiringWarranties = useExpiringWarranties(365); // Get warranties expiring within a year
   const { data: maintenance = [], isLoading: isLoadingMaintenance } = useMaintenance();
   const { data: completions = [] } = useMaintenanceCompletions();
   const applianceMaintenance = useApplianceMaintenance();
@@ -122,9 +127,60 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const showCompaniesLoading = isLoadingCompanies || (isDataSyncing && companies.length === 0 && !syncCategories.companies.synced);
   const showSubscriptionsLoading = isLoadingSubscriptions || (isDataSyncing && subscriptions.length === 0 && !syncCategories.subscriptions.synced);
   const showMaintenanceLoading = isLoadingMaintenance || (isDataSyncing && maintenance.length === 0 && !syncCategories.maintenance.synced);
+  const showWarrantiesLoading = isLoadingWarranties || (isDataSyncing && warranties.length === 0 && !syncCategories.warranties?.synced);
   
   // Discover friends using HomeLog
   const { friends: homeLogFriends, isLoading: isLoadingFriends } = useHomeLogFriends();
+  
+  // Get next 3 warranties about to expire sorted by expiration date
+  const nextExpiringWarranties = useMemo(() => {
+    // Get all warranties with end dates, sorted by expiration
+    const warrantiesWithDates = warranties
+      .map(warranty => ({
+        warranty,
+        endDate: parseWarrantyEndDate(warranty),
+        expired: isWarrantyExpired(warranty),
+        expiringSoon: isWarrantyExpiringSoon(warranty),
+      }))
+      .filter(w => w.endDate !== null && !w.expired) // Exclude expired and those without dates
+      .sort((a, b) => {
+        if (!a.endDate) return 1;
+        if (!b.endDate) return -1;
+        return a.endDate.getTime() - b.endDate.getTime();
+      });
+    
+    return warrantiesWithDates.slice(0, 3);
+  }, [warranties]);
+  
+  // Get count of expired warranties
+  const expiredWarrantiesCount = useMemo(() => {
+    return warranties.filter(w => isWarrantyExpired(w)).length;
+  }, [warranties]);
+  
+  // Helper to get warranty icon based on linked type
+  const getWarrantyTypeIcon = (warranty: Warranty) => {
+    if (warranty.linkedType === 'appliance') return Package;
+    if (warranty.linkedType === 'vehicle') return Car;
+    if (warranty.linkedType === 'home_feature') return Home;
+    if (warranty.linkedType === 'custom') return Tag;
+    return Shield;
+  };
+  
+  // Get linked item name for warranty
+  const getWarrantyLinkedItemName = (warranty: Warranty): string | null => {
+    if (warranty.linkedType === 'appliance' && warranty.linkedItemId) {
+      const appliance = appliances.find(a => a.id === warranty.linkedItemId);
+      return appliance?.model || warranty.linkedItemName || null;
+    }
+    if (warranty.linkedType === 'vehicle' && warranty.linkedItemId) {
+      const vehicle = vehicles.find(v => v.id === warranty.linkedItemId);
+      return vehicle?.name || warranty.linkedItemName || null;
+    }
+    if (warranty.linkedType === 'home_feature' || warranty.linkedType === 'custom') {
+      return warranty.linkedItemName || null;
+    }
+    return null;
+  };
 
   // Edit mode for reordering dashboard cards
   const [isEditMode, setIsEditMode] = useState(false);
@@ -1052,8 +1108,83 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                     </WidgetCard>
                   );
 
-                // Coming soon widgets
                 case 'warranties':
+                  return (
+                    <WidgetCard
+                      title="Warranties"
+                      icon={Shield}
+                      onClick={() => !isEditMode && onNavigateToTab('warranties')}
+                      isLoading={showWarrantiesLoading}
+                      clickable={!isEditMode}
+                      badge={expiredWarrantiesCount > 0 ? {
+                        text: `${expiredWarrantiesCount} expired`,
+                        variant: 'destructive' as const,
+                      } : undefined}
+                    >
+                      {warranties.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No warranties tracked yet</p>
+                      ) : nextExpiringWarranties.length === 0 ? (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-900/30">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          <span className="text-sm text-green-700 dark:text-green-300">All warranties are far from expiring</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {nextExpiringWarranties.map(({ warranty, expiringSoon }) => {
+                            const WarrantyIcon = getWarrantyTypeIcon(warranty);
+                            const linkedName = getWarrantyLinkedItemName(warranty);
+                            const timeRemaining = formatWarrantyTimeRemaining(warranty);
+                            
+                            return (
+                              <div
+                                key={warranty.id}
+                                className={cn(
+                                  "flex items-center justify-between text-sm p-2 rounded-lg",
+                                  expiringSoon 
+                                    ? 'bg-amber-50 dark:bg-amber-900/30' 
+                                    : 'bg-slate-50 dark:bg-slate-700/30'
+                                )}
+                              >
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <WarrantyIcon className={cn(
+                                    "h-4 w-4 shrink-0",
+                                    expiringSoon ? "text-amber-600 dark:text-amber-400" : "text-primary"
+                                  )} />
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
+                                      {warranty.name}
+                                    </p>
+                                    {linkedName && (
+                                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                        {linkedName}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0 ml-2">
+                                  <p className={cn(
+                                    "text-xs font-medium",
+                                    expiringSoon
+                                      ? 'text-amber-600 dark:text-amber-400'
+                                      : 'text-slate-600 dark:text-slate-300'
+                                  )}>
+                                    {timeRemaining}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {warranties.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center">
+                              +{warranties.length - 3} more warranties
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </WidgetCard>
+                  );
+
+                // Coming soon widgets
                 case 'projects':
                   return (
                     <WidgetCard

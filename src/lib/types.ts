@@ -266,3 +266,55 @@ export const COMPANY_KIND = 37003;
 export const MAINTENANCE_KIND = 30229;
 export const MAINTENANCE_COMPLETION_KIND = 9413;
 export const SUBSCRIPTION_KIND = 37004;
+export const WARRANTY_KIND = 35043;
+
+// Warranty linked item types
+export type WarrantyLinkedType = 'appliance' | 'vehicle' | 'home_feature' | 'custom';
+
+// Document for warranty
+export interface WarrantyDocument {
+  url: string;
+  name?: string;
+  uploadedAt?: string;
+}
+
+export interface Warranty {
+  id: string;
+  warrantyType: string;
+  // Basic warranty info
+  name: string; // Product/item name
+  description?: string;
+  // Purchase info
+  purchaseDate?: string; // MM/DD/YYYY format
+  purchasePrice?: string;
+  // Warranty duration
+  warrantyStartDate?: string; // MM/DD/YYYY format - defaults to purchase date
+  warrantyEndDate?: string; // MM/DD/YYYY format
+  warrantyLength?: string; // e.g., "1 year", "2 years"
+  // Link to other items
+  linkedType?: WarrantyLinkedType; // Type of linked item
+  linkedItemId?: string; // ID of linked appliance, vehicle, etc.
+  linkedItemName?: string; // For custom items or display purposes
+  // Service provider/company
+  companyId?: string; // Reference to a company/service provider
+  companyName?: string; // Manual entry if not linking to a company
+  // Registration info
+  isRegistered?: boolean;
+  registrationDate?: string; // MM/DD/YYYY format
+  registrationNumber?: string;
+  registrationNotes?: string;
+  // Extended warranty
+  hasExtendedWarranty?: boolean;
+  extendedWarrantyProvider?: string;
+  extendedWarrantyEndDate?: string; // MM/DD/YYYY format
+  extendedWarrantyCost?: string;
+  extendedWarrantyNotes?: string;
+  // Documents
+  documents?: WarrantyDocument[]; // Array of warranty documents
+  receiptUrl?: string; // Purchase receipt
+  // General
+  notes?: string;
+  // Metadata
+  pubkey: string;
+  createdAt: number;
+}
