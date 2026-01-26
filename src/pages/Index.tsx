@@ -21,6 +21,13 @@ import { DonateSection } from '@/components/DonateSection';
 import { TabNavigation } from '@/components/TabNavigation';
 import { AddTabDialog } from '@/components/AddTabDialog';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
+import { GlobalSearchDialog } from '@/components/GlobalSearchDialog';
+import { SearchButton } from '@/components/SearchButton';
+import { CompanyDetailDialog } from '@/components/CompanyDetailDialog';
+import { SubscriptionDetailDialog } from '@/components/SubscriptionDetailDialog';
+import { WarrantyDetailDialog } from '@/components/WarrantyDetailDialog';
+import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
+import type { Company, Subscription, Warranty, MaintenanceSchedule } from '@/lib/types';
 import {
   HomeTab,
   AppliancesTab,
@@ -129,6 +136,13 @@ const Index = () => {
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const [currencySettingsOpen, setCurrencySettingsOpen] = useState(false);
   const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
+  
+  // Global search state
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [viewingCompany, setViewingCompany] = useState<Company | undefined>();
+  const [viewingSubscription, setViewingSubscription] = useState<Subscription | undefined>();
+  const [viewingWarranty, setViewingWarranty] = useState<Warranty | undefined>();
+  const [viewingMaintenance, setViewingMaintenance] = useState<MaintenanceSchedule | undefined>();
   
   // Scroll target state for navigating to specific sections within tabs
   const [scrollTarget, setScrollTarget] = useState<string | undefined>(undefined);
@@ -260,8 +274,11 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Right - Theme Toggle & Login */}
+            {/* Right - Search, Theme Toggle & Login */}
             <div className="flex items-center gap-2">
+              {user && !isInitialLoading && (
+                <SearchButton onClick={() => setSearchOpen(true)} />
+              )}
               <ThemeToggle />
               <LoginArea className="max-w-48" />
             </div>
@@ -461,6 +478,55 @@ const Index = () => {
         isOpen={currencySettingsOpen}
         onClose={() => setCurrencySettingsOpen(false)}
       />
+
+      {/* Global Search */}
+      <GlobalSearchDialog
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        onSelectCompany={setViewingCompany}
+        onSelectSubscription={setViewingSubscription}
+        onSelectWarranty={setViewingWarranty}
+        onSelectMaintenance={setViewingMaintenance}
+      />
+
+      {/* Detail dialogs opened from search */}
+      {viewingCompany && (
+        <CompanyDetailDialog
+          isOpen={!!viewingCompany}
+          onClose={() => setViewingCompany(undefined)}
+          company={viewingCompany}
+          onEdit={() => {}} // View-only from search
+          onDelete={() => setViewingCompany(undefined)}
+        />
+      )}
+
+      {viewingSubscription && (
+        <SubscriptionDetailDialog
+          isOpen={!!viewingSubscription}
+          onClose={() => setViewingSubscription(undefined)}
+          subscription={viewingSubscription}
+          onDelete={() => setViewingSubscription(undefined)}
+        />
+      )}
+
+      {viewingWarranty && (
+        <WarrantyDetailDialog
+          isOpen={!!viewingWarranty}
+          onClose={() => setViewingWarranty(undefined)}
+          warranty={viewingWarranty}
+          onEdit={() => {}} // View-only from search
+          onDelete={() => setViewingWarranty(undefined)}
+        />
+      )}
+
+      {viewingMaintenance && (
+        <MaintenanceDetailDialog
+          isOpen={!!viewingMaintenance}
+          onClose={() => setViewingMaintenance(undefined)}
+          maintenance={viewingMaintenance}
+          onEdit={() => {}} // View-only from search
+        />
+      )}
     </div>
   );
 };
