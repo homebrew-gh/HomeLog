@@ -53,66 +53,30 @@ const Index = () => {
   const { user } = useCurrentUser();
   const { isProfileLoading } = useLoggedInAccounts();
   const { preferences, setActiveTab, isLoading: isPreferencesLoading } = useTabPreferences();
-  const { isSyncing: isDataSyncing, isSynced: isDataSynced, hasCachedData, cacheChecked } = useDataSyncStatus();
+  const { isSynced: isDataSynced, hasCachedData, cacheChecked } = useDataSyncStatus();
   
   // Apply color theme to document root
   useApplyColorTheme();
 
-  // Track if we've completed initial load for this session
-  // This prevents showing loading again after data is synced
-  const hasCompletedInitialLoad = useRef(false);
+  // Simple loading state:
+  // Show loading if user is logged in AND we haven't finished the initial data load
+  // Once either cache is found OR sync completes OR preferences load, we're done
+  const hasLocalTabs = preferences.activeTabs.length > 0;
   
-  // Mark initial load as complete once data is synced
-  useEffect(() => {
-    if (isDataSynced && user) {
-      hasCompletedInitialLoad.current = true;
-    }
-    // Reset when user logs out
-    if (!user) {
-      hasCompletedInitialLoad.current = false;
-    }
-  }, [isDataSynced, user]);
-
-  // Show loading animation while:
-  // 1. Profile is still loading, OR
-  // 2. Cache check hasn't completed yet, OR
-  // 3. No cached data AND sync not done (first time login / new device), OR
-  // 4. Preferences are still loading from Nostr (returning user with cleared cache)
-  // Users with cached data will see their cached data immediately while sync happens in background
-  // Once initial load completes for this session, don't show loading again
-  const isInitialLoading = user && !hasCompletedInitialLoad.current && (
+  const isInitialLoading = user && (
     isProfileLoading || 
-    !cacheChecked || 
-    (!hasCachedData && !isDataSynced) ||
-    isPreferencesLoading
+    (!cacheChecked) ||
+    (!hasLocalTabs && isPreferencesLoading) ||
+    (!hasCachedData && !isDataSynced && !hasLocalTabs)
   );
   
-  // Debug: Log once when dashboard renders (not loading)
-  const hasLoggedRef = useRef(false);
-  useEffect(() => {
-    if (user && !isInitialLoading && !hasLoggedRef.current) {
-      hasLoggedRef.current = true;
-      console.log('[Index] Dashboard rendered with state:', {
-        isProfileLoading,
-        cacheChecked,
-        hasCachedData,
-        isDataSynced,
-        isPreferencesLoading,
-        activeTabs: preferences.activeTabs.length,
-      });
-    }
-  }, [user, isInitialLoading, isProfileLoading, cacheChecked, hasCachedData, isDataSynced, isPreferencesLoading, preferences.activeTabs]);
-  
-  // Determine loading message based on current state
-  // Show "Loading your data..." if we're waiting for data (even if profile is also loading)
-  // This is more informative since data fetch is usually what takes time
-  const isWaitingForData = !cacheChecked || (!hasCachedData && !isDataSynced) || isPreferencesLoading;
-  const loadingMessage = isWaitingForData ? "Loading your data..." : "Signing in...";
-  const loadingSubMessage = isWaitingForData ? "Fetching from Nostr relays" : "Connecting to your account";
+  // Determine loading message
+  const loadingMessage = "Loading your data...";
+  const loadingSubMessage = "Fetching from Nostr relays";
   
   // Data sync is happening in background - show indicator but don't block UI
   // Only show this for users who HAVE cached data (so they're not blocked by the main loading)
-  const isBackgroundSyncing = user && isDataSyncing && !isDataSynced && hasCachedData;
+  const isBackgroundSyncing = user && !isDataSynced && hasCachedData;
 
   // Dialog states
   const [roomManagementOpen, setRoomManagementOpen] = useState(false);

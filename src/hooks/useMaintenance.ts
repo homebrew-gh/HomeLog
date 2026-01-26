@@ -179,9 +179,8 @@ export function useMaintenance() {
       return [];
     },
     enabled: !!user?.pubkey,
-    staleTime: Infinity, // Don't auto-refetch, data comes from IndexedDB cache
+    staleTime: 60000, // Consider fresh for 1 minute
     gcTime: Infinity, // Keep in memory for the session
-    refetchOnMount: 'always', // Refetch when component mounts to pick up cache changes
     refetchOnWindowFocus: false,
   });
 

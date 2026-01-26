@@ -217,9 +217,8 @@ export function useDataSyncStatus() {
       }
     },
     enabled: !!user?.pubkey && cacheChecked, // Only run after cache check completes
-    staleTime: Infinity, // Once synced, don't refetch automatically
+    staleTime: 60000, // Consider fresh for 1 minute
     gcTime: Infinity, // Keep in memory for the session
-    refetchOnMount: 'always', // But always refetch when component mounts (new login)
     refetchOnWindowFocus: false,
     retry: 1,
   });

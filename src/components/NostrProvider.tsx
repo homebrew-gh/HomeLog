@@ -67,7 +67,7 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
           console.log('[NostrProvider] Prioritizing caching relay:', currentCachingRelay);
         }
 
-        console.log('[NostrProvider] Routing query to read relays:', orderedRelays);
+        // console.log('[NostrProvider] Routing query to read relays:', orderedRelays);
 
         for (const url of orderedRelays) {
           routes.set(url, filters);
