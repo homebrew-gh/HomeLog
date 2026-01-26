@@ -53,30 +53,20 @@ const Index = () => {
   const { user } = useCurrentUser();
   const { isProfileLoading } = useLoggedInAccounts();
   const { preferences, setActiveTab, isLoading: isPreferencesLoading } = useTabPreferences();
-  const { isSynced: isDataSynced, hasCachedData, cacheChecked } = useDataSyncStatus();
+  const { isSynced: isDataSynced } = useDataSyncStatus();
   
   // Apply color theme to document root
   useApplyColorTheme();
 
-  // Simple loading state:
-  // Show loading if user is logged in AND we haven't finished the initial data load
-  // Once either cache is found OR sync completes OR preferences load, we're done
-  const hasLocalTabs = preferences.activeTabs.length > 0;
-  
-  const isInitialLoading = user && (
-    isProfileLoading || 
-    (!cacheChecked) ||
-    (!hasLocalTabs && isPreferencesLoading) ||
-    (!hasCachedData && !isDataSynced && !hasLocalTabs)
-  );
+  // Simple loading state - only wait for profile to load, data loads in background
+  const isInitialLoading = user && isProfileLoading;
   
   // Determine loading message
   const loadingMessage = "Loading your data...";
   const loadingSubMessage = "Fetching from Nostr relays";
   
   // Data sync is happening in background - show indicator but don't block UI
-  // Only show this for users who HAVE cached data (so they're not blocked by the main loading)
-  const isBackgroundSyncing = user && !isDataSynced && hasCachedData;
+  const isBackgroundSyncing = user && !isDataSynced;
 
   // Dialog states
   const [roomManagementOpen, setRoomManagementOpen] = useState(false);
