@@ -153,8 +153,10 @@ export function useSubscriptions() {
       return [];
     },
     enabled: !!user?.pubkey,
-    staleTime: 0, // Always refetch on mount to pick up cache changes
-    gcTime: 0, // Don't keep stale data between sessions
+    staleTime: Infinity, // Don't auto-refetch, data comes from IndexedDB cache
+    gcTime: Infinity, // Keep in memory for the session
+    refetchOnMount: 'always', // Refetch when component mounts to pick up cache changes
+    refetchOnWindowFocus: false,
   });
 
   return query;

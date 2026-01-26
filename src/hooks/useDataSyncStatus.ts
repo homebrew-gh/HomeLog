@@ -217,8 +217,10 @@ export function useDataSyncStatus() {
       }
     },
     enabled: !!user?.pubkey && cacheChecked, // Only run after cache check completes
-    staleTime: 0, // Always fetch fresh - don't use cached sync status
-    gcTime: 0, // Don't keep old sync results in memory
+    staleTime: Infinity, // Once synced, don't refetch automatically
+    gcTime: Infinity, // Keep in memory for the session
+    refetchOnMount: 'always', // But always refetch when component mounts (new login)
+    refetchOnWindowFocus: false,
     retry: 1,
   });
 

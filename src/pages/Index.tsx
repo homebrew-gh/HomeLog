@@ -87,6 +87,22 @@ const Index = () => {
     isPreferencesLoading
   );
   
+  // Debug: Log once when dashboard renders (not loading)
+  const hasLoggedRef = useRef(false);
+  useEffect(() => {
+    if (user && !isInitialLoading && !hasLoggedRef.current) {
+      hasLoggedRef.current = true;
+      console.log('[Index] Dashboard rendered with state:', {
+        isProfileLoading,
+        cacheChecked,
+        hasCachedData,
+        isDataSynced,
+        isPreferencesLoading,
+        activeTabs: preferences.activeTabs.length,
+      });
+    }
+  }, [user, isInitialLoading, isProfileLoading, cacheChecked, hasCachedData, isDataSynced, isPreferencesLoading, preferences.activeTabs]);
+  
   // Determine loading message based on current state
   // Show "Loading your data..." if we're waiting for data (even if profile is also loading)
   // This is more informative since data fetch is usually what takes time
