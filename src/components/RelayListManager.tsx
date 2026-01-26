@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, X, Wifi, Settings, Lock, RefreshCw } from 'lucide-react';
+import { Plus, X, Wifi, Settings, Lock, RefreshCw, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
@@ -63,6 +73,7 @@ export function RelayListManager() {
   const [newRelayUrl, setNewRelayUrl] = useState('');
   const [relayStatuses, setRelayStatuses] = useState<Record<string, RelayStatus>>({});
   const [isCheckingAll, setIsCheckingAll] = useState(false);
+  const [relayToRemove, setRelayToRemove] = useState<string | null>(null);
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use a ref to track config relays for the interval callback to avoid recreating it
@@ -175,9 +186,15 @@ export function RelayListManager() {
   };
 
   const handleRemoveRelay = (url: string) => {
-    const newRelays = relays.filter(r => r.url !== url);
+    setRelayToRemove(url);
+  };
+
+  const confirmRemoveRelay = () => {
+    if (!relayToRemove) return;
+    const newRelays = relays.filter(r => r.url !== relayToRemove);
     setRelays(newRelays);
     saveRelays(newRelays);
+    setRelayToRemove(null);
   };
 
   const handleToggleRead = (url: string) => {
@@ -464,6 +481,47 @@ export function RelayListManager() {
           Log in to sync your relay list with Nostr
         </p>
       )}
+
+      {/* Remove Relay Confirmation Dialog */}
+      <AlertDialog open={!!relayToRemove} onOpenChange={(open) => !open && setRelayToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Relay</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Are you sure you want to remove <span className="font-mono text-foreground">{relayToRemove && renderRelayUrl(relayToRemove)}</span> from your relay list?
+                </p>
+                
+                <div className="rounded-md bg-muted p-3 text-sm space-y-2">
+                  <div className="flex gap-2">
+                    <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">What happens when you remove a relay:</p>
+                      <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                        <li>Home Log will stop reading from and writing to this relay</li>
+                        <li>Your existing data on this relay will <strong className="text-foreground">not</strong> be automatically deleted</li>
+                        <li>Your encrypted data remains unreadable to others without your private key</li>
+                        <li>Deletion requests cannot guarantee removal from all relays due to Nostr's decentralized nature</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  If you're concerned about data on this relay, remember that Home Log encrypts your sensitive data (appliances, vehicles, maintenance records) using NIP-44 encryption. This data is unreadable without your private key.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoveRelay}>
+              Remove Relay
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
