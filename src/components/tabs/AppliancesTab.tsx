@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, ChevronDown, ChevronRight, Home, Package, List, LayoutGrid, Calendar, Building2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, ChevronDown, ChevronRight, Home, Package, List, LayoutGrid, Calendar, Building2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -314,40 +315,53 @@ interface ApplianceCardProps {
 
 function ApplianceCard({ appliance, onClick }: ApplianceCardProps) {
   return (
-    <button
-      onClick={onClick}
-      className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200 text-left"
-    >
-      {/* Icon */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-          <Package className="h-5 w-5 text-primary" />
+    <div className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200">
+      {/* Clickable area for quick view */}
+      <button
+        onClick={onClick}
+        className="text-left flex-1 flex flex-col"
+      >
+        {/* Icon */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <Package className="h-5 w-5 text-primary" />
+          </div>
         </div>
-      </div>
 
-      {/* Model/Name */}
-      <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-        {appliance.model}
-      </h3>
+        {/* Model/Name */}
+        <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+          {appliance.model}
+        </h3>
 
-      {/* Manufacturer */}
-      {appliance.manufacturer && (
-        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-2">
-          <Building2 className="h-3.5 w-3.5" />
-          <span className="truncate">{appliance.manufacturer}</span>
-        </p>
-      )}
+        {/* Manufacturer */}
+        {appliance.manufacturer && (
+          <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-2">
+            <Building2 className="h-3.5 w-3.5" />
+            <span className="truncate">{appliance.manufacturer}</span>
+          </p>
+        )}
 
-      {/* Purchase Date */}
-      {appliance.purchaseDate && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
-          <Calendar className="h-3 w-3" />
-          <span>Purchased {appliance.purchaseDate}</span>
-        </p>
-      )}
+        {/* Purchase Date */}
+        {appliance.purchaseDate && (
+          <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
+            <Calendar className="h-3 w-3" />
+            <span>Purchased {appliance.purchaseDate}</span>
+          </p>
+        )}
+      </button>
+
+      {/* View Details Link */}
+      <Link
+        to={`/asset/appliance/${appliance.id}`}
+        className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <FileText className="h-4 w-4" />
+        View Full Details
+      </Link>
 
       {/* Hover indicator */}
       <div className="absolute inset-0 rounded-xl ring-2 ring-primary ring-opacity-0 group-hover:ring-opacity-20 transition-all pointer-events-none" />
-    </button>
+    </div>
   );
 }

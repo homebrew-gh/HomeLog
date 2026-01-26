@@ -1,0 +1,1137 @@
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useSeoMeta } from '@unhead/react';
+import {
+  ArrowLeft,
+  Package,
+  Car,
+  Plane,
+  Ship,
+  Tractor,
+  Factory,
+  Calendar,
+  DollarSign,
+  Home,
+  FileText,
+  ExternalLink,
+  Image,
+  Wrench,
+  Shield,
+  Building2,
+  CreditCard,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Hash,
+  Gauge,
+  Fuel,
+  StickyNote,
+  Edit,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
+import { useVehicles, useVehicleById } from '@/hooks/useVehicles';
+import { useMaintenanceByAppliance, useMaintenanceByVehicle, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
+import { useMaintenanceCompletions, useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
+import { useWarrantiesByApplianceId, useWarrantiesByVehicleId, formatWarrantyTimeRemaining, isWarrantyExpired, isWarrantyExpiringSoon } from '@/hooks/useWarranties';
+import { useCompanyById, useCompanies } from '@/hooks/useCompanies';
+import { useSubscriptionsByCompanyId, useSubscriptions } from '@/hooks/useSubscriptions';
+import { FUEL_TYPES, type MaintenanceSchedule, type Warranty, type Company, type Subscription } from '@/lib/types';
+import NotFound from './NotFound';
+
+// Get icon based on vehicle type
+function getVehicleIcon(type: string) {
+  switch (type) {
+    case 'Plane':
+      return Plane;
+    case 'Boat':
+      return Ship;
+    case 'Farm Machinery':
+      return Tractor;
+    default:
+      return Car;
+  }
+}
+
+// Get fuel type label
+function getFuelTypeLabel(value: string): string {
+  const fuelType = FUEL_TYPES.find(f => f.value === value);
+  return fuelType?.label || value;
+}
+
+// Parse date string to get a purchase date for maintenance calculations
+function getStartDateForMaintenance(purchaseDate?: string): string {
+  return purchaseDate || new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+}
+
+// MaintenanceSection component
+function MaintenanceSection({ 
+  maintenance, 
+  startDate,
+  companies,
+}: { 
+  maintenance: MaintenanceSchedule[];
+  startDate: string;
+  companies: Company[];
+}) {
+  const { data: completions = [] } = useMaintenanceCompletions();
+
+  if (maintenance.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-8 text-center">
+          <Wrench className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-muted-foreground">No maintenance schedules found.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {maintenance.map((schedule) => {
+        const scheduleCompletions = completions.filter(c => c.maintenanceId === schedule.id);
+        const lastCompletion = scheduleCompletions[0];
+        const nextDue = calculateNextDueDate(
+          startDate,
+          schedule.frequency,
+          schedule.frequencyUnit,
+          lastCompletion?.completedDate
+        );
+        const overdue = isOverdue(startDate, schedule.frequency, schedule.frequencyUnit, lastCompletion?.completedDate);
+        const dueSoon = isDueSoon(startDate, schedule.frequency, schedule.frequencyUnit, lastCompletion?.completedDate);
+        
+        const company = schedule.companyId ? companies.find(c => c.id === schedule.companyId) : undefined;
+
+        return (
+          <Card key={schedule.id} className={overdue ? 'border-destructive/50 bg-destructive/5' : dueSoon ? 'border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20' : ''}>
+            <CardContent className="py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h4 className="font-semibold">{schedule.description}</h4>
+                    {overdue && (
+                      <Badge variant="destructive" className="flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        Overdue
+                      </Badge>
+                    )}
+                    {dueSoon && !overdue && (
+                      <Badge className="bg-amber-100 text-amber-700 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Due Soon
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      <span>Every {schedule.frequency} {schedule.frequencyUnit}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>Next due: {formatDueDate(nextDue)}</span>
+                    </div>
+                    {schedule.partNumber && (
+                      <div className="flex items-center gap-2">
+                        <Hash className="h-4 w-4" />
+                        <span>Part: {schedule.partNumber}</span>
+                      </div>
+                    )}
+                    {schedule.mileageInterval && (
+                      <div className="flex items-center gap-2">
+                        <Gauge className="h-4 w-4" />
+                        <span>Every {schedule.mileageInterval.toLocaleString()} miles</span>
+                      </div>
+                    )}
+                    {company && (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        <span>{company.name}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {lastCompletion && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Last completed: {lastCompletion.completedDate}</span>
+                        {lastCompletion.mileageAtCompletion && (
+                          <span className="text-muted-foreground">at {lastCompletion.mileageAtCompletion} miles</span>
+                        )}
+                      </div>
+                      {lastCompletion.notes && (
+                        <p className="text-sm text-muted-foreground mt-1 pl-6">{lastCompletion.notes}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+// WarrantySection component
+function WarrantySection({ warranties }: { warranties: Warranty[] }) {
+  if (warranties.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-8 text-center">
+          <Shield className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-muted-foreground">No warranties found.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {warranties.map((warranty) => {
+        const expired = isWarrantyExpired(warranty);
+        const expiringSoon = isWarrantyExpiringSoon(warranty);
+        const timeRemaining = formatWarrantyTimeRemaining(warranty);
+
+        return (
+          <Card key={warranty.id} className={expired ? 'border-destructive/50 bg-destructive/5' : expiringSoon ? 'border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20' : ''}>
+            <CardContent className="py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h4 className="font-semibold">{warranty.name}</h4>
+                    <Badge variant="outline">{warranty.warrantyType}</Badge>
+                    {expired && (
+                      <Badge variant="destructive">Expired</Badge>
+                    )}
+                    {expiringSoon && !expired && (
+                      <Badge className="bg-amber-100 text-amber-700">Expiring Soon</Badge>
+                    )}
+                  </div>
+
+                  {warranty.description && (
+                    <p className="text-sm text-muted-foreground mb-2">{warranty.description}</p>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      <span>{timeRemaining}</span>
+                    </div>
+                    {warranty.warrantyEndDate && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>Expires: {warranty.warrantyEndDate}</span>
+                      </div>
+                    )}
+                    {warranty.purchasePrice && (
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        <span>Paid: {warranty.purchasePrice}</span>
+                      </div>
+                    )}
+                    {warranty.companyName && (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        <span>{warranty.companyName}</span>
+                      </div>
+                    )}
+                    {warranty.isRegistered && (
+                      <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Registered</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {warranty.hasExtendedWarranty && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="text-sm">
+                        <span className="font-medium text-primary">Extended Warranty</span>
+                        {warranty.extendedWarrantyProvider && (
+                          <span className="text-muted-foreground"> by {warranty.extendedWarrantyProvider}</span>
+                        )}
+                        {warranty.extendedWarrantyEndDate && (
+                          <span className="text-muted-foreground"> until {warranty.extendedWarrantyEndDate}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {warranty.documents && warranty.documents.length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-sm font-medium mb-2">Documents</p>
+                      <div className="flex flex-wrap gap-2">
+                        {warranty.documents.map((doc, index) => (
+                          <a
+                            key={index}
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline flex items-center gap-1 text-sm"
+                          >
+                            <FileText className="h-3 w-3" />
+                            {doc.name || `Document ${index + 1}`}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+// CompanySection component
+function CompanySection({ companyIds, companies }: { companyIds: string[]; companies: Company[] }) {
+  const linkedCompanies = companies.filter(c => companyIds.includes(c.id));
+
+  if (linkedCompanies.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-8 text-center">
+          <Building2 className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-muted-foreground">No linked companies or service providers.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {linkedCompanies.map((company) => (
+        <Card key={company.id}>
+          <CardContent className="py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="font-semibold">{company.name}</h4>
+                  <Badge variant="outline">{company.serviceType}</Badge>
+                  {company.rating && (
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                      {'★'.repeat(company.rating)}{'☆'.repeat(5 - company.rating)}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
+                  {company.contactName && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Contact:</span>
+                      <span>{company.contactName}</span>
+                    </div>
+                  )}
+                  {company.phone && (
+                    <div className="flex items-center gap-2">
+                      <a href={`tel:${company.phone}`} className="text-primary hover:underline">
+                        {company.phone}
+                      </a>
+                    </div>
+                  )}
+                  {company.email && (
+                    <div className="flex items-center gap-2">
+                      <a href={`mailto:${company.email}`} className="text-primary hover:underline">
+                        {company.email}
+                      </a>
+                    </div>
+                  )}
+                  {company.website && (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={company.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline flex items-center gap-1"
+                      >
+                        Website
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {(company.address || company.city) && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {[company.address, company.city, company.state, company.zipCode].filter(Boolean).join(', ')}
+                  </p>
+                )}
+
+                {company.notes && (
+                  <p className="text-sm text-muted-foreground mt-2 italic">"{company.notes}"</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// SubscriptionSection component
+function SubscriptionSection({ subscriptions }: { subscriptions: Subscription[] }) {
+  if (subscriptions.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-8 text-center">
+          <CreditCard className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-muted-foreground">No linked subscriptions.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {subscriptions.map((subscription) => (
+        <Card key={subscription.id}>
+          <CardContent className="py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="font-semibold">{subscription.name}</h4>
+                  <Badge variant="outline">{subscription.subscriptionType}</Badge>
+                </div>
+
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="font-semibold text-lg text-primary">
+                    {subscription.cost}
+                    {subscription.currency && ` ${subscription.currency}`}
+                  </span>
+                  <span className="text-muted-foreground">/ {subscription.billingFrequency}</span>
+                </div>
+
+                {subscription.companyName && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Provider: {subscription.companyName}
+                  </p>
+                )}
+
+                {subscription.notes && (
+                  <p className="text-sm text-muted-foreground mt-2 italic">"{subscription.notes}"</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// Appliance Detail Content
+function ApplianceDetailContent({ id }: { id: string }) {
+  const navigate = useNavigate();
+  const { isLoading: isAppliancesLoading } = useAppliances();
+  const appliance = useApplianceById(id);
+  const maintenance = useMaintenanceByAppliance(id);
+  const warranties = useWarrantiesByApplianceId(id);
+  const { data: companies = [] } = useCompanies();
+  const { data: subscriptions = [] } = useSubscriptions();
+
+  // Get company IDs from maintenance and warranties
+  const companyIds = [
+    ...maintenance.filter(m => m.companyId).map(m => m.companyId!),
+    ...warranties.filter(w => w.companyId).map(w => w.companyId!),
+  ];
+  const uniqueCompanyIds = [...new Set(companyIds)];
+
+  // Get subscriptions linked to any of these companies
+  const linkedSubscriptions = subscriptions.filter(
+    s => s.companyId && uniqueCompanyIds.includes(s.companyId)
+  );
+
+  useSeoMeta({
+    title: appliance ? `${appliance.model} - Home Log` : 'Appliance Details - Home Log',
+    description: appliance ? `Details for ${appliance.model}${appliance.manufacturer ? ` by ${appliance.manufacturer}` : ''}` : 'View appliance details',
+  });
+
+  if (isAppliancesLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (!appliance) {
+    return <NotFound />;
+  }
+
+  const startDate = getStartDateForMaintenance(appliance.purchaseDate);
+
+  return (
+    <div className="min-h-screen bg-theme-gradient tool-pattern-bg">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Package className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold">{appliance.model}</h1>
+                  {appliance.manufacturer && (
+                    <p className="text-sm text-muted-foreground">{appliance.manufacturer}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <Button variant="outline" asChild>
+              <Link to="/?tab=appliances">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Basic Info Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                Appliance Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {appliance.manufacturer && (
+                <div className="flex items-start gap-3">
+                  <Factory className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Manufacturer</p>
+                    <p>{appliance.manufacturer}</p>
+                  </div>
+                </div>
+              )}
+
+              {appliance.room && (
+                <div className="flex items-start gap-3">
+                  <Home className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Room</p>
+                    <p>{appliance.room}</p>
+                  </div>
+                </div>
+              )}
+
+              {appliance.purchaseDate && (
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Purchase Date</p>
+                    <p>{appliance.purchaseDate}</p>
+                  </div>
+                </div>
+              )}
+
+              {appliance.price && (
+                <div className="flex items-start gap-3">
+                  <DollarSign className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Purchase Price</p>
+                    <p>{appliance.price}</p>
+                  </div>
+                </div>
+              )}
+
+              {appliance.receiptUrl && (
+                <div className="flex items-start gap-3">
+                  <Image className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Receipt</p>
+                    <a
+                      href={appliance.receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-1"
+                    >
+                      View Receipt
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {appliance.manualUrl && (
+                <div className="flex items-start gap-3">
+                  <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Manual</p>
+                    <a
+                      href={appliance.manualUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-1"
+                    >
+                      View Manual
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Maintenance Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-primary" />
+                Maintenance Schedules
+              </CardTitle>
+              <CardDescription>
+                {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} for this appliance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Warranties Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Warranties
+              </CardTitle>
+              <CardDescription>
+                {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this appliance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WarrantySection warranties={warranties} />
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Companies Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                Service Providers
+              </CardTitle>
+              <CardDescription>
+                {uniqueCompanyIds.length} compan{uniqueCompanyIds.length !== 1 ? 'ies' : 'y'} linked through maintenance or warranties
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CompanySection companyIds={uniqueCompanyIds} companies={companies} />
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Subscriptions Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Related Subscriptions
+              </CardTitle>
+              <CardDescription>
+                {linkedSubscriptions.length} subscription{linkedSubscriptions.length !== 1 ? 's' : ''} from linked companies
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SubscriptionSection subscriptions={linkedSubscriptions} />
+            </CardContent>
+          </Card>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+// Vehicle Detail Content
+function VehicleDetailContent({ id }: { id: string }) {
+  const navigate = useNavigate();
+  const { isLoading: isVehiclesLoading } = useVehicles();
+  const vehicle = useVehicleById(id);
+  const maintenance = useMaintenanceByVehicle(id);
+  const warranties = useWarrantiesByVehicleId(id);
+  const { data: companies = [] } = useCompanies();
+  const { data: subscriptions = [] } = useSubscriptions();
+
+  // Get company IDs from maintenance and warranties
+  const companyIds = [
+    ...maintenance.filter(m => m.companyId).map(m => m.companyId!),
+    ...warranties.filter(w => w.companyId).map(w => w.companyId!),
+  ];
+  const uniqueCompanyIds = [...new Set(companyIds)];
+
+  // Get subscriptions linked to any of these companies
+  const linkedSubscriptions = subscriptions.filter(
+    s => s.companyId && uniqueCompanyIds.includes(s.companyId)
+  );
+
+  useSeoMeta({
+    title: vehicle ? `${vehicle.name} - Home Log` : 'Vehicle Details - Home Log',
+    description: vehicle ? `Details for ${vehicle.name}` : 'View vehicle details',
+  });
+
+  if (isVehiclesLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (!vehicle) {
+    return <NotFound />;
+  }
+
+  const VehicleIcon = getVehicleIcon(vehicle.vehicleType);
+  const startDate = getStartDateForMaintenance(vehicle.purchaseDate);
+
+  return (
+    <div className="min-h-screen bg-theme-gradient tool-pattern-bg">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <VehicleIcon className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-bold">{vehicle.name}</h1>
+                    <Badge variant="secondary">{vehicle.vehicleType}</Badge>
+                  </div>
+                  {(vehicle.make || vehicle.model || vehicle.year) && (
+                    <p className="text-sm text-muted-foreground">
+                      {[vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(' ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <Button variant="outline" asChild>
+              <Link to="/?tab=vehicles">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Basic Info Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <VehicleIcon className="h-5 w-5 text-primary" />
+                Vehicle Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(vehicle.make || vehicle.model || vehicle.year) && (
+                <div className="flex items-start gap-3">
+                  <Factory className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Make / Model / Year</p>
+                    <p>{[vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(' ')}</p>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.vin && (
+                <div className="flex items-start gap-3">
+                  <Hash className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">VIN</p>
+                    <p className="font-mono text-sm">{vehicle.vin}</p>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.licensePlate && (
+                <div className="flex items-start gap-3">
+                  <CreditCard className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">License Plate</p>
+                    <p>{vehicle.licensePlate}</p>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.serialNumber && (
+                <div className="flex items-start gap-3">
+                  <Hash className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Serial Number</p>
+                    <p className="font-mono text-sm">{vehicle.serialNumber}</p>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.hullId && (
+                <div className="flex items-start gap-3">
+                  <Hash className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Hull ID (HIN)</p>
+                    <p className="font-mono text-sm">{vehicle.hullId}</p>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.tailNumber && (
+                <div className="flex items-start gap-3">
+                  <Plane className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Tail Number</p>
+                    <p className="font-mono text-sm">{vehicle.tailNumber}</p>
+                  </div>
+                </div>
+              )}
+
+              {(vehicle.mileage || vehicle.engineHours || vehicle.hobbsTime) && (
+                <div className="flex items-start gap-3">
+                  <Gauge className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {vehicle.hobbsTime ? 'Hobbs Time' : vehicle.engineHours ? 'Engine Hours' : 'Mileage'}
+                    </p>
+                    <p>
+                      {vehicle.hobbsTime ? `${vehicle.hobbsTime} hours` :
+                       vehicle.engineHours ? `${vehicle.engineHours} hours` :
+                       `${vehicle.mileage} miles`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.fuelType && (
+                <div className="flex items-start gap-3">
+                  <Fuel className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Fuel Type</p>
+                    <p>{getFuelTypeLabel(vehicle.fuelType)}</p>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.purchaseDate && (
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Purchase Date</p>
+                    <p>{vehicle.purchaseDate}</p>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.purchasePrice && (
+                <div className="flex items-start gap-3">
+                  <DollarSign className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Purchase Price</p>
+                    <p>{vehicle.purchasePrice}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Registration & Insurance Section */}
+        {(vehicle.registrationExpiry || vehicle.insuranceProvider || vehicle.insuranceExpiry) && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Registration & Insurance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {vehicle.registrationExpiry && (
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Registration Expiry</p>
+                      <p>{vehicle.registrationExpiry}</p>
+                    </div>
+                  </div>
+                )}
+
+                {vehicle.insuranceProvider && (
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Insurance Provider</p>
+                      <p>{vehicle.insuranceProvider}</p>
+                      {vehicle.insurancePolicyNumber && (
+                        <p className="text-sm text-muted-foreground">Policy: {vehicle.insurancePolicyNumber}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {vehicle.insuranceExpiry && (
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Insurance Expiry</p>
+                      <p>{vehicle.insuranceExpiry}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {/* Documents Section */}
+        {(vehicle.receiptUrl || vehicle.warrantyUrl || (vehicle.documentsUrls && vehicle.documentsUrls.length > 0)) && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Documents
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {vehicle.receiptUrl && (
+                  <a
+                    href={vehicle.receiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                  >
+                    <Image className="h-5 w-5 text-primary" />
+                    <span>View Receipt</span>
+                    <ExternalLink className="h-4 w-4 ml-auto" />
+                  </a>
+                )}
+                {vehicle.warrantyUrl && (
+                  <a
+                    href={vehicle.warrantyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                  >
+                    <Shield className="h-5 w-5 text-primary" />
+                    <span>View Warranty Document</span>
+                    <ExternalLink className="h-4 w-4 ml-auto" />
+                  </a>
+                )}
+                {vehicle.documentsUrls?.map((url, index) => (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                  >
+                    <FileText className="h-5 w-5 text-primary" />
+                    <span>Document {index + 1}</span>
+                    <ExternalLink className="h-4 w-4 ml-auto" />
+                  </a>
+                ))}
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {/* Notes Section */}
+        {vehicle.notes && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <StickyNote className="h-5 w-5 text-primary" />
+                  Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap">{vehicle.notes}</p>
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {/* Maintenance Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-primary" />
+                Maintenance Schedules
+              </CardTitle>
+              <CardDescription>
+                {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} for this vehicle
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Warranties Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Warranties
+              </CardTitle>
+              <CardDescription>
+                {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this vehicle
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WarrantySection warranties={warranties} />
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Companies Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                Service Providers
+              </CardTitle>
+              <CardDescription>
+                {uniqueCompanyIds.length} compan{uniqueCompanyIds.length !== 1 ? 'ies' : 'y'} linked through maintenance or warranties
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CompanySection companyIds={uniqueCompanyIds} companies={companies} />
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Subscriptions Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Related Subscriptions
+              </CardTitle>
+              <CardDescription>
+                {linkedSubscriptions.length} subscription{linkedSubscriptions.length !== 1 ? 's' : ''} from linked companies
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SubscriptionSection subscriptions={linkedSubscriptions} />
+            </CardContent>
+          </Card>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+// Loading Skeleton
+function LoadingSkeleton() {
+  return (
+    <div className="min-h-screen bg-theme-gradient tool-pattern-bg">
+      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+        </div>
+      </header>
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i}>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </main>
+    </div>
+  );
+}
+
+// Main Page Component
+export function AssetDetailPage() {
+  const { type, id } = useParams<{ type: string; id: string }>();
+  const { user } = useCurrentUser();
+
+  // Require login
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-theme-gradient tool-pattern-bg flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="py-12 text-center">
+            <Shield className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Login Required</h2>
+            <p className="text-muted-foreground mb-6">
+              Please log in to view your asset details.
+            </p>
+            <Button asChild>
+              <Link to="/">Go to Home</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!id) {
+    return <NotFound />;
+  }
+
+  if (type === 'appliance') {
+    return <ApplianceDetailContent id={id} />;
+  }
+
+  if (type === 'vehicle') {
+    return <VehicleDetailContent id={id} />;
+  }
+
+  return <NotFound />;
+}
+
+export default AssetDetailPage;

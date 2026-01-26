@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, ChevronDown, ChevronRight, Car, List, LayoutGrid, Calendar, Factory, Plane, Ship, Tractor, Gauge } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, ChevronDown, ChevronRight, Car, List, LayoutGrid, Calendar, Factory, Plane, Ship, Tractor, Gauge, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -346,46 +347,59 @@ function VehicleCard({ vehicle, onClick }: VehicleCardProps) {
   const usageDisplay = getUsageDisplay();
 
   return (
-    <button
-      onClick={onClick}
-      className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200 text-left"
-    >
-      {/* Icon */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-          <VehicleIcon className="h-5 w-5 text-primary" />
+    <div className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200">
+      {/* Clickable area for quick view */}
+      <button
+        onClick={onClick}
+        className="text-left flex-1 flex flex-col"
+      >
+        {/* Icon */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <VehicleIcon className="h-5 w-5 text-primary" />
+          </div>
+          {usageDisplay && (
+            <Badge variant="secondary" className="text-xs bg-slate-100 dark:bg-slate-700">
+              <Gauge className="h-3 w-3 mr-1" />
+              {usageDisplay}
+            </Badge>
+          )}
         </div>
-        {usageDisplay && (
-          <Badge variant="secondary" className="text-xs bg-slate-100 dark:bg-slate-700">
-            <Gauge className="h-3 w-3 mr-1" />
-            {usageDisplay}
-          </Badge>
+
+        {/* Name */}
+        <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+          {vehicle.name}
+        </h3>
+
+        {/* Make/Model */}
+        {(vehicle.make || vehicle.model) && (
+          <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-2">
+            <Factory className="h-3.5 w-3.5" />
+            <span className="truncate">{[vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(' ')}</span>
+          </p>
         )}
-      </div>
 
-      {/* Name */}
-      <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-        {vehicle.name}
-      </h3>
+        {/* Purchase Date */}
+        {vehicle.purchaseDate && (
+          <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
+            <Calendar className="h-3 w-3" />
+            <span>Purchased {vehicle.purchaseDate}</span>
+          </p>
+        )}
+      </button>
 
-      {/* Make/Model */}
-      {(vehicle.make || vehicle.model) && (
-        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-2">
-          <Factory className="h-3.5 w-3.5" />
-          <span className="truncate">{[vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(' ')}</span>
-        </p>
-      )}
-
-      {/* Purchase Date */}
-      {vehicle.purchaseDate && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
-          <Calendar className="h-3 w-3" />
-          <span>Purchased {vehicle.purchaseDate}</span>
-        </p>
-      )}
+      {/* View Details Link */}
+      <Link
+        to={`/asset/vehicle/${vehicle.id}`}
+        className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <FileText className="h-4 w-4" />
+        View Full Details
+      </Link>
 
       {/* Hover indicator */}
       <div className="absolute inset-0 rounded-xl ring-2 ring-primary ring-opacity-0 group-hover:ring-opacity-20 transition-all pointer-events-none" />
-    </button>
+    </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ExternalLink, FileText, Image, Calendar, Factory, Home, Edit, Trash2, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -151,20 +152,28 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDe
             )}
           </div>
 
-          <div className="flex justify-between pt-4 border-t">
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleEdit}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-              <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+          <div className="flex flex-col gap-4 pt-4 border-t">
+            <Button variant="default" asChild className="w-full">
+              <Link to={`/asset/appliance/${appliance.id}`}>
+                <FileText className="h-4 w-4 mr-2" />
+                View Full Details
+              </Link>
+            </Button>
+            <div className="flex justify-between">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleEdit}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </div>
+              <Button variant="ghost" onClick={onClose}>
+                Close
               </Button>
             </div>
-            <Button variant="ghost" onClick={onClose}>
-              Close
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
