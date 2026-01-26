@@ -216,9 +216,9 @@ export function useDataSyncStatus() {
         };
       }
     },
-    enabled: !!user?.pubkey,
-    staleTime: 60000, // Consider synced for 1 minute
-    gcTime: Infinity,
+    enabled: !!user?.pubkey && cacheChecked, // Only run after cache check completes
+    staleTime: 0, // Always fetch fresh - don't use cached sync status
+    gcTime: 0, // Don't keep old sync results in memory
     retry: 1,
   });
 
