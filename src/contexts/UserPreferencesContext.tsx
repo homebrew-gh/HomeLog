@@ -104,6 +104,10 @@ export interface UserPreferences {
   customHomeFeatures: string[];
   // Hidden default home features
   hiddenDefaultHomeFeatures: string[];
+  // Custom warranty types
+  customWarrantyTypes: string[];
+  // Hidden default warranty types
+  hiddenDefaultWarrantyTypes: string[];
   // Blossom media servers
   blossomServers: BlossomServer[];
   // Version for future migrations
@@ -132,6 +136,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   hiddenDefaultSubscriptionTypes: [],
   customHomeFeatures: [],
   hiddenDefaultHomeFeatures: [],
+  customWarrantyTypes: [],
+  hiddenDefaultWarrantyTypes: [],
   blossomServers: DEFAULT_BLOSSOM_SERVERS,
   version: 1,
 };
@@ -181,6 +187,11 @@ interface UserPreferencesContextType {
   removeCustomHomeFeature: (feature: string) => void;
   hideDefaultHomeFeature: (feature: string) => void;
   restoreDefaultHomeFeature: (feature: string) => void;
+  // Warranty type actions
+  addCustomWarrantyType: (type: string) => void;
+  removeCustomWarrantyType: (type: string) => void;
+  hideDefaultWarrantyType: (type: string) => void;
+  restoreDefaultWarrantyType: (type: string) => void;
   // Blossom server actions
   addBlossomServer: (url: string, isPrivate?: boolean) => void;
   removeBlossomServer: (url: string) => void;
@@ -655,6 +666,46 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  // Warranty type actions
+  const addCustomWarrantyType = useCallback((type: string) => {
+    updatePreferences((prev) => {
+      const currentCustomTypes = prev.customWarrantyTypes || [];
+      const currentHiddenTypes = prev.hiddenDefaultWarrantyTypes || [];
+      if (currentCustomTypes.includes(type)) return prev;
+      return {
+        ...prev,
+        customWarrantyTypes: [...currentCustomTypes, type],
+        // If adding a type that was a hidden default, remove it from hidden
+        hiddenDefaultWarrantyTypes: currentHiddenTypes.filter(t => t !== type),
+      };
+    });
+  }, [updatePreferences]);
+
+  const removeCustomWarrantyType = useCallback((type: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      customWarrantyTypes: (prev.customWarrantyTypes || []).filter(t => t !== type),
+    }));
+  }, [updatePreferences]);
+
+  const hideDefaultWarrantyType = useCallback((type: string) => {
+    updatePreferences((prev) => {
+      const currentHiddenTypes = prev.hiddenDefaultWarrantyTypes || [];
+      if (currentHiddenTypes.includes(type)) return prev;
+      return {
+        ...prev,
+        hiddenDefaultWarrantyTypes: [...currentHiddenTypes, type],
+      };
+    });
+  }, [updatePreferences]);
+
+  const restoreDefaultWarrantyType = useCallback((type: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      hiddenDefaultWarrantyTypes: (prev.hiddenDefaultWarrantyTypes || []).filter(t => t !== type),
+    }));
+  }, [updatePreferences]);
+
   // Blossom server actions
   const normalizeBlossomUrl = (url: string): string => {
     let normalized = url.trim();
@@ -796,6 +847,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     hiddenDefaultSubscriptionTypes: localPreferences.hiddenDefaultSubscriptionTypes || [],
     customHomeFeatures: localPreferences.customHomeFeatures || [],
     hiddenDefaultHomeFeatures: localPreferences.hiddenDefaultHomeFeatures || [],
+    customWarrantyTypes: localPreferences.customWarrantyTypes || [],
+    hiddenDefaultWarrantyTypes: localPreferences.hiddenDefaultWarrantyTypes || [],
     blossomServers: normalizedBlossomServers,
     version: localPreferences.version || 1,
   };
@@ -844,6 +897,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         removeCustomHomeFeature,
         hideDefaultHomeFeature,
         restoreDefaultHomeFeature,
+        addCustomWarrantyType,
+        removeCustomWarrantyType,
+        hideDefaultWarrantyType,
+        restoreDefaultWarrantyType,
         addBlossomServer,
         removeBlossomServer,
         toggleBlossomServer,

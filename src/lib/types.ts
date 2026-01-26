@@ -181,6 +181,22 @@ export const DEFAULT_SUBSCRIPTION_TYPES = [
 
 export type DefaultSubscriptionType = typeof DEFAULT_SUBSCRIPTION_TYPES[number];
 
+// Warranty Types
+export const DEFAULT_WARRANTY_TYPES = [
+  'Automotive',
+  'Appliance',
+  'Electronics',
+  'Tools',
+  'Furniture',
+  'Outdoor Gear',
+  'Home Features',
+  'Jewelry',
+  'Medical',
+  'Pet Products',
+] as const;
+
+export type DefaultWarrantyType = typeof DEFAULT_WARRANTY_TYPES[number];
+
 // Billing Frequencies for subscriptions
 export const BILLING_FREQUENCIES = [
   { value: 'weekly', label: 'Weekly' },

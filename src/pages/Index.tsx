@@ -12,6 +12,7 @@ import { RelayManagementDialog } from '@/components/RelayManagementDialog';
 import { VehicleTypeManagementDialog } from '@/components/VehicleTypeManagementDialog';
 import { SubscriptionTypeManagementDialog } from '@/components/SubscriptionTypeManagementDialog';
 import { HomeFeatureManagementDialog } from '@/components/HomeFeatureManagementDialog';
+import { WarrantyTypeManagementDialog } from '@/components/WarrantyTypeManagementDialog';
 import { EncryptionSettingsDialog } from '@/components/EncryptionSettingsDialog';
 import { StorageSettingsDialog } from '@/components/StorageSettingsDialog';
 import { DisplaySettingsDialog } from '@/components/DisplaySettingsDialog';
@@ -122,6 +123,7 @@ const Index = () => {
   const [vehicleTypeManagementOpen, setVehicleTypeManagementOpen] = useState(false);
   const [subscriptionTypeManagementOpen, setSubscriptionTypeManagementOpen] = useState(false);
   const [homeFeatureManagementOpen, setHomeFeatureManagementOpen] = useState(false);
+  const [warrantyTypeManagementOpen, setWarrantyTypeManagementOpen] = useState(false);
   const [encryptionSettingsOpen, setEncryptionSettingsOpen] = useState(false);
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
@@ -210,6 +212,10 @@ const Index = () => {
                     <DropdownMenuItem onClick={() => setHomeFeatureManagementOpen(true)}>
                       <TreePine className="h-4 w-4 mr-2" />
                       Home Features
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setWarrantyTypeManagementOpen(true)}>
+                      <Shield className="h-4 w-4 mr-2" />
+                      Warranty Types
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Privacy & Security</DropdownMenuLabel>
@@ -439,6 +445,11 @@ const Index = () => {
       <HomeFeatureManagementDialog
         isOpen={homeFeatureManagementOpen}
         onClose={() => setHomeFeatureManagementOpen(false)}
+      />
+
+      <WarrantyTypeManagementDialog
+        isOpen={warrantyTypeManagementOpen}
+        onClose={() => setWarrantyTypeManagementOpen(false)}
       />
 
       <DisplaySettingsDialog
