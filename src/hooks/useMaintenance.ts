@@ -257,6 +257,13 @@ export function useHomeFeatureMaintenance() {
   return maintenance?.filter(m => m.homeFeature && !m.applianceId && !m.vehicleId) || [];
 }
 
+// Get maintenance schedules linked to a specific company
+export function useMaintenanceByCompanyId(companyId: string | undefined) {
+  const { data: maintenance } = useMaintenance();
+  if (!companyId) return [];
+  return maintenance?.filter(m => m.companyId === companyId) || [];
+}
+
 export function useMaintenanceActions() {
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();

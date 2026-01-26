@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Plus, 
   ChevronDown, 
@@ -23,7 +24,8 @@ import {
   CircleDot,
   FileUp,
   UserPlus,
-  CreditCard
+  CreditCard,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -453,71 +455,84 @@ function CompanyCard({ company, onClick }: CompanyCardProps) {
   const hasActiveSubscription = linkedSubscriptions.length > 0;
   
   return (
-    <button
-      onClick={onClick}
-      className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200 text-left"
-    >
-      {/* Icon & Rating */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-          <ServiceIcon className="h-5 w-5 text-primary" />
-        </div>
-        {company.rating && (
-          <div className="flex items-center gap-0.5">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                className={`h-3.5 w-3.5 ${
-                  star <= company.rating!
-                    ? 'fill-amber-400 text-amber-400'
-                    : 'text-slate-300 dark:text-slate-600'
-                }`}
-              />
-            ))}
+    <div className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200">
+      {/* Clickable area for quick view */}
+      <button
+        onClick={onClick}
+        className="text-left flex-1 flex flex-col"
+      >
+        {/* Icon & Rating */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <ServiceIcon className="h-5 w-5 text-primary" />
           </div>
-        )}
-      </div>
+          {company.rating && (
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`h-3.5 w-3.5 ${
+                    star <= company.rating!
+                      ? 'fill-amber-400 text-amber-400'
+                      : 'text-slate-300 dark:text-slate-600'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Name */}
-      <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-        {company.name}
-      </h3>
+        {/* Name */}
+        <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+          {company.name}
+        </h3>
 
-      {/* Contact Info */}
-      {company.phone && (
-        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-          <Phone className="h-3.5 w-3.5" />
-          <span className="truncate">{company.phone}</span>
-        </p>
-      )}
-
-      {company.email && (
-        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-          <Mail className="h-3.5 w-3.5" />
-          <span className="truncate">{company.email}</span>
-        </p>
-      )}
-
-      {/* Footer info */}
-      <div className="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700 space-y-1">
-        {/* Active Subscription Badge */}
-        {hasActiveSubscription && (
-          <p className="text-xs text-primary flex items-center gap-1">
-            <CreditCard className="h-3 w-3" />
-            <span>{linkedSubscriptions.length} active subscription{linkedSubscriptions.length === 1 ? '' : 's'}</span>
+        {/* Contact Info */}
+        {company.phone && (
+          <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
+            <Phone className="h-3.5 w-3.5" />
+            <span className="truncate">{company.phone}</span>
           </p>
         )}
 
-        {/* Invoice Count */}
-        {company.invoices && company.invoices.length > 0 && (
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            {company.invoices.length} invoice{company.invoices.length === 1 ? '' : 's'} on file
+        {company.email && (
+          <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
+            <Mail className="h-3.5 w-3.5" />
+            <span className="truncate">{company.email}</span>
           </p>
         )}
-      </div>
+
+        {/* Footer info */}
+        <div className="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700 space-y-1">
+          {/* Active Subscription Badge */}
+          {hasActiveSubscription && (
+            <p className="text-xs text-primary flex items-center gap-1">
+              <CreditCard className="h-3 w-3" />
+              <span>{linkedSubscriptions.length} active subscription{linkedSubscriptions.length === 1 ? '' : 's'}</span>
+            </p>
+          )}
+
+          {/* Invoice Count */}
+          {company.invoices && company.invoices.length > 0 && (
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {company.invoices.length} invoice{company.invoices.length === 1 ? '' : 's'} on file
+            </p>
+          )}
+        </div>
+      </button>
+
+      {/* View Details Link */}
+      <Link
+        to={`/asset/company/${company.id}`}
+        className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <FileText className="h-4 w-4" />
+        View Full Details
+      </Link>
 
       {/* Hover indicator */}
       <div className="absolute inset-0 rounded-xl ring-2 ring-primary ring-opacity-0 group-hover:ring-opacity-20 transition-all pointer-events-none" />
-    </button>
+    </div>
   );
 }
