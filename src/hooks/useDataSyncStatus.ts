@@ -223,7 +223,7 @@ export function useDataSyncStatus() {
       }
     },
     enabled: !!user?.pubkey && cacheChecked, // Only run after cache check completes
-    staleTime: 60000, // Consider fresh for 1 minute
+    staleTime: Infinity, // Once synced, don't refetch
     gcTime: Infinity, // Keep in memory for the session
     refetchOnWindowFocus: false,
     retry: 1,

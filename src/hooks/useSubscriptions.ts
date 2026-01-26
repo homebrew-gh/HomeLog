@@ -153,7 +153,7 @@ export function useSubscriptions() {
       return [];
     },
     enabled: !!user?.pubkey,
-    staleTime: 60000, // Consider fresh for 1 minute
+    staleTime: Infinity, // Data comes from IndexedDB cache, no need to refetch
     gcTime: Infinity, // Keep in memory for the session
     refetchOnWindowFocus: false,
   });
