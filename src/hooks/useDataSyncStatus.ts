@@ -11,11 +11,17 @@ import {
 } from '@/lib/types';
 import { cacheEvents, getCachedEvents } from '@/lib/eventCache';
 
+// Timeout for new users - if no data is found quickly, assume new user
+const NEW_USER_FAST_TIMEOUT_MS = 3000;
+
 /**
  * Hook to track data synchronization status across all data types.
  * 
  * This hook performs initial sync with relays and tracks progress.
  * It returns whether sync is complete and the sync progress.
+ * 
+ * For new users with no cached data, uses a faster timeout to avoid
+ * long waits when there's nothing to fetch from relays.
  */
 export function useDataSyncStatus() {
   const { nostr } = useNostr();
@@ -58,7 +64,7 @@ export function useDataSyncStatus() {
 
   // Main sync query - fetches all data types in one efficient request
   const { data: syncStatus, isLoading: isSyncing, isFetched } = useQuery({
-    queryKey: ['data-sync-status', user?.pubkey],
+    queryKey: ['data-sync-status', user?.pubkey, hasCachedData],
     queryFn: async ({ signal }) => {
       if (!user?.pubkey) {
         return { 
@@ -91,6 +97,10 @@ export function useDataSyncStatus() {
 
       // If we have cached data, we can show it while syncing continues
       // But still perform sync to get fresh data
+      
+      // Use a shorter timeout for new users (no cache) to avoid long waits
+      // when there's nothing to fetch from relays
+      const timeoutMs = hasAnyCachedData ? 20000 : NEW_USER_FAST_TIMEOUT_MS;
 
       try {
         // Fetch all data types in one query for efficiency
@@ -103,10 +113,10 @@ export function useDataSyncStatus() {
             { kinds: [SUBSCRIPTION_KIND], authors: [user.pubkey] },
             { kinds: [5], authors: [user.pubkey] }, // Deletion events
           ],
-          { signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]) }
+          { signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) }
         );
 
-        console.log('[useDataSyncStatus] Sync complete, received', events.length, 'events');
+        console.log('[useDataSyncStatus] Sync complete, received', events.length, 'events (timeout was', timeoutMs, 'ms)');
 
         // Cache all events for other hooks to use
         if (events.length > 0) {
