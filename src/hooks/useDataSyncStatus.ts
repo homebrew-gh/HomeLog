@@ -144,20 +144,19 @@ export function useDataSyncStatus() {
         if (events.length > 0) {
           await cacheEvents(events);
           
-          // Refetch all data queries so they re-read from the now-populated cache
-          // This ensures first-time users see their data immediately after sync
-          // Using refetchQueries instead of invalidateQueries to wait for completion
+          // Invalidate all data queries so they re-read from the now-populated cache
+          // when they next become active (i.e., when the dashboard renders)
+          // Using invalidateQueries instead of refetchQueries because the queries
+          // might not be active yet (dashboard hasn't rendered during loading)
           if (!hasInvalidated.current) {
             hasInvalidated.current = true;
-            await Promise.all([
-              queryClient.refetchQueries({ queryKey: ['appliances'], type: 'active' }),
-              queryClient.refetchQueries({ queryKey: ['vehicles'], type: 'active' }),
-              queryClient.refetchQueries({ queryKey: ['maintenance'], type: 'active' }),
-              queryClient.refetchQueries({ queryKey: ['companies'], type: 'active' }),
-              queryClient.refetchQueries({ queryKey: ['subscriptions'], type: 'active' }),
-              queryClient.refetchQueries({ queryKey: ['warranties'], type: 'active' }),
-              queryClient.refetchQueries({ queryKey: ['maintenance-completions'], type: 'active' }),
-            ]);
+            queryClient.invalidateQueries({ queryKey: ['appliances'] });
+            queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+            queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+            queryClient.invalidateQueries({ queryKey: ['companies'] });
+            queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+            queryClient.invalidateQueries({ queryKey: ['warranties'] });
+            queryClient.invalidateQueries({ queryKey: ['maintenance-completions'] });
           }
         }
 
