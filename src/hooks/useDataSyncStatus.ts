@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   APPLIANCE_KIND, 
   VEHICLE_KIND, 
@@ -13,6 +13,16 @@ import { cacheEvents, getCachedEvents } from '@/lib/eventCache';
 
 // Timeout for new users - if no data is found quickly, assume new user
 const NEW_USER_FAST_TIMEOUT_MS = 3000;
+
+// Cache result type for reuse
+interface CacheCheckResult {
+  appliances: number;
+  vehicles: number;
+  maintenance: number;
+  companies: number;
+  subscriptions: number;
+  hasAny: boolean;
+}
 
 /**
  * Hook to track data synchronization status across all data types.
@@ -26,36 +36,43 @@ const NEW_USER_FAST_TIMEOUT_MS = 3000;
 export function useDataSyncStatus() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const syncStarted = useRef(false);
   
   // Track whether we've checked the cache (this happens instantly before relay sync)
   const [cacheChecked, setCacheChecked] = useState(false);
-  const [hasCachedData, setHasCachedData] = useState(false);
+  const [cacheResult, setCacheResult] = useState<CacheCheckResult | null>(null);
   
   // Check cache status immediately when user becomes available
   useEffect(() => {
     if (!user?.pubkey) {
       setCacheChecked(false);
-      setHasCachedData(false);
+      setCacheResult(null);
       return;
     }
     
     // Check cache instantly (IndexedDB is very fast)
     const checkCache = async () => {
-      const cachedAppliances = await getCachedEvents([APPLIANCE_KIND], user.pubkey);
-      const cachedVehicles = await getCachedEvents([VEHICLE_KIND], user.pubkey);
-      const cachedMaintenance = await getCachedEvents([MAINTENANCE_KIND], user.pubkey);
-      const cachedCompanies = await getCachedEvents([COMPANY_KIND], user.pubkey);
-      const cachedSubscriptions = await getCachedEvents([SUBSCRIPTION_KIND], user.pubkey);
+      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedSubscriptions] = await Promise.all([
+        getCachedEvents([APPLIANCE_KIND], user.pubkey),
+        getCachedEvents([VEHICLE_KIND], user.pubkey),
+        getCachedEvents([MAINTENANCE_KIND], user.pubkey),
+        getCachedEvents([COMPANY_KIND], user.pubkey),
+        getCachedEvents([SUBSCRIPTION_KIND], user.pubkey),
+      ]);
       
-      const hasAny = 
-        cachedAppliances.length > 0 ||
-        cachedVehicles.length > 0 ||
-        cachedMaintenance.length > 0 ||
-        cachedCompanies.length > 0 ||
-        cachedSubscriptions.length > 0;
+      const result: CacheCheckResult = {
+        appliances: cachedAppliances.length,
+        vehicles: cachedVehicles.length,
+        maintenance: cachedMaintenance.length,
+        companies: cachedCompanies.length,
+        subscriptions: cachedSubscriptions.length,
+        hasAny: cachedAppliances.length > 0 ||
+          cachedVehicles.length > 0 ||
+          cachedMaintenance.length > 0 ||
+          cachedCompanies.length > 0 ||
+          cachedSubscriptions.length > 0,
+      };
       
-      setHasCachedData(hasAny);
+      setCacheResult(result);
       setCacheChecked(true);
     };
     
@@ -63,8 +80,8 @@ export function useDataSyncStatus() {
   }, [user?.pubkey]);
 
   // Main sync query - fetches all data types in one efficient request
-  const { data: syncStatus, isLoading: isSyncing, isFetched } = useQuery({
-    queryKey: ['data-sync-status', user?.pubkey, hasCachedData],
+  const { data: syncStatus, isLoading: isSyncing } = useQuery({
+    queryKey: ['data-sync-status', user?.pubkey, cacheResult?.hasAny],
     queryFn: async ({ signal }) => {
       if (!user?.pubkey) {
         return { 
@@ -81,23 +98,9 @@ export function useDataSyncStatus() {
         };
       }
 
-      // First, check if we have any cached data (instant)
-      const cachedAppliances = await getCachedEvents([APPLIANCE_KIND], user.pubkey);
-      const cachedVehicles = await getCachedEvents([VEHICLE_KIND], user.pubkey);
-      const cachedMaintenance = await getCachedEvents([MAINTENANCE_KIND], user.pubkey);
-      const cachedCompanies = await getCachedEvents([COMPANY_KIND], user.pubkey);
-      const cachedSubscriptions = await getCachedEvents([SUBSCRIPTION_KIND], user.pubkey);
-      
-      const hasAnyCachedData = 
-        cachedAppliances.length > 0 ||
-        cachedVehicles.length > 0 ||
-        cachedMaintenance.length > 0 ||
-        cachedCompanies.length > 0 ||
-        cachedSubscriptions.length > 0;
+      // Reuse cache check result from state instead of re-reading IndexedDB
+      const hasAnyCachedData = cacheResult?.hasAny ?? false;
 
-      // If we have cached data, we can show it while syncing continues
-      // But still perform sync to get fresh data
-      
       // Use a shorter timeout for new users (no cache) to avoid long waits
       // when there's nothing to fetch from relays
       const timeoutMs = hasAnyCachedData ? 20000 : NEW_USER_FAST_TIMEOUT_MS;
@@ -116,7 +119,7 @@ export function useDataSyncStatus() {
           { signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) }
         );
 
-        console.log('[useDataSyncStatus] Sync complete, received', events.length, 'events (timeout was', timeoutMs, 'ms)');
+        // Sync complete
 
         // Cache all events for other hooks to use
         if (events.length > 0) {
@@ -141,20 +144,18 @@ export function useDataSyncStatus() {
             subscriptions: { synced: true, count: subscriptionCount },
           }
         };
-      } catch (error) {
-        console.error('[useDataSyncStatus] Sync failed:', error);
-        
+      } catch {
         // If sync fails but we have cached data, consider it "synced" with cache
-        if (hasAnyCachedData) {
+        if (hasAnyCachedData && cacheResult) {
           return {
             synced: true,
             hasAnyData: true,
             categories: {
-              appliances: { synced: true, count: cachedAppliances.length },
-              vehicles: { synced: true, count: cachedVehicles.length },
-              maintenance: { synced: true, count: cachedMaintenance.length },
-              companies: { synced: true, count: cachedCompanies.length },
-              subscriptions: { synced: true, count: cachedSubscriptions.length },
+              appliances: { synced: true, count: cacheResult.appliances },
+              vehicles: { synced: true, count: cacheResult.vehicles },
+              maintenance: { synced: true, count: cacheResult.maintenance },
+              companies: { synced: true, count: cacheResult.companies },
+              subscriptions: { synced: true, count: cacheResult.subscriptions },
             }
           };
         }
@@ -185,7 +186,7 @@ export function useDataSyncStatus() {
     hasAnyData: syncStatus?.hasAnyData ?? false,
     // These are available immediately after cache check (before relay sync)
     cacheChecked,
-    hasCachedData,
+    hasCachedData: cacheResult?.hasAny ?? false,
     categories: syncStatus?.categories ?? {
       appliances: { synced: false, count: 0 },
       vehicles: { synced: false, count: 0 },

@@ -172,18 +172,14 @@ export function useMaintenance() {
     queryFn: async () => {
       if (!user?.pubkey) return [];
 
-      console.log('[useMaintenance] Loading from cache for pubkey:', user.pubkey);
-
       // Load from cache first (instant)
       const cachedEvents = await getCachedEvents([MAINTENANCE_KIND, 5], user.pubkey);
       
       if (cachedEvents.length > 0) {
-        console.log('[useMaintenance] Found cached events:', cachedEvents.length);
         const maintenance = parseEventsToMaintenance(cachedEvents, user.pubkey);
         return maintenance;
       }
 
-      console.log('[useMaintenance] No cache, waiting for relay sync...');
       return [];
     },
     enabled: !!user?.pubkey,
@@ -196,7 +192,6 @@ export function useMaintenance() {
 
     const syncWithRelays = async () => {
       isSyncing.current = true;
-      console.log('[useMaintenance] Starting background relay sync...');
 
       try {
         const signal = AbortSignal.timeout(15000);
@@ -209,18 +204,14 @@ export function useMaintenance() {
           { signal }
         );
 
-        console.log('[useMaintenance] Relay sync received events:', events.length);
-
         if (events.length > 0) {
           await cacheEvents(events);
         }
 
         const maintenance = parseEventsToMaintenance(events, user.pubkey);
         queryClient.setQueryData(['maintenance', user.pubkey], maintenance);
-        
-        console.log('[useMaintenance] Background sync complete, schedules:', maintenance.length);
-      } catch (error) {
-        console.error('[useMaintenance] Background sync failed:', error);
+      } catch {
+        // Background sync failed, cached data will be used
       } finally {
         isSyncing.current = false;
       }

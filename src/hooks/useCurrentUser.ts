@@ -25,13 +25,10 @@ export function useCurrentUser() {
   const users = useMemo(() => {
     const users: NUser[] = [];
 
-    console.log('[useCurrentUser] Processing logins:', logins.length);
-
     for (const login of logins) {
       try {
         const user = loginToUser(login);
         users.push(user);
-        console.log('[useCurrentUser] Processed login:', login.type, 'pubkey:', user.pubkey);
       } catch (error) {
         console.warn('[useCurrentUser] Skipped invalid login', login.id, error);
       }
@@ -43,11 +40,12 @@ export function useCurrentUser() {
   const user = users[0] as NUser | undefined;
   const author = useAuthor(user?.pubkey);
 
-  console.log('[useCurrentUser] Current user:', user?.pubkey ?? 'none');
-
-  return {
+  // Memoize the return value to prevent unnecessary re-renders
+  // When author.data changes, this will create a new object reference
+  // but only when the underlying data actually changes
+  return useMemo(() => ({
     user,
     users,
     ...author.data,
-  };
+  }), [user, users, author.data]);
 }

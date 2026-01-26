@@ -43,7 +43,7 @@ export function useLoggedInAccounts() {
         }
       }
       
-      console.log('[useLoggedInAccounts] Found', cachedEvents.length, 'cached profiles');
+      // Cached profiles loaded from IndexedDB
       
       // Build initial results from cache (instant)
       const cachedResults = logins.map(({ id, pubkey }): Account => {
@@ -61,7 +61,7 @@ export function useLoggedInAccounts() {
           { signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) },
         );
         
-        console.log('[useLoggedInAccounts] Fetched', freshEvents.length, 'profiles from relays');
+        // Fetched fresh profile data from relays
         
         // Cache the fresh events for next time
         if (freshEvents.length > 0) {

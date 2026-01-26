@@ -155,18 +155,16 @@ export function useAppliances() {
         return [];
       }
 
-      console.log('[useAppliances] Loading from cache for pubkey:', user.pubkey);
+      // Loading appliances from cache
 
       // Load from cache first (instant)
       const cachedEvents = await getCachedEvents([APPLIANCE_KIND, 5], user.pubkey);
       
       if (cachedEvents.length > 0) {
-        console.log('[useAppliances] Found cached events:', cachedEvents.length);
         const appliances = await parseEventsToAppliances(cachedEvents, user.pubkey, decryptForCategory);
         return appliances;
       }
 
-      console.log('[useAppliances] No cache, waiting for relay sync...');
       // If no cache, return empty and let the background sync populate data
       return [];
     },
@@ -180,7 +178,6 @@ export function useAppliances() {
 
     const syncWithRelays = async () => {
       isSyncing.current = true;
-      console.log('[useAppliances] Starting background relay sync...');
 
       try {
         const signal = AbortSignal.timeout(15000);
@@ -193,7 +190,7 @@ export function useAppliances() {
           { signal }
         );
 
-        console.log('[useAppliances] Relay sync received events:', events.length);
+        // Relay sync complete
 
         // Cache the events for next time
         if (events.length > 0) {
@@ -205,10 +202,8 @@ export function useAppliances() {
         
         // Update the query cache with fresh data
         queryClient.setQueryData(['appliances', user.pubkey], appliances);
-        
-        console.log('[useAppliances] Background sync complete, appliances:', appliances.length);
-      } catch (error) {
-        console.error('[useAppliances] Background sync failed:', error);
+      } catch {
+        // Background sync failed, cached data will be used
         // Don't throw - we still have cached data
       } finally {
         isSyncing.current = false;

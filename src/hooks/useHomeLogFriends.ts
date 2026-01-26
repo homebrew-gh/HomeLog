@@ -18,6 +18,11 @@ interface HomeLogFriend {
  * 1. Fetching the user's follow list (kind 3)
  * 2. Querying for HomeLog events from those follows that have the "client" tag
  * 3. Returning the list of pubkeys who have published HomeLog events
+ * 
+ * Optimized for performance:
+ * - Longer stale times to reduce network requests
+ * - Limits follow list queries to first 200 follows
+ * - Lower event limit to reduce memory usage
  */
 export function useHomeLogFriends() {
   const { nostr } = useNostr();
@@ -29,8 +34,8 @@ export function useHomeLogFriends() {
     queryFn: async (c) => {
       if (!user?.pubkey) return [];
       
-      // Longer timeout for mobile/PWA mode where network might be slower
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
+      // Shorter timeout - this is a low-priority feature
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(8000)]);
       
       const events = await nostr.query([{
         kinds: [3],
@@ -40,24 +45,27 @@ export function useHomeLogFriends() {
 
       if (events.length === 0) return [];
 
-      // Extract pubkeys from p tags
+      // Extract pubkeys from p tags - limit to first 200 to reduce query size
       const followedPubkeys = events[0].tags
         .filter(tag => tag[0] === 'p' && tag[1])
-        .map(tag => tag[1]);
+        .map(tag => tag[1])
+        .slice(0, 200);
 
       return followedPubkeys;
     },
     enabled: !!user?.pubkey,
-    staleTime: 60000, // Cache for 1 minute
+    staleTime: 300000, // Cache for 5 minutes (was 1 minute)
+    gcTime: Infinity,
   });
 
   // Then, find which follows have HomeLog events
   const { data: homeLogFriends = [], isLoading: isLoadingFriends } = useQuery({
-    queryKey: ['homelog-friends', follows],
+    queryKey: ['homelog-friends', follows.length > 0 ? follows.slice(0, 10).join(',') : ''],
     queryFn: async (c) => {
       if (follows.length === 0) return [];
 
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(15000)]);
+      // Lower timeout - this is non-essential UI
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(8000)]);
 
       // Query for HomeLog events from follows
       // We look for events with the HomeLog client tag
@@ -66,7 +74,7 @@ export function useHomeLogFriends() {
       const events = await nostr.query([{
         kinds: HOMELOG_KINDS,
         authors: follows,
-        limit: 500, // Get a reasonable sample
+        limit: 200, // Reduced from 500 to limit memory usage
       }], { signal });
 
       // Filter to only events with the HomeLog client tag
@@ -91,7 +99,8 @@ export function useHomeLogFriends() {
       return friends;
     },
     enabled: follows.length > 0,
-    staleTime: 300000, // Cache for 5 minutes
+    staleTime: 600000, // Cache for 10 minutes (was 5 minutes)
+    gcTime: Infinity,
   });
 
   return {
