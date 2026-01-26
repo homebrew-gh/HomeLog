@@ -358,9 +358,13 @@ An addressable event representing a recurring subscription or service.
     ["name", "<subscription name/description>"],
     ["subscription_type", "<type>"],
     ["cost", "<cost>"],
+    ["currency", "<currency code>"],
     ["billing_frequency", "<frequency>"],
     ["company_id", "<company-d-tag>"],
     ["company_name", "<manual company name>"],
+    ["linked_asset_type", "<appliance|vehicle|home_feature>"],
+    ["linked_asset_id", "<asset-d-tag>"],
+    ["linked_asset_name", "<asset name>"],
     ["notes", "<notes>"]
   ]
 }
@@ -374,10 +378,14 @@ An addressable event representing a recurring subscription or service.
 | `alt` | Yes | Human-readable description (NIP-31) |
 | `name` | Yes | Name or description of the subscription |
 | `subscription_type` | Yes | Type of subscription (see Subscription Types below) |
-| `cost` | Yes | Cost/price of the subscription (e.g., "$15.99", "$120/year") |
+| `cost` | Yes | Cost/price of the subscription (e.g., "15.99") |
+| `currency` | No | Currency code (e.g., "USD", "EUR", "BTC"). Defaults to user's entry currency. |
 | `billing_frequency` | Yes | How often the subscription is billed (see Billing Frequencies below) |
 | `company_id` | No | Reference to a Company/Service Provider (d-tag from kind 37003). Mutually exclusive with `company_name`. |
 | `company_name` | No | Manual company name entry. Mutually exclusive with `company_id`. |
+| `linked_asset_type` | No | Type of linked asset: `appliance`, `vehicle`, or `home_feature` |
+| `linked_asset_id` | No | Reference to the linked asset's d-tag (for appliances and vehicles) |
+| `linked_asset_name` | No | Name of the linked asset (required for home features, optional for appliances/vehicles) |
 | `notes` | No | Additional notes about the subscription |
 
 ### Subscription Types
@@ -418,6 +426,22 @@ Subscriptions can optionally be linked to a company/service provider in two ways
 
 Only one of `company_id` or `company_name` should be present.
 
+### Asset Linking
+
+Subscriptions can optionally be linked to an asset (appliance, vehicle, or home feature) to organize subscriptions by the items they relate to. This is useful for:
+
+- Warranty service plans linked to specific appliances
+- Vehicle service subscriptions (roadside assistance, maintenance plans)
+- Home feature service contracts (lawn care, pool maintenance)
+
+The linked asset is defined by three optional tags:
+
+1. **`linked_asset_type`**: The type of asset - `appliance`, `vehicle`, or `home_feature`
+2. **`linked_asset_id`**: The d-tag of the linked appliance (kind 32627) or vehicle (kind 32628)
+3. **`linked_asset_name`**: The name of the asset for display purposes
+
+For appliances and vehicles, `linked_asset_id` is required. For home features, only `linked_asset_name` is used (since home features are not separate Nostr events).
+
 ### Security Warning
 
-The notes field should NOT be used to store login credentials, passwords, or other sensitive authentication information. Users should use a dedicated password manager for storing such data securely
+The notes field should NOT be used to store login credentials, passwords, or other sensitive authentication information. Users should use a dedicated password manager for storing such data securely.

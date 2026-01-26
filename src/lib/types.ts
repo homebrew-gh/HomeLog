@@ -218,6 +218,10 @@ export interface Subscription {
   billingFrequency: BillingFrequency;
   companyId?: string; // Optional - link to a company/service provider
   companyName?: string; // Manual entry if not linking to a company
+  // Link to assets
+  linkedAssetType?: LinkedAssetType; // Type of linked asset (appliance, vehicle, home_feature)
+  linkedAssetId?: string; // ID of linked appliance or vehicle
+  linkedAssetName?: string; // Name for home features or display purposes
   notes?: string;
   // Metadata
   pubkey: string;
@@ -268,8 +272,11 @@ export const MAINTENANCE_COMPLETION_KIND = 9413;
 export const SUBSCRIPTION_KIND = 37004;
 export const WARRANTY_KIND = 35043;
 
-// Warranty linked item types
-export type WarrantyLinkedType = 'appliance' | 'vehicle' | 'home_feature' | 'custom';
+// Linked item types (shared between Warranty and Subscription)
+export type LinkedAssetType = 'appliance' | 'vehicle' | 'home_feature';
+
+// Warranty linked item types (extends LinkedAssetType with 'custom')
+export type WarrantyLinkedType = LinkedAssetType | 'custom';
 
 // Document for warranty
 export interface WarrantyDocument {

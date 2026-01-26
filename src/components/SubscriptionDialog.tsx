@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, X, AlertTriangle, Building } from 'lucide-react';
+import { Plus, X, AlertTriangle, Building, Package, Car, TreePine, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,9 +12,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useSubscriptionActions } from '@/hooks/useSubscriptions';
 import { useSubscriptionTypes } from '@/hooks/useSubscriptionTypes';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useAppliances } from '@/hooks/useAppliances';
+import { useVehicles } from '@/hooks/useVehicles';
+import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
-import { BILLING_FREQUENCIES, type Subscription, type BillingFrequency } from '@/lib/types';
+import { BILLING_FREQUENCIES, type Subscription, type BillingFrequency, type LinkedAssetType } from '@/lib/types';
 import { getGroupedCurrencies, getCurrency } from '@/lib/currency';
 
 interface SubscriptionDialogProps {
@@ -27,6 +30,9 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
   const { createSubscription, updateSubscription } = useSubscriptionActions();
   const { allSubscriptionTypes, addCustomSubscriptionType } = useSubscriptionTypes();
   const { data: companies = [] } = useCompanies();
+  const { data: appliances = [] } = useAppliances();
+  const { data: vehicles = [] } = useVehicles();
+  const { allHomeFeatures } = useCustomHomeFeatures();
   const { entryCurrency } = useCurrency();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +40,8 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
   const [newType, setNewType] = useState('');
   const [companySearchOpen, setCompanySearchOpen] = useState(false);
   const [companySearch, setCompanySearch] = useState('');
+  const [assetSearchOpen, setAssetSearchOpen] = useState(false);
+  const [assetSearch, setAssetSearch] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -43,6 +51,9 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
     billingFrequency: 'monthly' as BillingFrequency,
     companyId: '',
     companyName: '',
+    linkedAssetType: '' as LinkedAssetType | '',
+    linkedAssetId: '',
+    linkedAssetName: '',
     notes: '',
   });
 
@@ -61,6 +72,9 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
           billingFrequency: subscription.billingFrequency,
           companyId: subscription.companyId || '',
           companyName: subscription.companyName || '',
+          linkedAssetType: subscription.linkedAssetType || '',
+          linkedAssetId: subscription.linkedAssetId || '',
+          linkedAssetName: subscription.linkedAssetName || '',
           notes: subscription.notes || '',
         });
       } else {
@@ -72,12 +86,16 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
           billingFrequency: 'monthly',
           companyId: '',
           companyName: '',
+          linkedAssetType: '',
+          linkedAssetId: '',
+          linkedAssetName: '',
           notes: '',
         });
       }
       setShowAddType(false);
       setNewType('');
       setCompanySearch('');
+      setAssetSearch('');
     }
   }, [isOpen, subscription, entryCurrency]);
 
@@ -140,6 +158,115 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
     }));
   };
 
+  // Filter assets based on search
+  const filteredAppliances = useMemo(() => {
+    if (!assetSearch) return appliances;
+    const search = assetSearch.toLowerCase();
+    return appliances.filter(a => 
+      a.model.toLowerCase().includes(search) ||
+      (a.manufacturer && a.manufacturer.toLowerCase().includes(search))
+    );
+  }, [appliances, assetSearch]);
+
+  const filteredVehicles = useMemo(() => {
+    if (!assetSearch) return vehicles;
+    const search = assetSearch.toLowerCase();
+    return vehicles.filter(v => 
+      v.name.toLowerCase().includes(search) ||
+      (v.make && v.make.toLowerCase().includes(search)) ||
+      (v.model && v.model.toLowerCase().includes(search))
+    );
+  }, [vehicles, assetSearch]);
+
+  const filteredHomeFeatures = useMemo(() => {
+    if (!assetSearch) return allHomeFeatures;
+    const search = assetSearch.toLowerCase();
+    return allHomeFeatures.filter(f => f.toLowerCase().includes(search));
+  }, [allHomeFeatures, assetSearch]);
+
+  // Get selected asset display name
+  const selectedAssetDisplay = useMemo(() => {
+    if (!formData.linkedAssetType) return '';
+    
+    if (formData.linkedAssetType === 'appliance' && formData.linkedAssetId) {
+      const appliance = appliances.find(a => a.id === formData.linkedAssetId);
+      return appliance ? `${appliance.model}${appliance.manufacturer ? ` (${appliance.manufacturer})` : ''}` : '';
+    }
+    
+    if (formData.linkedAssetType === 'vehicle' && formData.linkedAssetId) {
+      const vehicle = vehicles.find(v => v.id === formData.linkedAssetId);
+      return vehicle ? vehicle.name : '';
+    }
+    
+    if (formData.linkedAssetType === 'home_feature' && formData.linkedAssetName) {
+      return formData.linkedAssetName;
+    }
+    
+    return '';
+  }, [formData.linkedAssetType, formData.linkedAssetId, formData.linkedAssetName, appliances, vehicles]);
+
+  const handleSelectAppliance = (applianceId: string) => {
+    const appliance = appliances.find(a => a.id === applianceId);
+    if (appliance) {
+      setFormData(prev => ({
+        ...prev,
+        linkedAssetType: 'appliance',
+        linkedAssetId: appliance.id,
+        linkedAssetName: appliance.model,
+      }));
+    }
+    setAssetSearchOpen(false);
+    setAssetSearch('');
+  };
+
+  const handleSelectVehicle = (vehicleId: string) => {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (vehicle) {
+      setFormData(prev => ({
+        ...prev,
+        linkedAssetType: 'vehicle',
+        linkedAssetId: vehicle.id,
+        linkedAssetName: vehicle.name,
+      }));
+    }
+    setAssetSearchOpen(false);
+    setAssetSearch('');
+  };
+
+  const handleSelectHomeFeature = (featureName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      linkedAssetType: 'home_feature',
+      linkedAssetId: '',
+      linkedAssetName: featureName,
+    }));
+    setAssetSearchOpen(false);
+    setAssetSearch('');
+  };
+
+  const handleClearLinkedAsset = () => {
+    setFormData(prev => ({
+      ...prev,
+      linkedAssetType: '',
+      linkedAssetId: '',
+      linkedAssetName: '',
+    }));
+  };
+
+  // Get icon for linked asset type
+  const getLinkedAssetIcon = () => {
+    switch (formData.linkedAssetType) {
+      case 'appliance':
+        return <Package className="h-4 w-4 text-muted-foreground" />;
+      case 'vehicle':
+        return <Car className="h-4 w-4 text-muted-foreground" />;
+      case 'home_feature':
+        return <TreePine className="h-4 w-4 text-muted-foreground" />;
+      default:
+        return <Link2 className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
       toast({
@@ -178,6 +305,9 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
         billingFrequency: formData.billingFrequency,
         companyId: formData.companyId || undefined,
         companyName: formData.companyName.trim() || undefined,
+        linkedAssetType: formData.linkedAssetType || undefined,
+        linkedAssetId: formData.linkedAssetId || undefined,
+        linkedAssetName: formData.linkedAssetName || undefined,
         notes: formData.notes.trim() || undefined,
       };
 
@@ -414,6 +544,113 @@ export function SubscriptionDialog({ isOpen, onClose, subscription }: Subscripti
                 Clear company
               </Button>
             )}
+          </div>
+
+          {/* Link to Asset */}
+          <div className="space-y-2">
+            <Label>Link to Asset</Label>
+            <Popover open={assetSearchOpen} onOpenChange={setAssetSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={assetSearchOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedAssetDisplay ? (
+                    <span className="flex items-center gap-2">
+                      {getLinkedAssetIcon()}
+                      <span className="truncate">{selectedAssetDisplay}</span>
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Link to an appliance, vehicle, or home feature</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput 
+                    placeholder="Search appliances, vehicles, or features..." 
+                    value={assetSearch}
+                    onValueChange={setAssetSearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty>
+                      No matching assets found
+                    </CommandEmpty>
+                    {filteredAppliances.length > 0 && (
+                      <CommandGroup heading="Appliances">
+                        {filteredAppliances.map((appliance) => (
+                          <CommandItem
+                            key={appliance.id}
+                            value={`appliance-${appliance.model}`}
+                            onSelect={() => handleSelectAppliance(appliance.id)}
+                          >
+                            <Package className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <div className="flex flex-col">
+                              <span>{appliance.model}</span>
+                              {appliance.manufacturer && (
+                                <span className="text-xs text-muted-foreground">{appliance.manufacturer}</span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+                    {filteredVehicles.length > 0 && (
+                      <CommandGroup heading="Vehicles">
+                        {filteredVehicles.map((vehicle) => (
+                          <CommandItem
+                            key={vehicle.id}
+                            value={`vehicle-${vehicle.name}`}
+                            onSelect={() => handleSelectVehicle(vehicle.id)}
+                          >
+                            <Car className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <div className="flex flex-col">
+                              <span>{vehicle.name}</span>
+                              {(vehicle.make || vehicle.model) && (
+                                <span className="text-xs text-muted-foreground">
+                                  {[vehicle.make, vehicle.model].filter(Boolean).join(' ')}
+                                </span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+                    {filteredHomeFeatures.length > 0 && (
+                      <CommandGroup heading="Home Features">
+                        {filteredHomeFeatures.map((feature) => (
+                          <CommandItem
+                            key={feature}
+                            value={`feature-${feature}`}
+                            onSelect={() => handleSelectHomeFeature(feature)}
+                          >
+                            <TreePine className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span>{feature}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {selectedAssetDisplay && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground"
+                onClick={handleClearLinkedAsset}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Remove link
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Optionally link this subscription to an appliance, vehicle, or home feature for better organization.
+            </p>
           </div>
 
           {/* Notes */}

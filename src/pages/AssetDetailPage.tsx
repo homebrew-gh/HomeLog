@@ -26,6 +26,7 @@ import {
   Fuel,
   StickyNote,
   Edit,
+  TreePine,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -35,9 +36,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
 import { useVehicles, useVehicleById } from '@/hooks/useVehicles';
-import { useMaintenanceByAppliance, useMaintenanceByVehicle, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
+import { useMaintenance, useMaintenanceByAppliance, useMaintenanceByVehicle, useHomeFeatureMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletions, useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
-import { useWarrantiesByApplianceId, useWarrantiesByVehicleId, formatWarrantyTimeRemaining, isWarrantyExpired, isWarrantyExpiringSoon } from '@/hooks/useWarranties';
+import { useWarranties, useWarrantiesByApplianceId, useWarrantiesByVehicleId, formatWarrantyTimeRemaining, isWarrantyExpired, isWarrantyExpiringSoon } from '@/hooks/useWarranties';
 import { useCompanyById, useCompanies } from '@/hooks/useCompanies';
 import { useSubscriptionsByCompanyId, useSubscriptions } from '@/hooks/useSubscriptions';
 import { FUEL_TYPES, type MaintenanceSchedule, type Warranty, type Company, type Subscription } from '@/lib/types';
@@ -1059,6 +1060,162 @@ function VehicleDetailContent({ id }: { id: string }) {
   );
 }
 
+// Home Feature Detail Content
+function HomeFeatureDetailContent({ featureName }: { featureName: string }) {
+  const navigate = useNavigate();
+  const { data: allMaintenance = [] } = useMaintenance();
+  const { data: allWarranties = [] } = useWarranties();
+  const { data: companies = [] } = useCompanies();
+  const { data: subscriptions = [] } = useSubscriptions();
+
+  // Filter maintenance schedules for this home feature
+  const maintenance = allMaintenance.filter(m => m.homeFeature === featureName && !m.applianceId && !m.vehicleId);
+  
+  // Filter warranties for this home feature
+  const warranties = allWarranties.filter(w => w.linkedType === 'home_feature' && w.linkedItemName === featureName);
+
+  // Filter subscriptions linked to this home feature
+  const linkedSubscriptions = subscriptions.filter(
+    s => s.linkedAssetType === 'home_feature' && s.linkedAssetName === featureName
+  );
+
+  // Get company IDs from maintenance and warranties
+  const companyIds = [
+    ...maintenance.filter(m => m.companyId).map(m => m.companyId!),
+    ...warranties.filter(w => w.companyId).map(w => w.companyId!),
+  ];
+  const uniqueCompanyIds = [...new Set(companyIds)];
+
+  useSeoMeta({
+    title: `${featureName} - Home Log`,
+    description: `Details for ${featureName} home feature`,
+  });
+
+  const startDate = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+  return (
+    <div className="min-h-screen bg-theme-gradient tool-pattern-bg">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <TreePine className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold">{featureName}</h1>
+                  <p className="text-sm text-muted-foreground">Home Feature</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Basic Info Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TreePine className="h-5 w-5 text-primary" />
+                Home Feature Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-start gap-3">
+                <Home className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Feature Name</p>
+                  <p>{featureName}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Maintenance Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-primary" />
+                Maintenance Schedules
+              </CardTitle>
+              <CardDescription>
+                {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} for this home feature
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Warranties Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Warranties
+              </CardTitle>
+              <CardDescription>
+                {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this home feature
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WarrantySection warranties={warranties} />
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Companies Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                Service Providers
+              </CardTitle>
+              <CardDescription>
+                {uniqueCompanyIds.length} compan{uniqueCompanyIds.length !== 1 ? 'ies' : 'y'} linked through maintenance or warranties
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CompanySection companyIds={uniqueCompanyIds} companies={companies} />
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Subscriptions Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Related Subscriptions
+              </CardTitle>
+              <CardDescription>
+                {linkedSubscriptions.length} subscription{linkedSubscriptions.length !== 1 ? 's' : ''} linked to this home feature
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SubscriptionSection subscriptions={linkedSubscriptions} />
+            </CardContent>
+          </Card>
+        </section>
+      </main>
+    </div>
+  );
+}
+
 // Loading Skeleton
 function LoadingSkeleton() {
   return (
@@ -1129,6 +1286,11 @@ export function AssetDetailPage() {
 
   if (type === 'vehicle') {
     return <VehicleDetailContent id={id} />;
+  }
+
+  if (type === 'home-feature') {
+    const featureName = decodeURIComponent(id);
+    return <HomeFeatureDetailContent featureName={featureName} />;
   }
 
   return <NotFound />;

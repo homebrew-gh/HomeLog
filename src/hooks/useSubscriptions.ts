@@ -7,7 +7,7 @@ import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
-import { SUBSCRIPTION_KIND, type Subscription, type BillingFrequency } from '@/lib/types';
+import { SUBSCRIPTION_KIND, type Subscription, type BillingFrequency, type LinkedAssetType } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 
 // Encrypted content marker
@@ -40,6 +40,9 @@ function parseSubscriptionPlaintext(event: NostrEvent): Subscription | null {
     billingFrequency,
     companyId: getTagValue(event, 'company_id'),
     companyName: getTagValue(event, 'company_name'),
+    linkedAssetType: getTagValue(event, 'linked_asset_type') as LinkedAssetType | undefined,
+    linkedAssetId: getTagValue(event, 'linked_asset_id'),
+    linkedAssetName: getTagValue(event, 'linked_asset_name'),
     notes: getTagValue(event, 'notes'),
     pubkey: event.pubkey,
     createdAt: event.created_at,
@@ -249,6 +252,9 @@ export function useSubscriptionActions() {
       if (data.currency) tags.push(['currency', data.currency]);
       if (data.companyId) tags.push(['company_id', data.companyId]);
       if (data.companyName) tags.push(['company_name', data.companyName]);
+      if (data.linkedAssetType) tags.push(['linked_asset_type', data.linkedAssetType]);
+      if (data.linkedAssetId) tags.push(['linked_asset_id', data.linkedAssetId]);
+      if (data.linkedAssetName) tags.push(['linked_asset_name', data.linkedAssetName]);
       if (data.notes) tags.push(['notes', data.notes]);
     }
 
@@ -293,6 +299,9 @@ export function useSubscriptionActions() {
       if (data.currency) tags.push(['currency', data.currency]);
       if (data.companyId) tags.push(['company_id', data.companyId]);
       if (data.companyName) tags.push(['company_name', data.companyName]);
+      if (data.linkedAssetType) tags.push(['linked_asset_type', data.linkedAssetType]);
+      if (data.linkedAssetId) tags.push(['linked_asset_id', data.linkedAssetId]);
+      if (data.linkedAssetName) tags.push(['linked_asset_name', data.linkedAssetName]);
       if (data.notes) tags.push(['notes', data.notes]);
     }
 

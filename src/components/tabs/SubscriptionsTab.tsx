@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   CreditCard, 
   Plus, 
@@ -21,6 +22,9 @@ import {
   Home,
   Wallet,
   Dog,
+  Package,
+  TreePine,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,10 +32,13 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { SubscriptionDialog } from '@/components/SubscriptionDialog';
 import { SubscriptionDetailDialog } from '@/components/SubscriptionDetailDialog';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useCompanyById } from '@/hooks/useCompanies';
+import { useApplianceById } from '@/hooks/useAppliances';
+import { useVehicleById } from '@/hooks/useVehicles';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useSubscriptionCurrency, useCurrency } from '@/hooks/useCurrency';
 import { BILLING_FREQUENCIES, type Subscription } from '@/lib/types';
@@ -417,17 +424,47 @@ interface SubscriptionListItemProps {
 
 function SubscriptionListItem({ subscription, onClick }: SubscriptionListItemProps) {
   const linkedCompany = useCompanyById(subscription.companyId);
+  const linkedAppliance = useApplianceById(subscription.linkedAssetType === 'appliance' ? subscription.linkedAssetId : undefined);
+  const linkedVehicle = useVehicleById(subscription.linkedAssetType === 'vehicle' ? subscription.linkedAssetId : undefined);
   const { formatSubscriptionCost } = useSubscriptionCurrency();
   const billingLabel = BILLING_FREQUENCIES.find(f => f.value === subscription.billingFrequency)?.label || subscription.billingFrequency;
   const companyName = linkedCompany?.name || subscription.companyName;
   const formattedCost = formatSubscriptionCost(subscription.cost, subscription.currency);
 
+  // Get linked asset info
+  const getLinkedAssetInfo = () => {
+    if (subscription.linkedAssetType === 'appliance' && linkedAppliance) {
+      return {
+        icon: Package,
+        name: linkedAppliance.model,
+        link: `/asset/appliance/${linkedAppliance.id}`,
+      };
+    }
+    if (subscription.linkedAssetType === 'vehicle' && linkedVehicle) {
+      return {
+        icon: Car,
+        name: linkedVehicle.name,
+        link: `/asset/vehicle/${linkedVehicle.id}`,
+      };
+    }
+    if (subscription.linkedAssetType === 'home_feature' && subscription.linkedAssetName) {
+      return {
+        icon: TreePine,
+        name: subscription.linkedAssetName,
+        link: `/asset/home-feature/${encodeURIComponent(subscription.linkedAssetName)}`,
+      };
+    }
+    return null;
+  };
+
+  const linkedAssetInfo = getLinkedAssetInfo();
+
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center justify-between w-full p-2 rounded-lg text-left hover:bg-primary/5 transition-colors group"
-    >
-      <div className="flex flex-col min-w-0 flex-1">
+    <div className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-primary/5 transition-colors group">
+      <button
+        onClick={onClick}
+        className="flex flex-col min-w-0 flex-1 text-left"
+      >
         <span className="text-muted-foreground group-hover:text-primary font-medium truncate">
           {subscription.name}
         </span>
@@ -436,8 +473,26 @@ function SubscriptionListItem({ subscription, onClick }: SubscriptionListItemPro
             {companyName}
           </span>
         )}
-      </div>
-      <div className="flex items-center gap-3 ml-2">
+      </button>
+      <div className="flex items-center gap-2 ml-2">
+        {linkedAssetInfo && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  to={linkedAssetInfo.link}
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded-md bg-primary/10 hover:bg-primary/20 transition-colors"
+                >
+                  <linkedAssetInfo.icon className="h-3.5 w-3.5 text-primary" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View {linkedAssetInfo.name}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         <span className="text-sm font-semibold text-primary whitespace-nowrap">
           {formattedCost}
         </span>
@@ -445,7 +500,7 @@ function SubscriptionListItem({ subscription, onClick }: SubscriptionListItemPro
           {billingLabel}
         </Badge>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -457,48 +512,97 @@ interface SubscriptionCardProps {
 function SubscriptionCard({ subscription, onClick }: SubscriptionCardProps) {
   const TypeIcon = getSubscriptionIcon(subscription.subscriptionType);
   const linkedCompany = useCompanyById(subscription.companyId);
+  const linkedAppliance = useApplianceById(subscription.linkedAssetType === 'appliance' ? subscription.linkedAssetId : undefined);
+  const linkedVehicle = useVehicleById(subscription.linkedAssetType === 'vehicle' ? subscription.linkedAssetId : undefined);
   const { formatSubscriptionCost } = useSubscriptionCurrency();
   const billingLabel = BILLING_FREQUENCIES.find(f => f.value === subscription.billingFrequency)?.label || subscription.billingFrequency;
   const companyName = linkedCompany?.name || subscription.companyName;
   const formattedCost = formatSubscriptionCost(subscription.cost, subscription.currency);
+
+  // Get linked asset info
+  const getLinkedAssetInfo = () => {
+    if (subscription.linkedAssetType === 'appliance' && linkedAppliance) {
+      return {
+        icon: Package,
+        name: linkedAppliance.model,
+        link: `/asset/appliance/${linkedAppliance.id}`,
+        type: 'Appliance',
+      };
+    }
+    if (subscription.linkedAssetType === 'vehicle' && linkedVehicle) {
+      return {
+        icon: Car,
+        name: linkedVehicle.name,
+        link: `/asset/vehicle/${linkedVehicle.id}`,
+        type: 'Vehicle',
+      };
+    }
+    if (subscription.linkedAssetType === 'home_feature' && subscription.linkedAssetName) {
+      return {
+        icon: TreePine,
+        name: subscription.linkedAssetName,
+        link: `/asset/home-feature/${encodeURIComponent(subscription.linkedAssetName)}`,
+        type: 'Home Feature',
+      };
+    }
+    return null;
+  };
+
+  const linkedAssetInfo = getLinkedAssetInfo();
   
   return (
-    <button
-      onClick={onClick}
-      className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200 text-left"
-    >
-      {/* Icon & Price */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-          <TypeIcon className="h-5 w-5 text-primary" />
+    <div className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200">
+      {/* Clickable area for quick view */}
+      <button
+        onClick={onClick}
+        className="text-left flex-1 flex flex-col"
+      >
+        {/* Icon & Price */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <TypeIcon className="h-5 w-5 text-primary" />
+          </div>
+          <div className="text-right">
+            <p className="font-bold text-lg text-primary">{formattedCost}</p>
+            <p className="text-xs text-muted-foreground">{billingLabel}</p>
+          </div>
         </div>
-        <div className="text-right">
-          <p className="font-bold text-lg text-primary">{formattedCost}</p>
-          <p className="text-xs text-muted-foreground">{billingLabel}</p>
-        </div>
-      </div>
 
-      {/* Name */}
-      <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-        {subscription.name}
-      </h3>
+        {/* Name */}
+        <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+          {subscription.name}
+        </h3>
 
-      {/* Company/Provider */}
-      {companyName && (
-        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-          <Building className="h-3.5 w-3.5" />
-          <span className="truncate">{companyName}</span>
+        {/* Company/Provider */}
+        {companyName && (
+          <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
+            <Building className="h-3.5 w-3.5" />
+            <span className="truncate">{companyName}</span>
+          </p>
+        )}
+
+        {/* Billing Info */}
+        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5" />
+          <span>Billed {billingLabel.toLowerCase()}</span>
         </p>
+      </button>
+
+      {/* Linked Asset - Clickable Link */}
+      {linkedAssetInfo && (
+        <Link
+          to={linkedAssetInfo.link}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+        >
+          <linkedAssetInfo.icon className="h-4 w-4" />
+          <span className="truncate">{linkedAssetInfo.name}</span>
+          <ExternalLink className="h-3 w-3 ml-auto shrink-0" />
+        </Link>
       )}
 
-      {/* Billing Info */}
-      <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-        <Calendar className="h-3.5 w-3.5" />
-        <span>Billed {billingLabel.toLowerCase()}</span>
-      </p>
-
-      {/* Linked Company Badge */}
-      {linkedCompany && (
+      {/* Linked Company Badge - only show if no asset link */}
+      {!linkedAssetInfo && linkedCompany && (
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
           Linked to Companies & Services
         </p>
@@ -506,6 +610,6 @@ function SubscriptionCard({ subscription, onClick }: SubscriptionCardProps) {
 
       {/* Hover indicator */}
       <div className="absolute inset-0 rounded-xl ring-2 ring-primary ring-opacity-0 group-hover:ring-opacity-20 transition-all pointer-events-none" />
-    </button>
+    </div>
   );
 }
