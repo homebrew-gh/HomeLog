@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive } from 'lucide-react';
@@ -58,15 +58,36 @@ const Index = () => {
   // Apply color theme to document root
   useApplyColorTheme();
 
+  // Track if we've completed initial load for this session
+  // This prevents showing loading again after data is synced
+  const hasCompletedInitialLoad = useRef(false);
+  
+  // Mark initial load as complete once data is synced
+  useEffect(() => {
+    if (isDataSynced && user) {
+      hasCompletedInitialLoad.current = true;
+    }
+    // Reset when user logs out
+    if (!user) {
+      hasCompletedInitialLoad.current = false;
+    }
+  }, [isDataSynced, user]);
+
   // Show loading animation while:
   // 1. Profile is still loading, OR
-  // 2. Data sync is in progress AND user has NO cached data (first time login / new device)
+  // 2. Cache check hasn't completed yet, OR
+  // 3. No cached data AND sync not done (first time login / new device)
   // Users with cached data will see their cached data immediately while sync happens in background
-  const isInitialLoading = user && (
+  // Once initial load completes for this session, don't show loading again
+  const isInitialLoading = user && !hasCompletedInitialLoad.current && (
     isProfileLoading || 
-    (!cacheChecked) || // Wait for cache check to complete
-    (!hasCachedData && !isDataSynced) // No cache AND sync not done = still loading
+    !cacheChecked || 
+    (!hasCachedData && !isDataSynced)
   );
+  
+  // Determine loading message based on current state
+  const loadingMessage = isProfileLoading ? "Signing in..." : "Loading your data...";
+  const loadingSubMessage = isProfileLoading ? "Connecting to your account" : "Fetching from Nostr relays";
   
   // Data sync is happening in background - show indicator but don't block UI
   // Only show this for users who HAVE cached data (so they're not blocked by the main loading)
@@ -246,8 +267,8 @@ const Index = () => {
           // Initial loading - shows during profile fetch and initial data sync
           <LoadingAnimation 
             size="md"
-            message={isProfileLoading ? "Signing in..." : "Loading your data..."}
-            subMessage={isProfileLoading ? "Connecting to your account" : "Fetching from Nostr relays"}
+            message={loadingMessage}
+            subMessage={loadingSubMessage}
           />
         ) : !user ? (
           // Not logged in - Welcome screen
