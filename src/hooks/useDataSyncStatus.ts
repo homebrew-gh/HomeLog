@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { 
   APPLIANCE_KIND, 
   VEHICLE_KIND, 
@@ -40,11 +40,18 @@ interface CacheCheckResult {
 export function useDataSyncStatus() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const queryClient = useQueryClient();
+  const hasInvalidated = useRef(false);
   
   // Track whether we've checked the cache (this happens instantly before relay sync)
   const [cacheChecked, setCacheChecked] = useState(false);
   const [cacheResult, setCacheResult] = useState<CacheCheckResult | null>(null);
   
+  // Reset invalidation flag when user changes
+  useEffect(() => {
+    hasInvalidated.current = false;
+  }, [user?.pubkey]);
+
   // Check cache status immediately when user becomes available
   useEffect(() => {
     if (!user?.pubkey) {
@@ -136,6 +143,21 @@ export function useDataSyncStatus() {
         // Cache all events for other hooks to use
         if (events.length > 0) {
           await cacheEvents(events);
+          
+          // Invalidate all data queries so they re-read from the now-populated cache
+          // This ensures first-time users see their data immediately after sync
+          if (!hasInvalidated.current) {
+            hasInvalidated.current = true;
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['appliances'] }),
+              queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
+              queryClient.invalidateQueries({ queryKey: ['maintenance'] }),
+              queryClient.invalidateQueries({ queryKey: ['companies'] }),
+              queryClient.invalidateQueries({ queryKey: ['subscriptions'] }),
+              queryClient.invalidateQueries({ queryKey: ['warranties'] }),
+              queryClient.invalidateQueries({ queryKey: ['maintenance-completions'] }),
+            ]);
+          }
         }
 
         // Count events by type (excluding deletion events)

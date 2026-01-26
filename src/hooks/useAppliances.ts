@@ -163,8 +163,6 @@ export function useAppliances() {
     },
     enabled: !!user?.pubkey,
     staleTime: Infinity,
-    refetchInterval: 5000, // Re-check cache every 5s to pick up synced data
-    refetchIntervalInBackground: false,
   });
 
   return query;
