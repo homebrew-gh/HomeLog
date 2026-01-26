@@ -57,21 +57,10 @@ export function useLocalStorage<T>(
 
   // setValue function that properly handles functional updates
   const setValue = useCallback((value: T | ((prev: T) => T)) => {
-    // Use setState with functional update to ensure we have latest state
     setState((currentState) => {
       try {
-        // Also read from localStorage to get the most up-to-date value
-        // This handles cases where localStorage was updated externally
-        let latestValue: T;
-        try {
-          const item = localStorage.getItem(key);
-          latestValue = item !== null ? deserialize(item) : currentState;
-        } catch {
-          latestValue = currentState;
-        }
-
         // Calculate new value based on whether it's a function or direct value
-        const valueToStore = value instanceof Function ? value(latestValue) : value;
+        const valueToStore = value instanceof Function ? value(currentState) : value;
         
         // Persist to localStorage
         localStorage.setItem(key, serialize(valueToStore));
@@ -82,7 +71,7 @@ export function useLocalStorage<T>(
         return currentState;
       }
     });
-  }, [key, serialize, deserialize]);
+  }, [key, serialize]);
 
   // Sync with localStorage changes from other tabs/windows
   useEffect(() => {

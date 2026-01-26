@@ -235,6 +235,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const [hasSyncedFromRemote, setHasSyncedFromRemote] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isPublishingRef = useRef(false);
+  const lastTabChangeRef = useRef<number>(0);
 
   // Fetch preferences from Nostr (background sync)
   // Local storage is used as the primary source for instant loading
@@ -433,9 +434,15 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   }, [updatePreferences, activeTab]);
 
   const setActiveTab = useCallback((tabId: TabId) => {
+    // Throttle tab changes to prevent rapid switching from causing issues
+    const now = Date.now();
+    if (now - lastTabChangeRef.current < 100) {
+      return; // Ignore if less than 100ms since last change
+    }
+    lastTabChangeRef.current = now;
+    
     // Only update local React state - don't persist to localStorage or Nostr
     // This is transient UI state that doesn't need any persistence
-    // Tab state is ephemeral - users expect to start fresh on home tab anyway
     setActiveTabState(tabId);
   }, []);
 
