@@ -228,7 +228,6 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // Track if we've synced from remote on this session
   // Using state instead of ref so changes trigger re-render
   const [hasSyncedFromRemote, setHasSyncedFromRemote] = useState(false);
-  const lastSyncedPubkey = useRef<string | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch preferences from Nostr (background sync)
@@ -284,41 +283,42 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     retry: 1,
   });
 
-  // Track the last relay config we synced with
+  // Track the last sync state
+  const lastSyncedPubkeyRef = useRef<string | null>(null);
   const lastSyncedRelayTimestamp = useRef<number>(0);
 
-  // Sync remote preferences to local on login
+  // Reset sync state when user or relays change
   useEffect(() => {
     if (!user?.pubkey) {
       // User logged out, reset sync state
       setHasSyncedFromRemote(false);
-      lastSyncedPubkey.current = null;
+      lastSyncedPubkeyRef.current = null;
       lastSyncedRelayTimestamp.current = 0;
       return;
     }
 
-    // Check if we need to sync (new user or different user)
-    if (lastSyncedPubkey.current !== user.pubkey) {
+    // Check if we need to reset sync state (new user or different relays)
+    const userChanged = lastSyncedPubkeyRef.current !== user.pubkey;
+    const relaysChanged = lastSyncedRelayTimestamp.current !== config.relayMetadata.updatedAt && lastSyncedRelayTimestamp.current !== 0;
+    
+    if (userChanged || relaysChanged) {
       setHasSyncedFromRemote(false);
-      lastSyncedPubkey.current = user.pubkey;
-      lastSyncedRelayTimestamp.current = 0;
     }
+    
+    lastSyncedPubkeyRef.current = user.pubkey;
+    lastSyncedRelayTimestamp.current = config.relayMetadata.updatedAt;
+  }, [user?.pubkey, config.relayMetadata.updatedAt]);
 
-    // Check if relays changed - need to re-sync
-    if (lastSyncedRelayTimestamp.current !== config.relayMetadata.updatedAt) {
-      setHasSyncedFromRemote(false);
-      lastSyncedRelayTimestamp.current = config.relayMetadata.updatedAt;
-    }
-
-    // If we have remote preferences and haven't synced yet, use them
-    if (isFetched && !hasSyncedFromRemote) {
+  // Apply remote preferences when fetched
+  useEffect(() => {
+    if (isFetched && !hasSyncedFromRemote && user?.pubkey) {
       if (remotePreferences) {
         console.log('[UserPreferences] Syncing preferences from Nostr relay');
         setLocalPreferences(remotePreferences);
       }
       setHasSyncedFromRemote(true);
     }
-  }, [user?.pubkey, remotePreferences, isFetched, setLocalPreferences, hasSyncedFromRemote, config.relayMetadata.updatedAt]);
+  }, [isFetched, hasSyncedFromRemote, remotePreferences, setLocalPreferences, user?.pubkey]);
 
   // Save preferences to Nostr (debounced)
   const saveToNostr = useCallback(
