@@ -53,16 +53,23 @@ const Index = () => {
   const { user } = useCurrentUser();
   const { isProfileLoading } = useLoggedInAccounts();
   const { preferences, setActiveTab } = useTabPreferences();
-  const { isSyncing: isDataSyncing, isSynced: isDataSynced, hasCachedData } = useDataSyncStatus();
+  const { isSyncing: isDataSyncing, isSynced: isDataSynced, hasCachedData, cacheChecked } = useDataSyncStatus();
   
   // Apply color theme to document root
   useApplyColorTheme();
 
-  // Simple loading state - only show loading animation while profile is being fetched
-  // Data loading is handled by skeleton states in individual components
-  const isInitialLoading = user && isProfileLoading;
+  // Show loading animation while:
+  // 1. Profile is still loading, OR
+  // 2. Data sync is in progress AND user has NO cached data (first time login / new device)
+  // Users with cached data will see their cached data immediately while sync happens in background
+  const isInitialLoading = user && (
+    isProfileLoading || 
+    (!cacheChecked) || // Wait for cache check to complete
+    (!hasCachedData && !isDataSynced) // No cache AND sync not done = still loading
+  );
   
   // Data sync is happening in background - show indicator but don't block UI
+  // Only show this for users who HAVE cached data (so they're not blocked by the main loading)
   const isBackgroundSyncing = user && isDataSyncing && !isDataSynced && hasCachedData;
 
   // Dialog states
@@ -236,11 +243,11 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {isInitialLoading ? (
-          // Initial loading - shows only during profile fetch
+          // Initial loading - shows during profile fetch and initial data sync
           <LoadingAnimation 
             size="md"
-            message="Signing in..."
-            subMessage="Connecting to your account"
+            message={isProfileLoading ? "Signing in..." : "Loading your data..."}
+            subMessage={isProfileLoading ? "Connecting to your account" : "Fetching from Nostr relays"}
           />
         ) : !user ? (
           // Not logged in - Welcome screen
