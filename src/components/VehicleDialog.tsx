@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical } from 'lucide-react';
+import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Shield, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,9 +12,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useVehicleActions } from '@/hooks/useVehicles';
 import { useVehicleTypes } from '@/hooks/useVehicleTypes';
+import { useWarrantyActions } from '@/hooks/useWarranties';
+import { useSubscriptionActions } from '@/hooks/useSubscriptions';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
-import { FUEL_TYPES, type Vehicle } from '@/lib/types';
+import { FUEL_TYPES, BILLING_FREQUENCIES, type Vehicle, type BillingFrequency } from '@/lib/types';
 
 // Get today's date in MM/DD/YYYY format
 function getTodayFormatted(): string {
@@ -47,6 +49,8 @@ const DEFAULT_FIELDS = ['make', 'model', 'year', 'serialNumber', 'fuelType'];
 export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) {
   const { createVehicle, updateVehicle } = useVehicleActions();
   const { allVehicleTypes, addCustomVehicleType } = useVehicleTypes();
+  const { createWarranty } = useWarrantyActions();
+  const { createSubscription } = useSubscriptionActions();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
   const { mutateAsync: deleteFile, isPending: isDeleting } = useDeleteFile();
   const canUploadFiles = useCanUploadFiles();
@@ -56,6 +60,11 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
   const [newType, setNewType] = useState('');
   const [useTodayDate, setUseTodayDate] = useState(false);
   const [showWarranty, setShowWarranty] = useState(false);
+  const [showSubscription, setShowSubscription] = useState(false);
+  
+  // Options to create linked events
+  const [createWarrantyEvent, setCreateWarrantyEvent] = useState(false);
+  const [createSubscriptionEvent, setCreateSubscriptionEvent] = useState(false);
 
   const [formData, setFormData] = useState({
     vehicleType: '',
@@ -80,6 +89,11 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
     warrantyExpiry: '',
     documentsUrls: [] as string[],
     notes: '',
+    // Subscription fields
+    subscriptionName: '',
+    subscriptionType: 'Vehicle',
+    subscriptionCost: '',
+    subscriptionBillingFrequency: 'monthly' as BillingFrequency,
   });
 
   const receiptInputRef = useRef<HTMLInputElement>(null);
@@ -123,8 +137,16 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           warrantyExpiry: vehicle.warrantyExpiry || '',
           documentsUrls: vehicle.documentsUrls || [],
           notes: vehicle.notes || '',
+          // Subscription fields (not stored on vehicle, only for creation)
+          subscriptionName: '',
+          subscriptionType: 'Vehicle',
+          subscriptionCost: '',
+          subscriptionBillingFrequency: 'monthly' as BillingFrequency,
         });
         setShowWarranty(!!(vehicle.warrantyUrl || vehicle.warrantyExpiry));
+        setShowSubscription(false);
+        setCreateWarrantyEvent(false);
+        setCreateSubscriptionEvent(false);
       } else {
         setFormData({
           vehicleType: '',
@@ -149,8 +171,16 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           warrantyExpiry: '',
           documentsUrls: [],
           notes: '',
+          // Subscription fields
+          subscriptionName: '',
+          subscriptionType: 'Vehicle',
+          subscriptionCost: '',
+          subscriptionBillingFrequency: 'monthly' as BillingFrequency,
         });
         setShowWarranty(false);
+        setShowSubscription(false);
+        setCreateWarrantyEvent(false);
+        setCreateSubscriptionEvent(false);
       }
       setShowAddType(false);
       setNewType('');
@@ -300,21 +330,101 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
       return;
     }
 
+    // Validate subscription fields if creating a subscription
+    if (createSubscriptionEvent) {
+      if (!formData.subscriptionName.trim()) {
+        toast({
+          title: 'Subscription name required',
+          description: 'Please enter a subscription name.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (!formData.subscriptionCost.trim()) {
+        toast({
+          title: 'Subscription cost required',
+          description: 'Please enter the subscription cost.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
+      let vehicleId: string;
+      
       if (isEditing && vehicle) {
         await updateVehicle(vehicle.id, formData);
+        vehicleId = vehicle.id;
         toast({
           title: 'Vehicle updated',
           description: 'Your vehicle has been updated successfully.',
         });
       } else {
-        await createVehicle(formData);
+        vehicleId = await createVehicle(formData);
         toast({
           title: 'Vehicle added',
           description: 'Your vehicle has been added successfully.',
         });
       }
+
+      // Create linked warranty event if checkbox is checked and warranty info exists
+      if (createWarrantyEvent && formData.warrantyExpiry && !isEditing) {
+        try {
+          await createWarranty({
+            name: `${formData.name} Warranty`,
+            warrantyType: 'Automotive',
+            purchaseDate: formData.purchaseDate || undefined,
+            purchasePrice: formData.purchasePrice || undefined,
+            warrantyStartDate: formData.purchaseDate || undefined,
+            warrantyEndDate: formData.warrantyExpiry,
+            linkedType: 'vehicle',
+            linkedItemId: vehicleId,
+            linkedItemName: formData.name,
+            documents: formData.warrantyUrl ? [{ url: formData.warrantyUrl }] : [],
+            receiptUrl: formData.receiptUrl || undefined,
+          });
+          toast({
+            title: 'Warranty created',
+            description: 'A warranty record has been created in the Warranties tab.',
+          });
+        } catch (error) {
+          console.error('Failed to create warranty:', error);
+          toast({
+            title: 'Warning',
+            description: 'Vehicle saved but failed to create warranty record.',
+            variant: 'destructive',
+          });
+        }
+      }
+
+      // Create linked subscription event if checkbox is checked
+      if (createSubscriptionEvent && formData.subscriptionName && formData.subscriptionCost && !isEditing) {
+        try {
+          await createSubscription({
+            name: formData.subscriptionName,
+            subscriptionType: formData.subscriptionType,
+            cost: formData.subscriptionCost,
+            billingFrequency: formData.subscriptionBillingFrequency,
+            linkedAssetType: 'vehicle',
+            linkedAssetId: vehicleId,
+            linkedAssetName: formData.name,
+          });
+          toast({
+            title: 'Subscription created',
+            description: 'A subscription record has been created in the Subscriptions tab.',
+          });
+        } catch (error) {
+          console.error('Failed to create subscription:', error);
+          toast({
+            title: 'Warning',
+            description: 'Vehicle saved but failed to create subscription record.',
+            variant: 'destructive',
+          });
+        }
+      }
+
       onClose();
     } catch {
       toast({
@@ -608,6 +718,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           <Collapsible open={showWarranty} onOpenChange={setShowWarranty}>
             <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors">
               {showWarranty ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              <Shield className="h-4 w-4" />
               <span className="font-medium">Warranty Information</span>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-4 space-y-4">
@@ -702,8 +813,99 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
                   </div>
                 )}
               </div>
+
+              {/* Option to create warranty event */}
+              {!isEditing && formData.warrantyExpiry && (
+                <div className="flex items-center space-x-2 pt-2 border-t">
+                  <Checkbox
+                    id="createWarrantyEvent"
+                    checked={createWarrantyEvent}
+                    onCheckedChange={(checked) => setCreateWarrantyEvent(checked === true)}
+                  />
+                  <Label
+                    htmlFor="createWarrantyEvent"
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    Also create a warranty record in the Warranties tab
+                  </Label>
+                </div>
+              )}
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Subscription Section (collapsible) - only for new vehicles */}
+          {!isEditing && (
+            <Collapsible open={showSubscription} onOpenChange={setShowSubscription}>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors">
+                {showSubscription ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                <CreditCard className="h-4 w-4" />
+                <span className="font-medium">Vehicle Subscription</span>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-4 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Add a recurring subscription linked to this vehicle (e.g., roadside assistance, extended warranty service, maintenance plan).
+                </p>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="createSubscriptionEvent"
+                    checked={createSubscriptionEvent}
+                    onCheckedChange={(checked) => setCreateSubscriptionEvent(checked === true)}
+                  />
+                  <Label
+                    htmlFor="createSubscriptionEvent"
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    Create a subscription record in the Subscriptions tab
+                  </Label>
+                </div>
+
+                {createSubscriptionEvent && (
+                  <div className="space-y-4 pl-6 border-l-2 border-muted">
+                    <div className="space-y-2">
+                      <Label htmlFor="subscriptionName">Subscription Name *</Label>
+                      <Input
+                        id="subscriptionName"
+                        value={formData.subscriptionName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, subscriptionName: e.target.value }))}
+                        placeholder="e.g., AAA Roadside Assistance"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="subscriptionCost">Cost *</Label>
+                        <Input
+                          id="subscriptionCost"
+                          value={formData.subscriptionCost}
+                          onChange={(e) => setFormData(prev => ({ ...prev, subscriptionCost: e.target.value }))}
+                          placeholder="$0.00"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Billing Frequency</Label>
+                        <Select
+                          value={formData.subscriptionBillingFrequency}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, subscriptionBillingFrequency: value as BillingFrequency }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BILLING_FREQUENCIES.map(({ value, label }) => (
+                              <SelectItem key={value} value={value}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           {/* Receipt Upload */}
           <div className="space-y-2">
