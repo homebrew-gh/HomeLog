@@ -116,37 +116,57 @@ const Index = () => {
     }
   };
 
+  // Render all tabs but only show the active one
+  // This keeps components mounted so queries don't re-run on tab switch
   const renderTabContent = () => {
-    switch (preferences.activeTab) {
-      case 'home':
-        return (
+    const activeTab = preferences.activeTab;
+    const activeTabs = preferences.activeTabs;
+    
+    return (
+      <>
+        <div className={activeTab === 'home' ? '' : 'hidden'}>
           <HomeTab 
             onNavigateToTab={handleNavigateToTab} 
             onAddTab={() => setAddTabDialogOpen(true)} 
           />
-        );
-      case 'appliances':
-        return <AppliancesTab scrollTarget={scrollTarget} />;
-      case 'maintenance':
-        return <MaintenanceTab scrollTarget={scrollTarget} />;
-      case 'vehicles':
-        return <VehiclesTab scrollTarget={scrollTarget} />;
-      case 'subscriptions':
-        return <SubscriptionsTab scrollTarget={scrollTarget} />;
-      case 'warranties':
-        return <WarrantiesTab />;
-      case 'companies':
-        return <CompaniesTab scrollTarget={scrollTarget} />;
-      case 'projects':
-        return <ProjectsTab />;
-      default:
-        return (
-          <HomeTab 
-            onNavigateToTab={handleNavigateToTab} 
-            onAddTab={() => setAddTabDialogOpen(true)} 
-          />
-        );
-    }
+        </div>
+        {activeTabs.includes('appliances') && (
+          <div className={activeTab === 'appliances' ? '' : 'hidden'}>
+            <AppliancesTab scrollTarget={activeTab === 'appliances' ? scrollTarget : undefined} />
+          </div>
+        )}
+        {activeTabs.includes('maintenance') && (
+          <div className={activeTab === 'maintenance' ? '' : 'hidden'}>
+            <MaintenanceTab scrollTarget={activeTab === 'maintenance' ? scrollTarget : undefined} />
+          </div>
+        )}
+        {activeTabs.includes('vehicles') && (
+          <div className={activeTab === 'vehicles' ? '' : 'hidden'}>
+            <VehiclesTab scrollTarget={activeTab === 'vehicles' ? scrollTarget : undefined} />
+          </div>
+        )}
+        {activeTabs.includes('subscriptions') && (
+          <div className={activeTab === 'subscriptions' ? '' : 'hidden'}>
+            <SubscriptionsTab scrollTarget={activeTab === 'subscriptions' ? scrollTarget : undefined} />
+          </div>
+        )}
+        {activeTabs.includes('warranties') && (
+          <div className={activeTab === 'warranties' ? '' : 'hidden'}>
+            <WarrantiesTab />
+          </div>
+        )}
+        {activeTabs.includes('companies') && (
+          <div className={activeTab === 'companies' ? '' : 'hidden'}>
+            <CompaniesTab scrollTarget={activeTab === 'companies' ? scrollTarget : undefined} />
+          </div>
+        )}
+        {activeTabs.includes('projects') && (
+          <div className={activeTab === 'projects' ? '' : 'hidden'}>
+            <ProjectsTab />
+          </div>
+        )}
+      </>
+    );
   };
 
   return (
