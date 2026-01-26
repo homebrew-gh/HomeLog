@@ -362,9 +362,14 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         isPublishingRef.current = true;
         
         try {
+          // Exclude transient UI state (activeTab) and large cached data (exchangeRates) from Nostr sync
+          // activeTab is transient UI state that doesn't need to be synced across devices
+          // exchangeRates are cached API data that can be re-fetched on any device
+          const { activeTab: _activeTab, exchangeRates: _exchangeRates, ...prefsToSync } = preferences;
+          
           await publishEvent({
             kind: APP_DATA_KIND,
-            content: JSON.stringify(preferences),
+            content: JSON.stringify(prefsToSync),
             tags: [
               ['d', APP_IDENTIFIER],
               ['alt', 'Home Log user preferences'],
@@ -443,15 +448,11 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   }, [updatePreferences, activeTab]);
 
   const setActiveTab = useCallback((tabId: TabId) => {
-    // Only update local state - don't publish to Nostr for tab switches
-    // This is transient UI state that doesn't need network sync
+    // Only update local React state - don't persist to localStorage or Nostr
+    // This is transient UI state that doesn't need any persistence
+    // Tab state is ephemeral - users expect to start fresh on home tab anyway
     setActiveTabState(tabId);
-    // Also update local storage for persistence across page reloads
-    setLocalPreferences((prev) => ({
-      ...prev,
-      activeTab: tabId,
-    }));
-  }, [setLocalPreferences]);
+  }, []);
 
   const reorderTabs = useCallback((newOrder: TabId[]) => {
     const filteredOrder = newOrder.filter(id => id !== 'home');
