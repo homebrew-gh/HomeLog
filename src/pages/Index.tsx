@@ -52,7 +52,7 @@ const Index = () => {
 
   const { user } = useCurrentUser();
   const { isProfileLoading } = useLoggedInAccounts();
-  const { preferences, setActiveTab } = useTabPreferences();
+  const { preferences, setActiveTab, isLoading: isPreferencesLoading } = useTabPreferences();
   const { isSyncing: isDataSyncing, isSynced: isDataSynced, hasCachedData, cacheChecked } = useDataSyncStatus();
   
   // Apply color theme to document root
@@ -76,19 +76,21 @@ const Index = () => {
   // Show loading animation while:
   // 1. Profile is still loading, OR
   // 2. Cache check hasn't completed yet, OR
-  // 3. No cached data AND sync not done (first time login / new device)
+  // 3. No cached data AND sync not done (first time login / new device), OR
+  // 4. Preferences are still loading from Nostr (returning user with cleared cache)
   // Users with cached data will see their cached data immediately while sync happens in background
   // Once initial load completes for this session, don't show loading again
   const isInitialLoading = user && !hasCompletedInitialLoad.current && (
     isProfileLoading || 
     !cacheChecked || 
-    (!hasCachedData && !isDataSynced)
+    (!hasCachedData && !isDataSynced) ||
+    isPreferencesLoading
   );
   
   // Determine loading message based on current state
   // Show "Loading your data..." if we're waiting for data (even if profile is also loading)
   // This is more informative since data fetch is usually what takes time
-  const isWaitingForData = !cacheChecked || (!hasCachedData && !isDataSynced);
+  const isWaitingForData = !cacheChecked || (!hasCachedData && !isDataSynced) || isPreferencesLoading;
   const loadingMessage = isWaitingForData ? "Loading your data..." : "Signing in...";
   const loadingSubMessage = isWaitingForData ? "Fetching from Nostr relays" : "Connecting to your account";
   

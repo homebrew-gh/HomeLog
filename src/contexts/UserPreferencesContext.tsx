@@ -853,10 +853,13 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     version: localPreferences.version || 1,
   };
 
-  // CACHE-FIRST: We always have local preferences immediately
-  // Only show loading if this is a brand new user with no local data AND we're still fetching
-  const hasLocalData = localPreferences.version > 0 || localPreferences.activeTabs.length > 0;
-  const isActuallyLoading = !hasLocalData && isLoadingRemote && !hasSyncedFromRemote.current;
+  // For returning users with cleared browser cache:
+  // We need to wait for Nostr sync to complete before showing the dashboard.
+  // "hasLocalData" means the user has actually customized their preferences
+  // (not just using defaults), OR we've already synced from remote.
+  const hasRealLocalData = localPreferences.activeTabs.length > 0;
+  const needsRemoteSync = !!user?.pubkey && !hasRealLocalData && !hasSyncedFromRemote.current;
+  const isActuallyLoading = needsRemoteSync && (isLoadingRemote || !isFetched);
 
   return (
     <UserPreferencesContext.Provider
