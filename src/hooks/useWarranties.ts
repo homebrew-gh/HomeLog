@@ -69,6 +69,7 @@ function parseWarrantyPlaintext(event: NostrEvent): Warranty | null {
     documents: parseDocumentTags(event),
     receiptUrl: getTagValue(event, 'receipt_url'),
     notes: getTagValue(event, 'notes'),
+    isArchived: getTagValue(event, 'is_archived') === 'true',
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
@@ -359,6 +360,7 @@ export function useWarrantyActions() {
       if (data.extendedWarrantyNotes) tags.push(['extended_warranty_notes', data.extendedWarrantyNotes]);
       if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
       if (data.notes) tags.push(['notes', data.notes]);
+      if (data.isArchived) tags.push(['is_archived', 'true']);
 
       // Add document tags
       if (data.documents && data.documents.length > 0) {
@@ -429,6 +431,7 @@ export function useWarrantyActions() {
       if (data.extendedWarrantyNotes) tags.push(['extended_warranty_notes', data.extendedWarrantyNotes]);
       if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
       if (data.notes) tags.push(['notes', data.notes]);
+      if (data.isArchived) tags.push(['is_archived', 'true']);
 
       // Add document tags
       if (data.documents && data.documents.length > 0) {
@@ -452,6 +455,18 @@ export function useWarrantyActions() {
     }
 
     await queryClient.invalidateQueries({ queryKey: ['warranties'] });
+  };
+
+  const archiveWarranty = async (id: string, isArchived: boolean) => {
+    if (!user) throw new Error('Must be logged in');
+
+    // Get current warranty data
+    const warranties = queryClient.getQueryData<Warranty[]>(['warranties', user.pubkey]) || [];
+    const warranty = warranties.find(w => w.id === id);
+    if (!warranty) throw new Error('Warranty not found');
+
+    // Update with archive status
+    await updateWarranty(id, { ...warranty, isArchived });
   };
 
   const deleteWarranty = async (id: string) => {
@@ -478,7 +493,19 @@ export function useWarrantyActions() {
     await queryClient.refetchQueries({ queryKey: ['warranties'] });
   };
 
-  return { createWarranty, updateWarranty, deleteWarranty };
+  return { createWarranty, updateWarranty, deleteWarranty, archiveWarranty };
+}
+
+// Get archived warranties
+export function useArchivedWarranties() {
+  const { data: warranties = [] } = useWarranties();
+  return warranties.filter(w => w.isArchived);
+}
+
+// Get active (non-archived) warranties
+export function useActiveWarranties() {
+  const { data: warranties = [] } = useWarranties();
+  return warranties.filter(w => !w.isArchived);
 }
 
 // Helper function to parse warranty end date and return a Date object

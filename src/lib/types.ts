@@ -9,6 +9,7 @@ export interface Appliance {
   room: string;
   receiptUrl?: string;
   manualUrl?: string;
+  isArchived?: boolean; // Whether this appliance is archived
   pubkey: string;
   createdAt: number;
 }
@@ -57,6 +58,7 @@ export interface Vehicle {
   documentsUrls?: string[]; // Array of PDF/document URLs
   // Metadata
   notes?: string;
+  isArchived?: boolean; // Whether this vehicle is archived
   pubkey: string;
   createdAt: number;
 }
@@ -73,6 +75,7 @@ export interface MaintenanceSchedule {
   frequencyUnit: 'days' | 'weeks' | 'months' | 'years';
   // Additional fields for mileage-based maintenance
   mileageInterval?: number; // e.g., every 5000 miles
+  isArchived?: boolean; // Whether this maintenance is archived
   pubkey: string;
   createdAt: number;
 }
@@ -219,6 +222,7 @@ export interface Subscription {
   linkedAssetId?: string; // ID of linked appliance or vehicle
   linkedAssetName?: string; // Name for home features or display purposes
   notes?: string;
+  isArchived?: boolean; // Whether this subscription is archived
   // Metadata
   pubkey: string;
   createdAt: number;
@@ -317,6 +321,7 @@ export interface Warranty {
   receiptUrl?: string; // Purchase receipt
   // General
   notes?: string;
+  isArchived?: boolean; // Whether this warranty is archived
   // Metadata
   pubkey: string;
   createdAt: number;

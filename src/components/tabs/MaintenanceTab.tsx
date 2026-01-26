@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus } from 'lucide-react';
+import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus, Archive, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -75,15 +75,39 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
   const applianceMaintenanceRaw = useApplianceMaintenance();
   const vehicleMaintenanceRaw = useVehicleMaintenance();
   
+  // View mode: 'active' or 'archived'
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Filter maintenance by archive status
+  const activeApplianceMaintenance = useMemo(() => 
+    applianceMaintenanceRaw.filter(m => !m.isArchived),
+    [applianceMaintenanceRaw]
+  );
+  const archivedApplianceMaintenance = useMemo(() => 
+    applianceMaintenanceRaw.filter(m => m.isArchived),
+    [applianceMaintenanceRaw]
+  );
+  
+  const activeVehicleMaintenance = useMemo(() => 
+    vehicleMaintenanceRaw.filter(m => !m.isArchived),
+    [vehicleMaintenanceRaw]
+  );
+  const archivedVehicleMaintenance = useMemo(() => 
+    vehicleMaintenanceRaw.filter(m => m.isArchived),
+    [vehicleMaintenanceRaw]
+  );
+
+  const archivedCount = archivedApplianceMaintenance.length + archivedVehicleMaintenance.length;
+  
   // Sort maintenance items by due date (closest first)
   const applianceMaintenance = useMemo(() => 
-    sortMaintenanceByDueDate(applianceMaintenanceRaw, appliances, vehicles, completions),
-    [applianceMaintenanceRaw, appliances, vehicles, completions]
+    sortMaintenanceByDueDate(showArchived ? archivedApplianceMaintenance : activeApplianceMaintenance, appliances, vehicles, completions),
+    [showArchived, archivedApplianceMaintenance, activeApplianceMaintenance, appliances, vehicles, completions]
   );
   
   const vehicleMaintenance = useMemo(() => 
-    sortMaintenanceByDueDate(vehicleMaintenanceRaw, appliances, vehicles, completions),
-    [vehicleMaintenanceRaw, appliances, vehicles, completions]
+    sortMaintenanceByDueDate(showArchived ? archivedVehicleMaintenance : activeVehicleMaintenance, appliances, vehicles, completions),
+    [showArchived, archivedVehicleMaintenance, activeVehicleMaintenance, appliances, vehicles, completions]
   );
 
   // Dialog states
@@ -139,21 +163,56 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Wrench className="h-6 w-6 text-primary" />
-          Maintenance
+          {showArchived ? (
+            <>
+              <Archive className="h-6 w-6 text-muted-foreground" />
+              Archived Maintenance
+            </>
+          ) : (
+            <>
+              <Wrench className="h-6 w-6 text-primary" />
+              Maintenance
+            </>
+          )}
         </h2>
-        {allMaintenance.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setExportDialogOpen(true)}
-            className="gap-2"
-          >
-            <CalendarPlus className="h-4 w-4" />
-            <span className="hidden sm:inline">Export to Calendar</span>
-            <span className="sm:hidden">Export</span>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {showArchived ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowArchived(false)}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Maintenance
+            </Button>
+          ) : (
+            <>
+              {archivedCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowArchived(true)}
+                  className="text-muted-foreground"
+                >
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archived ({archivedCount})
+                </Button>
+              )}
+              {allMaintenance.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExportDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <CalendarPlus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Export to Calendar</span>
+                  <span className="sm:hidden">Export</span>
+                </Button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {isLoading ? (

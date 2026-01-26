@@ -15,7 +15,9 @@ import {
   Home,
   Tag,
   Building,
-  ShieldPlus
+  ShieldPlus,
+  Archive,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,6 +65,9 @@ export function WarrantiesTab({ scrollTarget }: WarrantiesTabProps) {
   const { preferences } = useUserPreferences();
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
 
+  // View mode: 'active' or 'archived'
+  const [showArchived, setShowArchived] = useState(false);
+
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingWarranty, setEditingWarranty] = useState<Warranty | undefined>();
@@ -73,6 +78,11 @@ export function WarrantiesTab({ scrollTarget }: WarrantiesTabProps) {
 
   // Refs for warranty type sections
   const typeRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Filter warranties based on archive state
+  const activeWarranties = useMemo(() => warranties.filter(w => !w.isArchived), [warranties]);
+  const archivedWarranties = useMemo(() => warranties.filter(w => w.isArchived), [warranties]);
+  const displayedWarranties = showArchived ? archivedWarranties : activeWarranties;
 
   // Handle scroll to target when scrollTarget changes
   useEffect(() => {
@@ -100,7 +110,7 @@ export function WarrantiesTab({ scrollTarget }: WarrantiesTabProps) {
   const warrantiesByType = useMemo(() => {
     const grouped: Record<string, Warranty[]> = {};
 
-    for (const warranty of warranties) {
+    for (const warranty of displayedWarranties) {
       const type = warranty.warrantyType || 'Uncategorized';
       if (!grouped[type]) {
         grouped[type] = [];
@@ -116,7 +126,7 @@ export function WarrantiesTab({ scrollTarget }: WarrantiesTabProps) {
     });
 
     return { grouped, sortedTypes };
-  }, [warranties]);
+  }, [displayedWarranties]);
 
   // Get linked item name for display
   const getLinkedItemName = (warranty: Warranty): string | null => {
@@ -155,44 +165,77 @@ export function WarrantiesTab({ scrollTarget }: WarrantiesTabProps) {
     <section>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Shield className="h-6 w-6 text-primary" />
-          Warranties
+          {showArchived ? (
+            <>
+              <Archive className="h-6 w-6 text-muted-foreground" />
+              Archived Warranties
+            </>
+          ) : (
+            <>
+              <Shield className="h-6 w-6 text-primary" />
+              Warranties
+            </>
+          )}
         </h2>
         <div className="flex items-center gap-2">
-          {/* View Toggle */}
-          {warranties.length > 0 && (
-            <ToggleGroup 
-              type="single" 
-              value={viewMode} 
-              onValueChange={(value) => value && setViewMode(value as 'list' | 'card')}
-              className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5"
+          {showArchived ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowArchived(false)}
             >
-              <ToggleGroupItem 
-                value="list" 
-                aria-label="List view"
-                className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Warranties
+            </Button>
+          ) : (
+            <>
+              {archivedWarranties.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowArchived(true)}
+                  className="text-muted-foreground"
+                >
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archived ({archivedWarranties.length})
+                </Button>
+              )}
+              {/* View Toggle */}
+              {activeWarranties.length > 0 && (
+                <ToggleGroup 
+                  type="single" 
+                  value={viewMode} 
+                  onValueChange={(value) => value && setViewMode(value as 'list' | 'card')}
+                  className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5"
+                >
+                  <ToggleGroupItem 
+                    value="list" 
+                    aria-label="List view"
+                    className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+                  >
+                    <List className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="card" 
+                    aria-label="Card view"
+                    className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              )}
+              <Button
+                onClick={() => {
+                  setEditingWarranty(undefined);
+                  setDialogOpen(true);
+                }}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
-                <List className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem 
-                value="card" 
-                aria-label="Card view"
-                className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Warranty
+              </Button>
+            </>
           )}
-          <Button
-            onClick={() => {
-              setEditingWarranty(undefined);
-              setDialogOpen(true);
-            }}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Warranty
-          </Button>
         </div>
       </div>
 
@@ -229,27 +272,45 @@ export function WarrantiesTab({ scrollTarget }: WarrantiesTabProps) {
             ))}
           </div>
         )
-      ) : warranties.length === 0 ? (
+      ) : displayedWarranties.length === 0 ? (
         <Card className="bg-card border-border border-dashed">
           <CardContent className="py-12 text-center">
-            <Shield className="h-12 w-12 text-primary/30 mx-auto mb-4" />
-            <h3 className="font-semibold text-foreground mb-2">
-              No Warranties Yet
-            </h3>
-            <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-              Store warranty documents, track expiration dates, and never miss a coverage deadline again.
-            </p>
-            <Button
-              onClick={() => {
-                setEditingWarranty(undefined);
-                setDialogOpen(true);
-              }}
-              variant="outline"
-              className="border-primary/30 hover:bg-primary/10"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Warranty
-            </Button>
+            {showArchived ? (
+              <>
+                <Archive className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  No archived warranties.
+                </p>
+                <Button
+                  onClick={() => setShowArchived(false)}
+                  variant="outline"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Warranties
+                </Button>
+              </>
+            ) : (
+              <>
+                <Shield className="h-12 w-12 text-primary/30 mx-auto mb-4" />
+                <h3 className="font-semibold text-foreground mb-2">
+                  No Warranties Yet
+                </h3>
+                <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                  Store warranty documents, track expiration dates, and never miss a coverage deadline again.
+                </p>
+                <Button
+                  onClick={() => {
+                    setEditingWarranty(undefined);
+                    setDialogOpen(true);
+                  }}
+                  variant="outline"
+                  className="border-primary/30 hover:bg-primary/10"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Warranty
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : viewMode === 'list' ? (

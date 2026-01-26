@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, FileText, Image, Calendar, Factory, Home, Edit, Trash2, DollarSign } from 'lucide-react';
+import { ExternalLink, FileText, Image, Calendar, Factory, Home, Edit, Trash2, DollarSign, Archive, ArchiveRestore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
+import { ArchiveConfirmDialog } from '@/components/ArchiveConfirmDialog';
 import { useApplianceActions } from '@/hooks/useAppliances';
 import { toast } from '@/hooks/useToast';
 import type { Appliance } from '@/lib/types';
@@ -18,9 +19,11 @@ interface ApplianceDetailDialogProps {
 }
 
 export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDelete }: ApplianceDetailDialogProps) {
-  const { deleteAppliance } = useApplianceActions();
+  const { deleteAppliance, archiveAppliance } = useApplianceActions();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const handleDelete = async () => {
     setShowDeleteConfirm(false);
@@ -62,6 +65,31 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDe
   const handleEdit = () => {
     onClose();
     onEdit();
+  };
+
+  const handleArchiveConfirm = async () => {
+    await archiveAppliance(appliance.id, !appliance.isArchived);
+  };
+
+  const handleQuickUnarchive = async () => {
+    setIsArchiving(true);
+    try {
+      await archiveAppliance(appliance.id, false);
+      toast({
+        title: 'Appliance restored',
+        description: 'The appliance has been restored from archive.',
+      });
+      onClose();
+      onDelete?.();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to restore appliance. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsArchiving(false);
+    }
   };
 
   return (
@@ -159,12 +187,30 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDe
                 View Full Details
               </Link>
             </Button>
-            <div className="flex justify-between">
-              <div className="flex gap-2">
+            <div className="flex justify-between flex-wrap gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button variant="outline" onClick={handleEdit}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
+                {appliance.isArchived ? (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleQuickUnarchive}
+                    disabled={isArchiving}
+                  >
+                    <ArchiveRestore className="h-4 w-4 mr-2" />
+                    {isArchiving ? 'Restoring...' : 'Restore'}
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowArchiveConfirm(true)}
+                  >
+                    <Archive className="h-4 w-4 mr-2" />
+                    Archive
+                  </Button>
+                )}
                 <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
@@ -194,6 +240,14 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDe
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ArchiveConfirmDialog
+        isOpen={showArchiveConfirm}
+        onClose={() => setShowArchiveConfirm(false)}
+        assetType="appliance"
+        asset={appliance}
+        onConfirm={handleArchiveConfirm}
+      />
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, ChevronDown, ChevronRight, Car, List, LayoutGrid, Calendar, Factory, Plane, Ship, Tractor, Gauge, FileText } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Car, List, LayoutGrid, Calendar, Factory, Plane, Ship, Tractor, Gauge, FileText, Archive, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,9 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
   const { preferences, setVehiclesViewMode } = useUserPreferences();
   const viewMode = preferences.vehiclesViewMode;
 
+  // View mode: 'active' or 'archived'
+  const [showArchived, setShowArchived] = useState(false);
+
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | undefined>();
@@ -43,6 +46,11 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
 
   // Collapsed types state (for list view)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
+
+  // Filter vehicles based on archive state
+  const activeVehicles = useMemo(() => vehicles.filter(v => !v.isArchived), [vehicles]);
+  const archivedVehicles = useMemo(() => vehicles.filter(v => v.isArchived), [vehicles]);
+  const displayedVehicles = showArchived ? archivedVehicles : activeVehicles;
 
   // Refs for vehicle type sections
   const typeRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -77,7 +85,7 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
   const vehiclesByType = useMemo(() => {
     const grouped: Record<string, Vehicle[]> = {};
 
-    for (const vehicle of vehicles) {
+    for (const vehicle of displayedVehicles) {
       const type = vehicle.vehicleType || 'Uncategorized';
       if (!grouped[type]) {
         grouped[type] = [];
@@ -93,7 +101,7 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
     });
 
     return { grouped, sortedTypes };
-  }, [vehicles]);
+  }, [displayedVehicles]);
 
   const toggleType = (type: string) => {
     setCollapsedTypes(prev => {
@@ -116,44 +124,78 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
     <section>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Car className="h-6 w-6 text-primary" />
-          Vehicles
+          {showArchived ? (
+            <>
+              <Archive className="h-6 w-6 text-muted-foreground" />
+              Archived Vehicles
+            </>
+          ) : (
+            <>
+              <Car className="h-6 w-6 text-primary" />
+              Vehicles
+            </>
+          )}
         </h2>
         <div className="flex items-center gap-2">
-          {/* View Toggle */}
-          {vehicles.length > 0 && (
-            <ToggleGroup 
-              type="single" 
-              value={viewMode} 
-              onValueChange={(value) => value && setVehiclesViewMode(value as 'list' | 'card')}
-              className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5"
+          {/* Archive Toggle */}
+          {showArchived ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowArchived(false)}
             >
-              <ToggleGroupItem 
-                value="list" 
-                aria-label="List view"
-                className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Vehicles
+            </Button>
+          ) : (
+            <>
+              {archivedVehicles.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowArchived(true)}
+                  className="text-muted-foreground"
+                >
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archived ({archivedVehicles.length})
+                </Button>
+              )}
+              {/* View Toggle */}
+              {activeVehicles.length > 0 && (
+                <ToggleGroup 
+                  type="single" 
+                  value={viewMode} 
+                  onValueChange={(value) => value && setVehiclesViewMode(value as 'list' | 'card')}
+                  className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5"
+                >
+                  <ToggleGroupItem 
+                    value="list" 
+                    aria-label="List view"
+                    className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+                  >
+                    <List className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="card" 
+                    aria-label="Card view"
+                    className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              )}
+              <Button
+                onClick={() => {
+                  setEditingVehicle(undefined);
+                  setDialogOpen(true);
+                }}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
-                <List className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem 
-                value="card" 
-                aria-label="Card view"
-                className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Vehicle
+              </Button>
+            </>
           )}
-          <Button
-            onClick={() => {
-              setEditingVehicle(undefined);
-              setDialogOpen(true);
-            }}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Vehicle
-          </Button>
         </div>
       </div>
 
@@ -190,24 +232,42 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
             ))}
           </div>
         )
-      ) : vehicles.length === 0 ? (
+      ) : displayedVehicles.length === 0 ? (
         <Card className="bg-card border-border border-dashed">
           <CardContent className="py-12 text-center">
-            <Car className="h-12 w-12 text-primary/30 mx-auto mb-4" />
-            <p className="text-muted-foreground mb-4">
-              No vehicles added yet. Start tracking your vehicles!
-            </p>
-            <Button
-              onClick={() => {
-                setEditingVehicle(undefined);
-                setDialogOpen(true);
-              }}
-              variant="outline"
-              className="border-primary/30 hover:bg-primary/10"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Vehicle
-            </Button>
+            {showArchived ? (
+              <>
+                <Archive className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  No archived vehicles.
+                </p>
+                <Button
+                  onClick={() => setShowArchived(false)}
+                  variant="outline"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Vehicles
+                </Button>
+              </>
+            ) : (
+              <>
+                <Car className="h-12 w-12 text-primary/30 mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  No vehicles added yet. Start tracking your vehicles!
+                </p>
+                <Button
+                  onClick={() => {
+                    setEditingVehicle(undefined);
+                    setDialogOpen(true);
+                  }}
+                  variant="outline"
+                  className="border-primary/30 hover:bg-primary/10"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Vehicle
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : viewMode === 'list' ? (

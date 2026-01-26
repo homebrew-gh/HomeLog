@@ -63,6 +63,7 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
     frequency: parseInt(frequency, 10),
     frequencyUnit: frequencyUnit as MaintenanceSchedule['frequencyUnit'],
     mileageInterval: mileageInterval ? parseInt(mileageInterval, 10) : undefined,
+    isArchived: getTagValue(event, 'is_archived') === 'true',
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
@@ -294,6 +295,7 @@ export function useMaintenanceActions() {
 
     if (data.partNumber) tags.push(['part_number', data.partNumber]);
     if (data.mileageInterval) tags.push(['mileage_interval', data.mileageInterval.toString()]);
+    if (data.isArchived) tags.push(['is_archived', 'true']);
 
     const event = await publishEvent({
       kind: MAINTENANCE_KIND,
@@ -342,6 +344,7 @@ export function useMaintenanceActions() {
 
     if (data.partNumber) tags.push(['part_number', data.partNumber]);
     if (data.mileageInterval) tags.push(['mileage_interval', data.mileageInterval.toString()]);
+    if (data.isArchived) tags.push(['is_archived', 'true']);
 
     const event = await publishEvent({
       kind: MAINTENANCE_KIND,
@@ -354,6 +357,18 @@ export function useMaintenanceActions() {
     }
 
     await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+  };
+
+  const archiveMaintenance = async (id: string, isArchived: boolean) => {
+    if (!user) throw new Error('Must be logged in');
+
+    // Get current maintenance data
+    const maintenance = queryClient.getQueryData<MaintenanceSchedule[]>(['maintenance', user.pubkey]) || [];
+    const schedule = maintenance.find(m => m.id === id);
+    if (!schedule) throw new Error('Maintenance schedule not found');
+
+    // Update with archive status
+    await updateMaintenance(id, { ...schedule, isArchived });
   };
 
   const deleteMaintenance = async (id: string) => {
@@ -379,7 +394,19 @@ export function useMaintenanceActions() {
     await queryClient.refetchQueries({ queryKey: ['maintenance'] });
   };
 
-  return { createMaintenance, updateMaintenance, deleteMaintenance };
+  return { createMaintenance, updateMaintenance, deleteMaintenance, archiveMaintenance };
+}
+
+// Get archived maintenance schedules
+export function useArchivedMaintenance() {
+  const { data: maintenance = [] } = useMaintenance();
+  return maintenance.filter(m => m.isArchived);
+}
+
+// Get active (non-archived) maintenance schedules
+export function useActiveMaintenance() {
+  const { data: maintenance = [] } = useMaintenance();
+  return maintenance.filter(m => !m.isArchived);
 }
 
 // Parse MM/DD/YYYY date string to Date object

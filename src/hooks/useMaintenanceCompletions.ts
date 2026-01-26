@@ -226,5 +226,18 @@ export function useMaintenanceCompletionActions() {
     await queryClient.refetchQueries({ queryKey: ['maintenance-completions'] });
   };
 
-  return { createCompletion, deleteCompletion };
+  const deleteCompletionsByMaintenanceId = async (maintenanceId: string) => {
+    if (!user) throw new Error('Must be logged in');
+
+    // Get all completions for this maintenance
+    const completions = queryClient.getQueryData<MaintenanceCompletion[]>(['maintenance-completions', user.pubkey]) || [];
+    const toDelete = completions.filter(c => c.maintenanceId === maintenanceId);
+
+    // Delete each completion
+    for (const completion of toDelete) {
+      await deleteCompletion(completion.id);
+    }
+  };
+
+  return { createCompletion, deleteCompletion, deleteCompletionsByMaintenanceId };
 }

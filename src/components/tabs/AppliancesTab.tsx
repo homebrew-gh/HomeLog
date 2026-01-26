@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, ChevronDown, ChevronRight, Home, Package, List, LayoutGrid, Calendar, Building2, FileText } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Home, Package, List, LayoutGrid, Calendar, Building2, FileText, Archive, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,9 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
   const { preferences, setAppliancesViewMode } = useUserPreferences();
   const viewMode = preferences.appliancesViewMode;
 
+  // View mode: 'active' or 'archived'
+  const [showArchived, setShowArchived] = useState(false);
+
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAppliance, setEditingAppliance] = useState<Appliance | undefined>();
@@ -29,6 +32,11 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
 
   // Collapsed rooms state (for list view)
   const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(new Set());
+
+  // Filter appliances based on archive state
+  const activeAppliances = useMemo(() => appliances.filter(a => !a.isArchived), [appliances]);
+  const archivedAppliances = useMemo(() => appliances.filter(a => a.isArchived), [appliances]);
+  const displayedAppliances = showArchived ? archivedAppliances : activeAppliances;
 
   // Refs for room sections
   const roomRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -63,7 +71,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
   const appliancesByRoom = useMemo(() => {
     const grouped: Record<string, Appliance[]> = {};
 
-    for (const appliance of appliances) {
+    for (const appliance of displayedAppliances) {
       const room = appliance.room || 'Uncategorized';
       if (!grouped[room]) {
         grouped[room] = [];
@@ -79,7 +87,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
     });
 
     return { grouped, sortedRooms };
-  }, [appliances]);
+  }, [displayedAppliances]);
 
   const toggleRoom = (room: string) => {
     setCollapsedRooms(prev => {
@@ -102,44 +110,78 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
     <section>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Package className="h-6 w-6 text-primary" />
-          Appliances
+          {showArchived ? (
+            <>
+              <Archive className="h-6 w-6 text-muted-foreground" />
+              Archived Appliances
+            </>
+          ) : (
+            <>
+              <Package className="h-6 w-6 text-primary" />
+              Appliances
+            </>
+          )}
         </h2>
         <div className="flex items-center gap-2">
-          {/* View Toggle */}
-          {appliances.length > 0 && (
-            <ToggleGroup 
-              type="single" 
-              value={viewMode} 
-              onValueChange={(value) => value && setAppliancesViewMode(value as 'list' | 'card')}
-              className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5"
+          {/* Archive Toggle */}
+          {showArchived ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowArchived(false)}
             >
-              <ToggleGroupItem 
-                value="list" 
-                aria-label="List view"
-                className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Appliances
+            </Button>
+          ) : (
+            <>
+              {archivedAppliances.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowArchived(true)}
+                  className="text-muted-foreground"
+                >
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archived ({archivedAppliances.length})
+                </Button>
+              )}
+              {/* View Toggle */}
+              {activeAppliances.length > 0 && (
+                <ToggleGroup 
+                  type="single" 
+                  value={viewMode} 
+                  onValueChange={(value) => value && setAppliancesViewMode(value as 'list' | 'card')}
+                  className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5"
+                >
+                  <ToggleGroupItem 
+                    value="list" 
+                    aria-label="List view"
+                    className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+                  >
+                    <List className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="card" 
+                    aria-label="Card view"
+                    className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              )}
+              <Button
+                onClick={() => {
+                  setEditingAppliance(undefined);
+                  setDialogOpen(true);
+                }}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
-                <List className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem 
-                value="card" 
-                aria-label="Card view"
-                className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Appliance
+              </Button>
+            </>
           )}
-          <Button
-            onClick={() => {
-              setEditingAppliance(undefined);
-              setDialogOpen(true);
-            }}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Appliance
-          </Button>
         </div>
       </div>
 
@@ -176,24 +218,42 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
             ))}
           </div>
         )
-      ) : appliances.length === 0 ? (
+      ) : displayedAppliances.length === 0 ? (
         <Card className="bg-card border-border border-dashed">
           <CardContent className="py-12 text-center">
-            <Package className="h-12 w-12 text-primary/30 mx-auto mb-4" />
-            <p className="text-muted-foreground mb-4">
-              No appliances added yet. Start tracking your home equipment!
-            </p>
-            <Button
-              onClick={() => {
-                setEditingAppliance(undefined);
-                setDialogOpen(true);
-              }}
-              variant="outline"
-              className="border-primary/30 hover:bg-primary/10"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Appliance
-            </Button>
+            {showArchived ? (
+              <>
+                <Archive className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  No archived appliances.
+                </p>
+                <Button
+                  onClick={() => setShowArchived(false)}
+                  variant="outline"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Appliances
+                </Button>
+              </>
+            ) : (
+              <>
+                <Package className="h-12 w-12 text-primary/30 mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  No appliances added yet. Start tracking your home equipment!
+                </p>
+                <Button
+                  onClick={() => {
+                    setEditingAppliance(undefined);
+                    setDialogOpen(true);
+                  }}
+                  variant="outline"
+                  className="border-primary/30 hover:bg-primary/10"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Appliance
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : viewMode === 'list' ? (

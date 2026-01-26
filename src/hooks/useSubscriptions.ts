@@ -44,6 +44,7 @@ function parseSubscriptionPlaintext(event: NostrEvent): Subscription | null {
     linkedAssetId: getTagValue(event, 'linked_asset_id'),
     linkedAssetName: getTagValue(event, 'linked_asset_name'),
     notes: getTagValue(event, 'notes'),
+    isArchived: getTagValue(event, 'is_archived') === 'true',
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
@@ -256,6 +257,7 @@ export function useSubscriptionActions() {
       if (data.linkedAssetId) tags.push(['linked_asset_id', data.linkedAssetId]);
       if (data.linkedAssetName) tags.push(['linked_asset_name', data.linkedAssetName]);
       if (data.notes) tags.push(['notes', data.notes]);
+      if (data.isArchived) tags.push(['is_archived', 'true']);
     }
 
     const event = await publishEvent({
@@ -303,6 +305,7 @@ export function useSubscriptionActions() {
       if (data.linkedAssetId) tags.push(['linked_asset_id', data.linkedAssetId]);
       if (data.linkedAssetName) tags.push(['linked_asset_name', data.linkedAssetName]);
       if (data.notes) tags.push(['notes', data.notes]);
+      if (data.isArchived) tags.push(['is_archived', 'true']);
     }
 
     const event = await publishEvent({
@@ -316,6 +319,18 @@ export function useSubscriptionActions() {
     }
 
     await queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+  };
+
+  const archiveSubscription = async (id: string, isArchived: boolean) => {
+    if (!user) throw new Error('Must be logged in');
+
+    // Get current subscription data
+    const subscriptions = queryClient.getQueryData<Subscription[]>(['subscriptions', user.pubkey]) || [];
+    const subscription = subscriptions.find(s => s.id === id);
+    if (!subscription) throw new Error('Subscription not found');
+
+    // Update with archive status
+    await updateSubscription(id, { ...subscription, isArchived });
   };
 
   const deleteSubscription = async (id: string) => {
@@ -342,5 +357,17 @@ export function useSubscriptionActions() {
     await queryClient.refetchQueries({ queryKey: ['subscriptions'] });
   };
 
-  return { createSubscription, updateSubscription, deleteSubscription };
+  return { createSubscription, updateSubscription, deleteSubscription, archiveSubscription };
+}
+
+// Get archived subscriptions
+export function useArchivedSubscriptions() {
+  const { data: subscriptions = [] } = useSubscriptions();
+  return subscriptions.filter(s => s.isArchived);
+}
+
+// Get active (non-archived) subscriptions
+export function useActiveSubscriptions() {
+  const { data: subscriptions = [] } = useSubscriptions();
+  return subscriptions.filter(s => !s.isArchived);
 }

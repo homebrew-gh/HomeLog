@@ -45,6 +45,7 @@ function parseAppliancePlaintext(event: NostrEvent): Appliance | null {
     room: getTagValue(event, 'room') || '',
     receiptUrl: getTagValue(event, 'receipt_url'),
     manualUrl: getTagValue(event, 'manual_url'),
+    isArchived: getTagValue(event, 'is_archived') === 'true',
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
@@ -269,6 +270,7 @@ export function useApplianceActions() {
       if (data.room) tags.push(['room', data.room]);
       if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
       if (data.manualUrl) tags.push(['manual_url', data.manualUrl]);
+      if (data.isArchived) tags.push(['is_archived', 'true']);
     }
 
     const event = await publishEvent({
@@ -322,6 +324,7 @@ export function useApplianceActions() {
       if (data.room) tags.push(['room', data.room]);
       if (data.receiptUrl) tags.push(['receipt_url', data.receiptUrl]);
       if (data.manualUrl) tags.push(['manual_url', data.manualUrl]);
+      if (data.isArchived) tags.push(['is_archived', 'true']);
     }
 
     const event = await publishEvent({
@@ -336,6 +339,18 @@ export function useApplianceActions() {
     }
 
     await queryClient.invalidateQueries({ queryKey: ['appliances'] });
+  };
+
+  const archiveAppliance = async (id: string, isArchived: boolean) => {
+    if (!user) throw new Error('Must be logged in');
+
+    // Get current appliance data
+    const appliances = queryClient.getQueryData<Appliance[]>(['appliances', user.pubkey]) || [];
+    const appliance = appliances.find(a => a.id === id);
+    if (!appliance) throw new Error('Appliance not found');
+
+    // Update with archive status
+    await updateAppliance(id, { ...appliance, isArchived });
   };
 
   const deleteAppliance = async (id: string) => {
@@ -364,5 +379,17 @@ export function useApplianceActions() {
     await queryClient.refetchQueries({ queryKey: ['maintenance'] });
   };
 
-  return { createAppliance, updateAppliance, deleteAppliance };
+  return { createAppliance, updateAppliance, deleteAppliance, archiveAppliance };
+}
+
+// Get archived appliances
+export function useArchivedAppliances() {
+  const { data: appliances = [] } = useAppliances();
+  return appliances.filter(a => a.isArchived);
+}
+
+// Get active (non-archived) appliances
+export function useActiveAppliances() {
+  const { data: appliances = [] } = useAppliances();
+  return appliances.filter(a => !a.isArchived);
 }

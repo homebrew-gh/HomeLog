@@ -8,6 +8,8 @@ import {
   Factory, 
   Edit, 
   Trash2,
+  Archive,
+  ArchiveRestore,
   Car,
   Gauge,
   Fuel,
@@ -25,6 +27,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
+import { ArchiveConfirmDialog } from '@/components/ArchiveConfirmDialog';
 import { useVehicleActions } from '@/hooks/useVehicles';
 import { toast } from '@/hooks/useToast';
 import { FUEL_TYPES, type Vehicle } from '@/lib/types';
@@ -58,9 +61,11 @@ function getFuelTypeLabel(value: string): string {
 }
 
 export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete }: VehicleDetailDialogProps) {
-  const { deleteVehicle } = useVehicleActions();
+  const { deleteVehicle, archiveVehicle } = useVehicleActions();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const handleDelete = async () => {
     setShowDeleteConfirm(false);
@@ -102,6 +107,31 @@ export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete
   const handleEdit = () => {
     onClose();
     onEdit();
+  };
+
+  const handleArchiveConfirm = async () => {
+    await archiveVehicle(vehicle.id, !vehicle.isArchived);
+  };
+
+  const handleQuickUnarchive = async () => {
+    setIsArchiving(true);
+    try {
+      await archiveVehicle(vehicle.id, false);
+      toast({
+        title: 'Vehicle restored',
+        description: 'The vehicle has been restored from archive.',
+      });
+      onClose();
+      onDelete?.();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to restore vehicle. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsArchiving(false);
+    }
   };
 
   const VehicleIcon = getVehicleIcon(vehicle.vehicleType);
@@ -372,12 +402,30 @@ export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete
                 View Full Details
               </Link>
             </Button>
-            <div className="flex justify-between">
-              <div className="flex gap-2">
+            <div className="flex justify-between flex-wrap gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button variant="outline" onClick={handleEdit}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
+                {vehicle.isArchived ? (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleQuickUnarchive}
+                    disabled={isArchiving}
+                  >
+                    <ArchiveRestore className="h-4 w-4 mr-2" />
+                    {isArchiving ? 'Restoring...' : 'Restore'}
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowArchiveConfirm(true)}
+                  >
+                    <Archive className="h-4 w-4 mr-2" />
+                    Archive
+                  </Button>
+                )}
                 <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
@@ -407,6 +455,14 @@ export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ArchiveConfirmDialog
+        isOpen={showArchiveConfirm}
+        onClose={() => setShowArchiveConfirm(false)}
+        assetType="vehicle"
+        asset={vehicle}
+        onConfirm={handleArchiveConfirm}
+      />
     </>
   );
 }

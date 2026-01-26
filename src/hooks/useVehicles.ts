@@ -61,6 +61,7 @@ function parseVehiclePlaintext(event: NostrEvent): Vehicle | null {
     warrantyExpiry: getTagValue(event, 'warranty_expiry'),
     documentsUrls: getTagValues(event, 'document_url'),
     notes: getTagValue(event, 'notes'),
+    isArchived: getTagValue(event, 'is_archived') === 'true',
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
@@ -278,6 +279,7 @@ export function useVehicleActions() {
       if (data.warrantyUrl) tags.push(['warranty_url', data.warrantyUrl]);
       if (data.warrantyExpiry) tags.push(['warranty_expiry', data.warrantyExpiry]);
       if (data.notes) tags.push(['notes', data.notes]);
+      if (data.isArchived) tags.push(['is_archived', 'true']);
 
       if (data.documentsUrls) {
         for (const url of data.documentsUrls) {
@@ -341,6 +343,7 @@ export function useVehicleActions() {
       if (data.warrantyUrl) tags.push(['warranty_url', data.warrantyUrl]);
       if (data.warrantyExpiry) tags.push(['warranty_expiry', data.warrantyExpiry]);
       if (data.notes) tags.push(['notes', data.notes]);
+      if (data.isArchived) tags.push(['is_archived', 'true']);
 
       if (data.documentsUrls) {
         for (const url of data.documentsUrls) {
@@ -360,6 +363,18 @@ export function useVehicleActions() {
     }
 
     await queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+  };
+
+  const archiveVehicle = async (id: string, isArchived: boolean) => {
+    if (!user) throw new Error('Must be logged in');
+
+    // Get current vehicle data
+    const vehicles = queryClient.getQueryData<Vehicle[]>(['vehicles', user.pubkey]) || [];
+    const vehicle = vehicles.find(v => v.id === id);
+    if (!vehicle) throw new Error('Vehicle not found');
+
+    // Update with archive status
+    await updateVehicle(id, { ...vehicle, isArchived });
   };
 
   const deleteVehicle = async (id: string) => {
@@ -387,5 +402,17 @@ export function useVehicleActions() {
     await queryClient.refetchQueries({ queryKey: ['maintenance'] });
   };
 
-  return { createVehicle, updateVehicle, deleteVehicle };
+  return { createVehicle, updateVehicle, deleteVehicle, archiveVehicle };
+}
+
+// Get archived vehicles
+export function useArchivedVehicles() {
+  const { data: vehicles = [] } = useVehicles();
+  return vehicles.filter(v => v.isArchived);
+}
+
+// Get active (non-archived) vehicles
+export function useActiveVehicles() {
+  const { data: vehicles = [] } = useVehicles();
+  return vehicles.filter(v => !v.isArchived);
 }
