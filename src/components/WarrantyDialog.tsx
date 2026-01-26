@@ -442,16 +442,15 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
     }
   };
 
-  const handleSubmit = async () => {
-    if (!formData.name.trim()) {
-      toast({
-        title: 'Name required',
-        description: 'Please enter a product/item name.',
-        variant: 'destructive',
-      });
-      return;
-    }
+  // Check if an item is linked (either via selection or custom name in linked item)
+  const hasLinkedItem = useMemo(() => {
+    if (formData.linkedType === 'appliance' && formData.linkedItemId) return true;
+    if (formData.linkedType === 'vehicle' && formData.linkedItemId) return true;
+    if (formData.linkedType === 'home_feature' && formData.linkedItemName) return true;
+    return false;
+  }, [formData.linkedType, formData.linkedItemId, formData.linkedItemName]);
 
+  const handleSubmit = async () => {
     if (!formData.warrantyType) {
       toast({
         title: 'Type required',
@@ -461,10 +460,23 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
       return;
     }
 
+    // Must have either a linked item OR a custom product name
+    if (!hasLinkedItem && !formData.name.trim()) {
+      toast({
+        title: 'Item required',
+        description: 'Please select an existing item (appliance, vehicle, or home feature) OR enter a custom product/item name.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      // Use the linked item name as warranty name if no custom name provided
+      const warrantyName = formData.name.trim() || selectedLinkedItemName || '';
+      
       const submitData = {
-        name: formData.name.trim(),
+        name: warrantyName,
         warrantyType: formData.warrantyType,
         description: formData.description.trim() || undefined,
         purchaseDate: formData.purchaseDate.trim() || undefined,
@@ -582,48 +594,43 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
             )}
           </div>
 
-          {/* Name/Product */}
+          {/* Link to Existing Item - PRIMARY OPTION */}
           <div className="space-y-2">
-            <Label htmlFor="name">Product/Item Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g., Samsung Refrigerator, DeWalt Drill"
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Optional details about the product"
-            />
-          </div>
-
-          {/* Link to Item */}
-          <div className="space-y-2">
-            <Label>Link to Item (Optional)</Label>
+            <Label>Link to Existing Item *</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Select an appliance, vehicle, or home feature to link this warranty to.
+            </p>
             <div className="flex gap-2">
               <Select
                 value={formData.linkedType}
                 onValueChange={handleLinkedTypeChange}
               >
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Type" />
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="appliance">Appliance</SelectItem>
-                  <SelectItem value="vehicle">Vehicle</SelectItem>
-                  <SelectItem value="home_feature">Home Feature</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
+                  <SelectItem value="appliance">
+                    <span className="flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Appliance
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="vehicle">
+                    <span className="flex items-center gap-2">
+                      <Car className="h-4 w-4" />
+                      Vehicle
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="home_feature">
+                    <span className="flex items-center gap-2">
+                      <Home className="h-4 w-4" />
+                      Home Feature
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
 
-              {formData.linkedType && formData.linkedType !== 'custom' && (
+              {formData.linkedType && (
                 <Popover open={linkedItemSearchOpen} onOpenChange={setLinkedItemSearchOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -759,17 +766,8 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
                   </PopoverContent>
                 </Popover>
               )}
-
-              {formData.linkedType === 'custom' && (
-                <Input
-                  value={formData.linkedItemName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, linkedItemName: e.target.value }))}
-                  placeholder="Enter custom item name"
-                  className="flex-1"
-                />
-              )}
             </div>
-            {selectedLinkedItemName && formData.linkedType !== 'custom' && (
+            {selectedLinkedItemName && (
               <Button
                 type="button"
                 variant="ghost"
@@ -781,6 +779,53 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
                 Clear linked item
               </Button>
             )}
+          </div>
+
+          {/* OR Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or enter custom item
+              </span>
+            </div>
+          </div>
+
+          {/* Custom Product/Item Name - SECONDARY OPTION */}
+          <div className="space-y-2">
+            <Label htmlFor="name">
+              Custom Product/Item Name {hasLinkedItem ? '(optional)' : '*'}
+            </Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder={hasLinkedItem ? 'Override name (optional)' : 'e.g., Samsung Refrigerator, DeWalt Drill'}
+              disabled={false}
+            />
+            {!hasLinkedItem && (
+              <p className="text-xs text-muted-foreground">
+                Required if no existing item is selected above.
+              </p>
+            )}
+            {hasLinkedItem && formData.name.trim() && (
+              <p className="text-xs text-muted-foreground">
+                This will be used instead of the linked item's name.
+              </p>
+            )}
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Optional details about the product"
+            />
           </div>
 
           {/* Purchase Date */}
