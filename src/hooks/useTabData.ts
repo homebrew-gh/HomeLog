@@ -2,6 +2,8 @@ import { useAppliances } from './useAppliances';
 import { useMaintenance } from './useMaintenance';
 import { useVehicles } from './useVehicles';
 import { useCompanies } from './useCompanies';
+import { useSubscriptions } from './useSubscriptions';
+import { useWarranties } from './useWarranties';
 import type { TabId } from '@/contexts/TabPreferencesContext';
 
 export interface TabDataInfo {
@@ -19,6 +21,8 @@ export function useTabData(tabId: TabId): TabDataInfo {
   const { data: maintenance = [] } = useMaintenance();
   const { data: vehicles = [] } = useVehicles();
   const { data: companies = [] } = useCompanies();
+  const { data: subscriptions = [] } = useSubscriptions();
+  const { data: warranties = [] } = useWarranties();
 
   switch (tabId) {
     case 'appliances':
@@ -53,23 +57,23 @@ export function useTabData(tabId: TabId): TabDataInfo {
         itemNamePlural: 'companies',
       };
 
-    // These tabs don't have data yet (coming soon)
     case 'subscriptions':
       return {
-        hasData: false,
-        count: 0,
+        hasData: subscriptions.length > 0,
+        count: subscriptions.length,
         itemName: 'subscription',
         itemNamePlural: 'subscriptions',
       };
 
     case 'warranties':
       return {
-        hasData: false,
-        count: 0,
+        hasData: warranties.length > 0,
+        count: warranties.length,
         itemName: 'warranty',
         itemNamePlural: 'warranties',
       };
 
+    // This tab doesn't have data yet (coming soon)
     case 'projects':
       return {
         hasData: false,
@@ -96,6 +100,8 @@ export function useAllTabsData(tabIds: TabId[]): Record<TabId, TabDataInfo> {
   const { data: maintenance = [] } = useMaintenance();
   const { data: vehicles = [] } = useVehicles();
   const { data: companies = [] } = useCompanies();
+  const { data: subscriptions = [] } = useSubscriptions();
+  const { data: warranties = [] } = useWarranties();
 
   const result: Record<string, TabDataInfo> = {};
 
@@ -134,6 +140,24 @@ export function useAllTabsData(tabIds: TabId[]): Record<TabId, TabDataInfo> {
           count: companies.length,
           itemName: 'company',
           itemNamePlural: 'companies',
+        };
+        break;
+
+      case 'subscriptions':
+        result[tabId] = {
+          hasData: subscriptions.length > 0,
+          count: subscriptions.length,
+          itemName: 'subscription',
+          itemNamePlural: 'subscriptions',
+        };
+        break;
+
+      case 'warranties':
+        result[tabId] = {
+          hasData: warranties.length > 0,
+          count: warranties.length,
+          itemName: 'warranty',
+          itemNamePlural: 'warranties',
         };
         break;
 
