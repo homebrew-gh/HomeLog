@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { CalendarExportDialog } from '@/components/CalendarExportDialog';
-import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
-import { useVehicles, useVehicleById } from '@/hooks/useVehicles';
+import { useAppliances } from '@/hooks/useAppliances';
+import { useVehicles } from '@/hooks/useVehicles';
 import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
-import { useMaintenanceCompletions, useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
+import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import type { MaintenanceSchedule, Appliance, Vehicle, MaintenanceCompletion } from '@/lib/types';
 
 interface MaintenanceTabProps {
@@ -274,6 +274,8 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
                     <MaintenanceItem
                       key={maint.id}
                       maintenance={maint}
+                      appliance={appliances.find(a => a.id === maint.applianceId)}
+                      completions={completions.filter(c => c.maintenanceId === maint.id)}
                       onClick={() => setViewingMaintenance(maint)}
                     />
                   ))}
@@ -324,6 +326,8 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
                     <VehicleMaintenanceItem
                       key={maint.id}
                       maintenance={maint}
+                      vehicle={vehicles.find(v => v.id === maint.vehicleId)}
+                      completions={completions.filter(c => c.maintenanceId === maint.id)}
                       onClick={() => setViewingMaintenance(maint)}
                     />
                   ))}
@@ -365,14 +369,16 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
 // Maintenance Item Component with Completion History
 function MaintenanceItem({
   maintenance,
+  appliance,
+  completions,
   onClick
 }: {
   maintenance: MaintenanceSchedule;
+  appliance: Appliance | undefined;
+  completions: MaintenanceCompletion[];
   onClick: () => void;
 }) {
   const [showHistory, setShowHistory] = useState(false);
-  const appliance = useApplianceById(maintenance.applianceId);
-  const completions = useCompletionsByMaintenance(maintenance.id);
   
   // For home feature maintenance without an appliance, use today as a baseline for due date calculations
   // For appliance maintenance, use the appliance's purchase date
@@ -516,14 +522,16 @@ function MaintenanceItem({
 // Vehicle Maintenance Item Component
 function VehicleMaintenanceItem({
   maintenance,
+  vehicle,
+  completions,
   onClick
 }: {
   maintenance: MaintenanceSchedule;
+  vehicle: Vehicle | undefined;
+  completions: MaintenanceCompletion[];
   onClick: () => void;
 }) {
   const [showHistory, setShowHistory] = useState(false);
-  const vehicle = useVehicleById(maintenance.vehicleId);
-  const completions = useCompletionsByMaintenance(maintenance.id);
   const purchaseDate = vehicle?.purchaseDate || '';
 
   // Get the most recent completion date
