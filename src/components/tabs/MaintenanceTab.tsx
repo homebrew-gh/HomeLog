@@ -854,21 +854,11 @@ const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceS
     return (
       <div ref={ref} className="space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <Car className="h-5 w-5 text-primary" />
-            </div>
-            <span className="text-lg font-semibold text-foreground">Vehicle Maintenance</span>
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Car className="h-5 w-5 text-primary" />
           </div>
-          <Button
-            onClick={onAddMaintenance}
-            size="sm"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add
-          </Button>
+          <span className="text-lg font-semibold text-foreground">Vehicle Maintenance</span>
         </div>
 
         {/* Two-column layout */}
