@@ -1,23 +1,52 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Light background -->
-  <rect width="512" height="512" fill="#f0f9ff"/>
+  <!-- Warm wood background -->
+  <rect width="512" height="512" rx="64" fill="#8B4513"/>
   
-  <!-- Subtle decorative circles -->
-  <circle cx="400" cy="100" r="60" fill="#e0f2fe" opacity="0.6"/>
-  <circle cx="90" cy="420" r="80" fill="#e0f2fe" opacity="0.5"/>
+  <!-- Sky background -->
+  <rect x="32" y="32" width="448" height="200" rx="32" fill="#87CEEB"/>
   
-  <!-- Main circular background -->
-  <circle cx="256" cy="256" r="130" fill="#bae6fd"/>
+  <!-- Sun -->
+  <circle cx="420" cy="90" r="45" fill="#FFD700" opacity="0.9"/>
   
-  <!-- Home icon - bold and centered -->
-  <g fill="none" stroke="#38bdf8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
-    <!-- House body (walls) -->
-    <path d="M200 268 L200 330 L312 330 L312 268"/>
-    
-    <!-- Roof -->
-    <path d="M182 276 L256 210 L330 276"/>
-    
-    <!-- Door -->
-    <rect x="232" y="280" width="48" height="50" rx="6"/>
-  </g>
+  <!-- Trees in background -->
+  <polygon points="80,230 60,180 50,230" fill="#228B22" opacity="0.6"/>
+  <polygon points="100,230 80,160 60,230" fill="#228B22" opacity="0.7"/>
+  <polygon points="430,230 410,170 390,230" fill="#228B22" opacity="0.6"/>
+  <polygon points="460,230 435,150 410,230" fill="#228B22" opacity="0.7"/>
+  
+  <!-- Cabin roof (A-frame) -->
+  <polygon points="256,100 64,230 448,230" fill="#5D3A1A"/>
+  <polygon points="256,120 90,230 422,230" fill="#704214"/>
+  
+  <!-- Cabin body with log texture -->
+  <rect x="96" y="230" width="320" height="230" fill="#CD853F"/>
+  
+  <!-- Horizontal log lines -->
+  <line x1="96" y1="270" x2="416" y2="270" stroke="#8B4513" stroke-width="4"/>
+  <line x1="96" y1="310" x2="416" y2="310" stroke="#8B4513" stroke-width="4"/>
+  <line x1="96" y1="350" x2="416" y2="350" stroke="#8B4513" stroke-width="4"/>
+  <line x1="96" y1="390" x2="416" y2="390" stroke="#8B4513" stroke-width="4"/>
+  <line x1="96" y1="430" x2="416" y2="430" stroke="#8B4513" stroke-width="4"/>
+  
+  <!-- Door -->
+  <rect x="206" y="320" width="100" height="140" rx="8" fill="#5D3A1A"/>
+  <circle cx="285" cy="390" r="10" fill="#FFD700"/>
+  
+  <!-- Window left -->
+  <rect x="116" y="260" width="70" height="70" rx="6" fill="#87CEEB" stroke="#5D3A1A" stroke-width="6"/>
+  <line x1="151" y1="260" x2="151" y2="330" stroke="#5D3A1A" stroke-width="4"/>
+  <line x1="116" y1="295" x2="186" y2="295" stroke="#5D3A1A" stroke-width="4"/>
+  
+  <!-- Window right -->
+  <rect x="326" y="260" width="70" height="70" rx="6" fill="#87CEEB" stroke="#5D3A1A" stroke-width="6"/>
+  <line x1="361" y1="260" x2="361" y2="330" stroke="#5D3A1A" stroke-width="4"/>
+  <line x1="326" y1="295" x2="396" y2="295" stroke="#5D3A1A" stroke-width="4"/>
+  
+  <!-- Chimney -->
+  <rect x="340" y="80" width="50" height="90" fill="#8B4513"/>
+  <rect x="335" y="70" width="60" height="20" fill="#5D3A1A"/>
+  
+  <!-- Smoke from chimney -->
+  <ellipse cx="365" cy="50" rx="15" ry="10" fill="#D3D3D3" opacity="0.6"/>
+  <ellipse cx="375" cy="35" rx="12" ry="8" fill="#D3D3D3" opacity="0.5"/>
 </svg>
