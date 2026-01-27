@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, forwardRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus, Archive, ArrowLeft, ClipboardList, Package, CheckCircle2, Plane, Ship, Tractor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { LogMaintenanceDialog } from '@/components/LogMaintenanceDialog';
@@ -739,8 +740,113 @@ interface VehicleMaintenanceSectionProps {
   onViewMaintenance: (maint: MaintenanceSchedule) => void;
 }
 
+// Add Vehicle Dialog Component
+function AddVehicleToMaintenanceDialog({
+  isOpen,
+  onClose,
+  untrackedVehicles,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  untrackedVehicles: Vehicle[];
+}) {
+  const navigate = useNavigate();
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+
+  // Reset selection when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedVehicleId('');
+    }
+  }, [isOpen]);
+
+  const handleAdd = () => {
+    if (selectedVehicleId) {
+      // Navigate to the vehicle's maintenance page where they can add tasks
+      navigate(`/vehicle/${selectedVehicleId}/maintenance`);
+      onClose();
+    }
+  };
+
+  const selectedVehicle = untrackedVehicles.find(v => v.id === selectedVehicleId);
+  const VehicleIcon = selectedVehicle ? getVehicleTypeIcon(selectedVehicle.vehicleType) : Car;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5 text-primary" />
+            Add Vehicle to Maintenance
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <p className="text-sm text-muted-foreground">
+            Select a vehicle to start tracking its maintenance.
+          </p>
+          
+          {untrackedVehicles.length === 0 ? (
+            <div className="text-center py-6">
+              <Car className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-muted-foreground">All your vehicles are already being tracked.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {untrackedVehicles.map(vehicle => {
+                const Icon = getVehicleTypeIcon(vehicle.vehicleType);
+                const isSelected = selectedVehicleId === vehicle.id;
+                
+                return (
+                  <button
+                    key={vehicle.id}
+                    onClick={() => setSelectedVehicleId(vehicle.id)}
+                    className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                      isSelected
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg shrink-0 ${isSelected ? 'bg-primary/20' : 'bg-muted'}`}>
+                        <Icon className={`h-5 w-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{vehicle.name}</p>
+                        <p className="text-xs text-muted-foreground">{vehicle.vehicleType}</p>
+                      </div>
+                      {isSelected && (
+                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleAdd} 
+            disabled={!selectedVehicleId}
+            className="gap-2"
+          >
+            <ChevronRight className="h-4 w-4" />
+            Add & Configure
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceSectionProps>(
   ({ vehicles, vehicleMaintenance, completions, showArchived, onAddMaintenance, onLogTask, onViewMaintenance }, ref) => {
+    const navigate = useNavigate();
+    const [addVehicleDialogOpen, setAddVehicleDialogOpen] = useState(false);
     // Calculate upcoming maintenance (within 3 months) sorted chronologically
     const upcomingMaintenance = useMemo(() => {
       const threeMonthsFromNow = new Date();
@@ -805,8 +911,12 @@ const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceS
       });
     }, [vehicleMaintenance, vehicles, completions]);
 
-    // Get active (non-archived) vehicles
-    const activeVehicles = vehicles.filter(v => !v.isArchived);
+    // Get vehicles that have maintenance tasks (these are "tracked" vehicles)
+    const trackedVehicleIds = new Set(vehicleMaintenance.filter(m => !m.isArchived).map(m => m.vehicleId));
+    const trackedVehicles = vehicles.filter(v => !v.isArchived && trackedVehicleIds.has(v.id));
+    
+    // Get vehicles that are NOT yet tracked (available to add)
+    const untrackedVehicles = vehicles.filter(v => !v.isArchived && !trackedVehicleIds.has(v.id));
 
     if (vehicles.length === 0) {
       return (
@@ -854,11 +964,23 @@ const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceS
     return (
       <div ref={ref} className="space-y-4">
         {/* Header */}
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary/10">
-            <Car className="h-5 w-5 text-primary" />
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <Car className="h-5 w-5 text-primary" />
+            </div>
+            <span className="text-lg font-semibold text-foreground">Vehicle Maintenance</span>
           </div>
-          <span className="text-lg font-semibold text-foreground">Vehicle Maintenance</span>
+          {untrackedVehicles.length > 0 && (
+            <Button
+              onClick={() => setAddVehicleDialogOpen(true)}
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add
+            </Button>
+          )}
         </div>
 
         {/* Two-column layout */}
@@ -974,59 +1096,83 @@ const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceS
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-2 pr-4">
-                  {activeVehicles.map(vehicle => {
-                    const vehicleTasks = vehicleMaintenance.filter(m => m.vehicleId === vehicle.id && !m.isArchived);
-                    const overdueCount = vehicleTasks.filter(m => {
-                      if (m.isLogOnly) return false;
-                      const mCompletions = completions.filter(c => c.maintenanceId === m.id);
-                      const lastCompletion = mCompletions[0];
-                      return isOverdue(vehicle.purchaseDate || '', m.frequency, m.frequencyUnit, lastCompletion?.completedDate);
-                    }).length;
-                    
-                    const VehicleIcon = getVehicleTypeIcon(vehicle.vehicleType);
-                    
-                    return (
-                      <Link
-                        key={vehicle.id}
-                        to={`/vehicle/${vehicle.id}/maintenance`}
-                        className="block p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-                            <VehicleIcon className="h-5 w-5 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{vehicle.name}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{vehicleTasks.length} task{vehicleTasks.length !== 1 ? 's' : ''}</span>
-                              {vehicle.mileage && (
-                                <>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-1">
-                                    <Gauge className="h-3 w-3" />
-                                    {Number(vehicle.mileage).toLocaleString()} mi
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          {overdueCount > 0 && (
-                            <Badge variant="destructive" className="shrink-0">
-                              {overdueCount} overdue
-                            </Badge>
-                          )}
-                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                        </div>
-                      </Link>
-                    );
-                  })}
+              {trackedVehicles.length === 0 ? (
+                <div className="text-center py-8">
+                  <Car className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground mb-3">No vehicles added yet</p>
+                  {untrackedVehicles.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAddVehicleDialogOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Vehicle
+                    </Button>
+                  )}
                 </div>
-              </ScrollArea>
+              ) : (
+                <ScrollArea className="h-[400px]">
+                  <div className="space-y-2 pr-4">
+                    {trackedVehicles.map(vehicle => {
+                      const vehicleTasks = vehicleMaintenance.filter(m => m.vehicleId === vehicle.id && !m.isArchived);
+                      const overdueCount = vehicleTasks.filter(m => {
+                        if (m.isLogOnly) return false;
+                        const mCompletions = completions.filter(c => c.maintenanceId === m.id);
+                        const lastCompletion = mCompletions[0];
+                        return isOverdue(vehicle.purchaseDate || '', m.frequency, m.frequencyUnit, lastCompletion?.completedDate);
+                      }).length;
+                      
+                      const VehicleIcon = getVehicleTypeIcon(vehicle.vehicleType);
+                      
+                      return (
+                        <Link
+                          key={vehicle.id}
+                          to={`/vehicle/${vehicle.id}/maintenance`}
+                          className="block p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                              <VehicleIcon className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{vehicle.name}</p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>{vehicleTasks.length} task{vehicleTasks.length !== 1 ? 's' : ''}</span>
+                                {vehicle.mileage && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="flex items-center gap-1">
+                                      <Gauge className="h-3 w-3" />
+                                      {Number(vehicle.mileage).toLocaleString()} mi
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            {overdueCount > 0 && (
+                              <Badge variant="destructive" className="shrink-0">
+                                {overdueCount} overdue
+                              </Badge>
+                            )}
+                            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              )}
             </CardContent>
           </Card>
         </div>
+
+        {/* Add Vehicle Dialog */}
+        <AddVehicleToMaintenanceDialog
+          isOpen={addVehicleDialogOpen}
+          onClose={() => setAddVehicleDialogOpen(false)}
+          untrackedVehicles={untrackedVehicles}
+        />
       </div>
     );
   }
