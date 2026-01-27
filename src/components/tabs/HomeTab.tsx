@@ -925,7 +925,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                 case 'home-maintenance':
                   return (
                     <WidgetCard
-                      title="Home Maintenance"
+                      title="Upcoming Home Maintenance"
                       icon={Home}
                       onClick={() => !isEditMode && onNavigateToTab('maintenance', 'home-maintenance')}
                       isLoading={showMaintenanceLoading}
@@ -988,7 +988,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                 case 'vehicle-maintenance':
                   return (
                     <WidgetCard
-                      title="Vehicle Maintenance"
+                      title="Upcoming Vehicle Maintenance"
                       icon={Car}
                       onClick={() => !isEditMode && onNavigateToTab('maintenance', 'vehicle-maintenance')}
                       isLoading={showMaintenanceLoading || showVehiclesLoading}
