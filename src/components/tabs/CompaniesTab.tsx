@@ -239,7 +239,7 @@ export function CompaniesTab({ scrollTarget }: CompaniesTabProps) {
             <DropdownMenuTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Service
+                Add
                 <ChevronDown className="h-4 w-4 ml-1" />
               </Button>
             </DropdownMenuTrigger>
