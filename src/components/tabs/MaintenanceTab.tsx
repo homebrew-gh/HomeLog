@@ -9,7 +9,7 @@ import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { CalendarExportDialog } from '@/components/CalendarExportDialog';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
-import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
+import { useMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import type { MaintenanceSchedule, Appliance, Vehicle, MaintenanceCompletion } from '@/lib/types';
 
@@ -77,43 +77,40 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
   const { data: vehicles = [] } = useVehicles();
   const { data: allMaintenance = [], isLoading } = useMaintenance();
   const { data: completions = [] } = useMaintenanceCompletions();
-  const applianceMaintenanceRaw = useApplianceMaintenance();
-  const vehicleMaintenanceRaw = useVehicleMaintenance();
   
   // View mode: 'active' or 'archived'
   const [showArchived, setShowArchived] = useState(false);
 
-  // Filter maintenance by archive status
-  const activeApplianceMaintenance = useMemo(() => 
-    applianceMaintenanceRaw.filter(m => !m.isArchived),
-    [applianceMaintenanceRaw]
-  );
-  const archivedApplianceMaintenance = useMemo(() => 
-    applianceMaintenanceRaw.filter(m => m.isArchived),
-    [applianceMaintenanceRaw]
-  );
-  
-  const activeVehicleMaintenance = useMemo(() => 
-    vehicleMaintenanceRaw.filter(m => !m.isArchived),
-    [vehicleMaintenanceRaw]
-  );
-  const archivedVehicleMaintenance = useMemo(() => 
-    vehicleMaintenanceRaw.filter(m => m.isArchived),
-    [vehicleMaintenanceRaw]
-  );
-
-  const archivedCount = archivedApplianceMaintenance.length + archivedVehicleMaintenance.length;
-  
-  // Sort maintenance items by due date (closest first)
-  const applianceMaintenance = useMemo(() => 
-    sortMaintenanceByDueDate(showArchived ? archivedApplianceMaintenance : activeApplianceMaintenance, appliances, vehicles, completions),
-    [showArchived, archivedApplianceMaintenance, activeApplianceMaintenance, appliances, vehicles, completions]
-  );
-  
-  const vehicleMaintenance = useMemo(() => 
-    sortMaintenanceByDueDate(showArchived ? archivedVehicleMaintenance : activeVehicleMaintenance, appliances, vehicles, completions),
-    [showArchived, archivedVehicleMaintenance, activeVehicleMaintenance, appliances, vehicles, completions]
-  );
+  // Filter and sort maintenance - all in one useMemo to avoid cascading recomputes
+  const { applianceMaintenance, vehicleMaintenance, archivedCount } = useMemo(() => {
+    // Filter by type
+    const applianceMaintenanceRaw = allMaintenance.filter(m => (m.applianceId || m.homeFeature) && !m.vehicleId);
+    const vehicleMaintenanceRaw = allMaintenance.filter(m => m.vehicleId && !m.applianceId);
+    
+    // Filter by archive status
+    const activeAppliance = applianceMaintenanceRaw.filter(m => !m.isArchived);
+    const archivedAppliance = applianceMaintenanceRaw.filter(m => m.isArchived);
+    const activeVehicle = vehicleMaintenanceRaw.filter(m => !m.isArchived);
+    const archivedVehicle = vehicleMaintenanceRaw.filter(m => m.isArchived);
+    
+    const archivedCount = archivedAppliance.length + archivedVehicle.length;
+    
+    // Sort by due date
+    const applianceMaintenance = sortMaintenanceByDueDate(
+      showArchived ? archivedAppliance : activeAppliance, 
+      appliances, 
+      vehicles, 
+      completions
+    );
+    const vehicleMaintenance = sortMaintenanceByDueDate(
+      showArchived ? archivedVehicle : activeVehicle, 
+      appliances, 
+      vehicles, 
+      completions
+    );
+    
+    return { applianceMaintenance, vehicleMaintenance, archivedCount };
+  }, [allMaintenance, appliances, vehicles, completions, showArchived]);
 
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);

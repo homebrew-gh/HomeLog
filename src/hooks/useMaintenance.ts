@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
 
@@ -204,19 +205,28 @@ export function useMaintenanceByVehicle(vehicleId: string | undefined) {
 export function useApplianceMaintenance() {
   const { data: maintenance } = useMaintenance();
   // Return maintenance that has an appliance OR homeFeature but NOT a vehicle
-  return maintenance?.filter(m => (m.applianceId || m.homeFeature) && !m.vehicleId) || [];
+  return useMemo(
+    () => maintenance?.filter(m => (m.applianceId || m.homeFeature) && !m.vehicleId) || [],
+    [maintenance]
+  );
 }
 
 // Get all vehicle maintenance (for maintenance tab vehicle section)
 export function useVehicleMaintenance() {
   const { data: maintenance } = useMaintenance();
-  return maintenance?.filter(m => m.vehicleId && !m.applianceId) || [];
+  return useMemo(
+    () => maintenance?.filter(m => m.vehicleId && !m.applianceId) || [],
+    [maintenance]
+  );
 }
 
 // Get all home feature maintenance (maintenance with homeFeature but no appliance)
 export function useHomeFeatureMaintenance() {
   const { data: maintenance } = useMaintenance();
-  return maintenance?.filter(m => m.homeFeature && !m.applianceId && !m.vehicleId) || [];
+  return useMemo(
+    () => maintenance?.filter(m => m.homeFeature && !m.applianceId && !m.vehicleId) || [],
+    [maintenance]
+  );
 }
 
 // Get maintenance schedules linked to a specific company
