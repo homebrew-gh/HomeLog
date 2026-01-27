@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus, Archive, ArrowLeft, ClipboardList, Package } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo, forwardRef } from 'react';
+import { Link } from 'react-router-dom';
+import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus, Archive, ArrowLeft, ClipboardList, Package, CheckCircle2, Plane, Ship, Tractor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { LogMaintenanceDialog } from '@/components/LogMaintenanceDialog';
@@ -14,6 +16,20 @@ import { useVehicles } from '@/hooks/useVehicles';
 import { useMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import type { MaintenanceSchedule, Appliance, Vehicle, MaintenanceCompletion } from '@/lib/types';
+
+// Get icon based on vehicle type
+function getVehicleTypeIcon(type: string) {
+  switch (type) {
+    case 'Plane':
+      return Plane;
+    case 'Boat':
+      return Ship;
+    case 'Farm Machinery':
+      return Tractor;
+    default:
+      return Car;
+  }
+}
 
 interface MaintenanceTabProps {
   scrollTarget?: string;
@@ -321,71 +337,18 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
             </Card>
           )}
 
-          {/* Vehicle Maintenance Section */}
+          {/* Vehicle Maintenance Section - New Layout */}
           {activeTab === 'vehicle' && (
-            <Card 
+            <VehicleMaintenanceSection
               ref={vehicleMaintenanceRef}
-              className="bg-card border-border"
-            >
-              <div className="p-4 pb-3 border-b flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-primary/10">
-                    <Car className="h-4 w-4 text-primary" />
-                  </div>
-                  <span className="text-lg font-semibold text-foreground">
-                    {showArchived ? 'Archived Vehicle Maintenance' : 'Vehicle Maintenance'}
-                  </span>
-                </div>
-                {!showArchived && (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => setLogDialogOpen(true)}
-                      size="sm"
-                      variant="outline"
-                      className="border-primary text-primary hover:bg-primary/10"
-                      disabled={vehicles.length === 0}
-                    >
-                      <ClipboardList className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">Log Task</span>
-                      <span className="sm:hidden">Log</span>
-                    </Button>
-                    <Button
-                      onClick={() => handleAddMaintenance('vehicle')}
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                      disabled={vehicles.length === 0}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">Recurring</span>
-                      <span className="sm:hidden">Add</span>
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <CardContent className="pt-4">
-                {vehicles.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-6">
-                    Add a vehicle first to create maintenance schedules.
-                  </p>
-                ) : vehicleMaintenance.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-6">
-                    {showArchived ? 'No archived vehicle maintenance.' : 'No vehicle maintenance schedules yet.'}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {vehicleMaintenance.map((maint) => (
-                      <VehicleMaintenanceItem
-                        key={maint.id}
-                        maintenance={maint}
-                        vehicle={vehicles.find(v => v.id === maint.vehicleId)}
-                        completions={completions.filter(c => c.maintenanceId === maint.id)}
-                        onClick={() => setViewingMaintenance(maint)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              vehicles={vehicles}
+              vehicleMaintenance={vehicleMaintenance}
+              completions={completions}
+              showArchived={showArchived}
+              onAddMaintenance={() => handleAddMaintenance('vehicle')}
+              onLogTask={() => setLogDialogOpen(true)}
+              onViewMaintenance={setViewingMaintenance}
+            />
           )}
         </>
       )}
@@ -764,3 +727,319 @@ function VehicleMaintenanceItem({
     </div>
   );
 }
+
+// Vehicle Maintenance Section Component with new two-column layout
+interface VehicleMaintenanceSectionProps {
+  vehicles: Vehicle[];
+  vehicleMaintenance: MaintenanceSchedule[];
+  completions: MaintenanceCompletion[];
+  showArchived: boolean;
+  onAddMaintenance: () => void;
+  onLogTask: () => void;
+  onViewMaintenance: (maint: MaintenanceSchedule) => void;
+}
+
+const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceSectionProps>(
+  ({ vehicles, vehicleMaintenance, completions, showArchived, onAddMaintenance, onLogTask, onViewMaintenance }, ref) => {
+    // Calculate upcoming maintenance (within 3 months) sorted chronologically
+    const upcomingMaintenance = useMemo(() => {
+      const threeMonthsFromNow = new Date();
+      threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+      
+      const items: {
+        maintenance: MaintenanceSchedule;
+        vehicle: Vehicle | undefined;
+        nextDue: Date;
+        overdue: boolean;
+        dueSoon: boolean;
+      }[] = [];
+      
+      for (const maint of vehicleMaintenance) {
+        if (maint.isLogOnly || maint.isArchived) continue;
+        
+        const vehicle = vehicles.find(v => v.id === maint.vehicleId);
+        const purchaseDate = vehicle?.purchaseDate || '';
+        const maintCompletions = completions.filter(c => c.maintenanceId === maint.id);
+        const lastCompletion = maintCompletions[0];
+        
+        const nextDue = calculateNextDueDate(purchaseDate, maint.frequency, maint.frequencyUnit, lastCompletion?.completedDate);
+        if (!nextDue) continue;
+        
+        // Include if overdue or within 3 months
+        if (nextDue <= threeMonthsFromNow) {
+          items.push({
+            maintenance: maint,
+            vehicle,
+            nextDue,
+            overdue: isOverdue(purchaseDate, maint.frequency, maint.frequencyUnit, lastCompletion?.completedDate),
+            dueSoon: isDueSoon(purchaseDate, maint.frequency, maint.frequencyUnit, lastCompletion?.completedDate),
+          });
+        }
+      }
+      
+      // Sort by date (soonest first)
+      return items.sort((a, b) => a.nextDue.getTime() - b.nextDue.getTime());
+    }, [vehicleMaintenance, vehicles, completions]);
+
+    // Get recently completed maintenance (last 5)
+    const recentlyCompleted = useMemo(() => {
+      // Get all completions for vehicle maintenance
+      const vehicleMaintenanceIds = new Set(vehicleMaintenance.map(m => m.id));
+      const vehicleCompletions = completions
+        .filter(c => vehicleMaintenanceIds.has(c.maintenanceId))
+        .sort((a, b) => {
+          // Parse MM/DD/YYYY dates for comparison
+          const parseDate = (dateStr: string) => {
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return 0;
+            return new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1])).getTime();
+          };
+          return parseDate(b.completedDate) - parseDate(a.completedDate);
+        })
+        .slice(0, 5);
+      
+      return vehicleCompletions.map(completion => {
+        const maint = vehicleMaintenance.find(m => m.id === completion.maintenanceId);
+        const vehicle = maint ? vehicles.find(v => v.id === maint.vehicleId) : undefined;
+        return { completion, maintenance: maint, vehicle };
+      });
+    }, [vehicleMaintenance, vehicles, completions]);
+
+    // Get active (non-archived) vehicles
+    const activeVehicles = vehicles.filter(v => !v.isArchived);
+
+    if (vehicles.length === 0) {
+      return (
+        <Card ref={ref} className="bg-card border-border">
+          <CardContent className="py-12 text-center">
+            <Car className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+            <p className="text-muted-foreground">Add a vehicle first to create maintenance schedules.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (showArchived) {
+      // Show archived maintenance in a simple list
+      const archivedMaintenance = vehicleMaintenance.filter(m => m.isArchived);
+      return (
+        <Card ref={ref} className="bg-card border-border">
+          <div className="p-4 pb-3 border-b flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-muted">
+              <Archive className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <span className="text-lg font-semibold text-foreground">Archived Vehicle Maintenance</span>
+          </div>
+          <CardContent className="pt-4">
+            {archivedMaintenance.length === 0 ? (
+              <p className="text-center text-muted-foreground py-6">No archived vehicle maintenance.</p>
+            ) : (
+              <div className="space-y-2">
+                {archivedMaintenance.map((maint) => (
+                  <VehicleMaintenanceItem
+                    key={maint.id}
+                    maintenance={maint}
+                    vehicle={vehicles.find(v => v.id === maint.vehicleId)}
+                    completions={completions.filter(c => c.maintenanceId === maint.id)}
+                    onClick={() => onViewMaintenance(maint)}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div ref={ref} className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <Car className="h-5 w-5 text-primary" />
+            </div>
+            <span className="text-lg font-semibold text-foreground">Vehicle Maintenance</span>
+          </div>
+          <Button
+            onClick={onAddMaintenance}
+            size="sm"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add
+          </Button>
+        </div>
+
+        {/* Two-column layout */}
+        <div className="grid lg:grid-cols-2 gap-4">
+          {/* Left Column - Upcoming & Completed Maintenance */}
+          <div className="space-y-4">
+            {/* Upcoming Maintenance */}
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-amber-500" />
+                  Upcoming Maintenance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {upcomingMaintenance.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    No maintenance due within 3 months
+                  </p>
+                ) : (
+                  <ScrollArea className="h-[180px]">
+                    <div className="space-y-2 pr-4">
+                      {upcomingMaintenance.map(({ maintenance: maint, vehicle, nextDue, overdue, dueSoon }) => (
+                        <button
+                          key={maint.id}
+                          onClick={() => onViewMaintenance(maint)}
+                          className={`w-full p-3 rounded-lg text-left transition-colors ${
+                            overdue
+                              ? 'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50'
+                              : dueSoon
+                                ? 'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50'
+                                : 'bg-muted/50 hover:bg-muted'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{maint.description}</p>
+                              <p className="text-xs text-muted-foreground truncate">{vehicle?.name || 'Unknown'}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              {overdue ? (
+                                <Badge variant="destructive" className="text-xs">Overdue</Badge>
+                              ) : dueSoon ? (
+                                <Badge className="bg-amber-100 text-amber-700 text-xs">Due Soon</Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">{formatDueDate(nextDue)}</span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Completed Maintenance */}
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  Completed Maintenance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {recentlyCompleted.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    No completed maintenance yet
+                  </p>
+                ) : (
+                  <ScrollArea className="h-[180px]">
+                    <div className="space-y-2 pr-4">
+                      {recentlyCompleted.map(({ completion, maintenance: maint, vehicle }) => (
+                        <div
+                          key={completion.id}
+                          className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate text-green-800 dark:text-green-200">
+                                {maint?.description || 'Unknown'}
+                              </p>
+                              <p className="text-xs text-green-600 dark:text-green-400 truncate">
+                                {vehicle?.name || 'Unknown'}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="text-xs text-green-700 dark:text-green-300">{completion.completedDate}</span>
+                              {completion.mileageAtCompletion && (
+                                <p className="text-xs text-green-600 dark:text-green-400 flex items-center justify-end gap-1">
+                                  <Gauge className="h-3 w-3" />
+                                  {Number(completion.mileageAtCompletion).toLocaleString()} mi
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Vehicle List */}
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Car className="h-4 w-4 text-primary" />
+                Vehicles
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-2 pr-4">
+                  {activeVehicles.map(vehicle => {
+                    const vehicleTasks = vehicleMaintenance.filter(m => m.vehicleId === vehicle.id && !m.isArchived);
+                    const overdueCount = vehicleTasks.filter(m => {
+                      if (m.isLogOnly) return false;
+                      const mCompletions = completions.filter(c => c.maintenanceId === m.id);
+                      const lastCompletion = mCompletions[0];
+                      return isOverdue(vehicle.purchaseDate || '', m.frequency, m.frequencyUnit, lastCompletion?.completedDate);
+                    }).length;
+                    
+                    const VehicleIcon = getVehicleTypeIcon(vehicle.vehicleType);
+                    
+                    return (
+                      <Link
+                        key={vehicle.id}
+                        to={`/vehicle/${vehicle.id}/maintenance`}
+                        className="block p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                            <VehicleIcon className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{vehicle.name}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{vehicleTasks.length} task{vehicleTasks.length !== 1 ? 's' : ''}</span>
+                              {vehicle.mileage && (
+                                <>
+                                  <span>•</span>
+                                  <span className="flex items-center gap-1">
+                                    <Gauge className="h-3 w-3" />
+                                    {Number(vehicle.mileage).toLocaleString()} mi
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          {overdueCount > 0 && (
+                            <Badge variant="destructive" className="shrink-0">
+                              {overdueCount} overdue
+                            </Badge>
+                          )}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+);
+
+VehicleMaintenanceSection.displayName = 'VehicleMaintenanceSection';

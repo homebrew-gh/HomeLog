@@ -7,6 +7,7 @@ import Privacy from "./pages/Privacy";
 import License from "./pages/License";
 import { NIP19Page } from "./pages/NIP19Page";
 import { AssetDetailPage } from "./pages/AssetDetailPage";
+import { VehicleMaintenancePage } from "./pages/VehicleMaintenancePage";
 import NotFound from "./pages/NotFound";
 
 export function AppRouter() {
@@ -19,6 +20,7 @@ export function AppRouter() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/license" element={<License />} />
         <Route path="/asset/:type/:id" element={<AssetDetailPage />} />
+        <Route path="/vehicle/:vehicleId/maintenance" element={<VehicleMaintenancePage />} />
         {/* NIP-19 route for npub1, note1, naddr1, nevent1, nprofile1 */}
         <Route path="/:nip19" element={<NIP19Page />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
