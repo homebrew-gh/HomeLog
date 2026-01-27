@@ -213,10 +213,13 @@ const Index = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setActiveTab('home')}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
                 <img src="/logo.png" alt="Home Log" className="h-10 w-10" />
                 <span className="font-bold text-xl text-theme-heading">Home Log</span>
-              </div>
+              </button>
             </div>
 
             {/* Right - Search, Theme Toggle & Login */}
