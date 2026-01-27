@@ -18,11 +18,11 @@ import {
   Pencil,
   Check,
   UserCheck,
-  ChevronUp,
-  ChevronDown,
   DollarSign,
   CheckCircle2,
-  Tag
+  Tag,
+  EyeOff,
+  Eye
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -194,6 +194,9 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   
   // Widget order state - stored separately from tab order
   const [widgetOrder, setWidgetOrder] = useLocalStorage<WidgetId[]>('homelog-widget-order', []);
+  
+  // Hidden widgets state - widgets user has chosen to hide
+  const [hiddenWidgets, setHiddenWidgets] = useLocalStorage<WidgetId[]>('homelog-hidden-widgets', []);
   
   // Generate random animation parameters for each widget (persist across renders)
   // This creates the iOS-style "fake randomness" effect
@@ -407,7 +410,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     };
   }, [subscriptions, entryCurrency, displayCurrency, hasRates, rates]);
 
-  // Get ordered list of active widgets based on active tabs
+  // Get ordered list of active widgets based on active tabs (excluding hidden)
   const activeWidgets = useMemo((): WidgetId[] => {
     // Get all widgets for active tabs
     const widgetsFromTabs: WidgetId[] = [];
@@ -421,15 +424,32 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     });
     
     // If we have a stored order, use it but filter to only active widgets
+    let orderedWidgets: WidgetId[];
     if (widgetOrder.length > 0) {
-      const orderedWidgets = widgetOrder.filter(w => widgetsFromTabs.includes(w));
+      orderedWidgets = widgetOrder.filter(w => widgetsFromTabs.includes(w));
       // Add any new widgets not in the stored order
       const missingWidgets = widgetsFromTabs.filter(w => !widgetOrder.includes(w));
-      return [...orderedWidgets, ...missingWidgets];
+      orderedWidgets = [...orderedWidgets, ...missingWidgets];
+    } else {
+      orderedWidgets = widgetsFromTabs;
     }
     
-    return widgetsFromTabs;
-  }, [preferences.activeTabs, widgetOrder]);
+    // Filter out hidden widgets
+    return orderedWidgets.filter(w => !hiddenWidgets.includes(w));
+  }, [preferences.activeTabs, widgetOrder, hiddenWidgets]);
+
+  // Get list of hidden widgets that could be shown (from active tabs)
+  const hiddenActiveWidgets = useMemo((): WidgetId[] => {
+    const widgetsFromTabs: WidgetId[] = [];
+    preferences.activeTabs.forEach(tabId => {
+      if (tabId === 'maintenance') {
+        widgetsFromTabs.push('home-maintenance', 'vehicle-maintenance');
+      } else {
+        widgetsFromTabs.push(tabId as WidgetId);
+      }
+    });
+    return hiddenWidgets.filter(w => widgetsFromTabs.includes(w));
+  }, [preferences.activeTabs, hiddenWidgets]);
 
   // Auto-scroll configuration
   const SCROLL_ZONE_SIZE = 80; // pixels from edge to trigger scroll
@@ -669,31 +689,17 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     };
   }, [draggedWidget, handleTouchMove, handleTouchEnd]);
 
-  // Move widget up in the order (for mobile button controls)
-  const moveWidgetUp = useCallback((widgetId: WidgetId) => {
-    const currentOrder = [...activeWidgets];
-    const currentIndex = currentOrder.indexOf(widgetId);
-    
-    if (currentIndex > 0) {
-      // Swap with the previous widget
-      [currentOrder[currentIndex - 1], currentOrder[currentIndex]] = 
-        [currentOrder[currentIndex], currentOrder[currentIndex - 1]];
-      setWidgetOrder(currentOrder);
+  // Hide a widget
+  const hideWidget = useCallback((widgetId: WidgetId) => {
+    if (!hiddenWidgets.includes(widgetId)) {
+      setHiddenWidgets([...hiddenWidgets, widgetId]);
     }
-  }, [activeWidgets, setWidgetOrder]);
+  }, [hiddenWidgets, setHiddenWidgets]);
 
-  // Move widget down in the order (for mobile button controls)
-  const moveWidgetDown = useCallback((widgetId: WidgetId) => {
-    const currentOrder = [...activeWidgets];
-    const currentIndex = currentOrder.indexOf(widgetId);
-    
-    if (currentIndex < currentOrder.length - 1) {
-      // Swap with the next widget
-      [currentOrder[currentIndex], currentOrder[currentIndex + 1]] = 
-        [currentOrder[currentIndex + 1], currentOrder[currentIndex]];
-      setWidgetOrder(currentOrder);
-    }
-  }, [activeWidgets, setWidgetOrder]);
+  // Unhide a widget
+  const unhideWidget = useCallback((widgetId: WidgetId) => {
+    setHiddenWidgets(hiddenWidgets.filter(w => w !== widgetId));
+  }, [hiddenWidgets, setHiddenWidgets]);
 
   // Get animation styles for a specific widget (iOS-style random parameters)
   const getAnimationStyle = (widgetId: WidgetId): React.CSSProperties => {
@@ -712,7 +718,8 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   return (
     <section className="space-y-6 relative">
       {/* Floating Reorder/Done Button - fixed in right margin near top */}
-      {hasActiveTabs && activeWidgets.length > 1 && (
+      {/* Show if: has tabs AND (more than 1 visible widget OR has hidden widgets to potentially restore) */}
+      {hasActiveTabs && (activeWidgets.length > 1 || hiddenActiveWidgets.length > 0) && (
         <Button
           variant="ghost"
           size="sm"
@@ -1287,43 +1294,21 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                   onMouseDown={(e) => handleMouseDown(e, widgetId)}
                   onTouchStart={(e) => handleTouchStart(e, widgetId)}
                 >
-                {/* Edit mode overlay with drag handle and up/down buttons */}
+                {/* Edit mode overlay with hide button and drag handle */}
                 {isEditMode && (
                   <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-                    {/* Up/Down buttons - more visible on mobile */}
-                    <div className="flex flex-col gap-0.5 md:hidden">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          moveWidgetUp(widgetId);
-                        }}
-                        disabled={index === 0}
-                        className={cn(
-                          "p-1 rounded-md transition-colors",
-                          index === 0
-                            ? "bg-muted text-muted-foreground/30"
-                            : "bg-primary/10 text-primary active:bg-primary/20"
-                        )}
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          moveWidgetDown(widgetId);
-                        }}
-                        disabled={index === activeWidgets.length - 1}
-                        className={cn(
-                          "p-1 rounded-md transition-colors",
-                          index === activeWidgets.length - 1
-                            ? "bg-muted text-muted-foreground/30"
-                            : "bg-primary/10 text-primary active:bg-primary/20"
-                        )}
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </button>
-                    </div>
-                    {/* Drag handle - always visible */}
+                    {/* Hide button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        hideWidget(widgetId);
+                      }}
+                      className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 active:bg-rose-500/30 transition-colors"
+                      title="Hide widget"
+                    >
+                      <EyeOff className="h-4 w-4" />
+                    </button>
+                    {/* Drag handle */}
                     <div className="p-1.5 rounded-lg bg-primary/10">
                       <GripVertical className="h-4 w-4 text-primary" />
                     </div>
@@ -1341,6 +1326,41 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* Hidden widgets section - only shown in edit mode when there are hidden widgets */}
+      {isEditMode && hiddenActiveWidgets.length > 0 && (
+        <Card className="bg-card/50 border-dashed border-2 border-muted-foreground/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <EyeOff className="h-4 w-4" />
+              Hidden Widgets
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-2">
+              {hiddenActiveWidgets.map(widgetId => {
+                const config = getWidgetConfig(widgetId);
+                if (!config) return null;
+                const IconComponent = config.icon;
+                return (
+                  <button
+                    key={widgetId}
+                    onClick={() => unhideWidget(widgetId)}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <IconComponent className="h-4 w-4" />
+                    <span className="text-sm">{config.label}</span>
+                    <Eye className="h-3.5 w-3.5 ml-1 text-primary" />
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Click a widget to show it again
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Friends using HomeLog */}
