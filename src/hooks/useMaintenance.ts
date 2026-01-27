@@ -439,10 +439,15 @@ function addFrequencyToDate(date: Date, frequency: number, frequencyUnit: Mainte
 // If lastCompletionDate is provided, calculate from there; otherwise use purchaseDate
 export function calculateNextDueDate(
   purchaseDate: string,
-  frequency: number,
+  frequency: number | undefined,
   frequencyUnit: MaintenanceSchedule['frequencyUnit'],
   lastCompletionDate?: string
 ): Date | null {
+  // Guard against invalid frequency values that could cause infinite loops
+  if (!frequency || frequency <= 0 || !frequencyUnit) {
+    return null;
+  }
+
   // If there's a completion date, calculate from that
   if (lastCompletionDate) {
     const completionDate = parseDateString(lastCompletionDate);
@@ -460,8 +465,17 @@ export function calculateNextDueDate(
   let nextDue = new Date(startDate);
 
   // Keep adding frequency until we get a future date
-  while (nextDue <= now) {
+  // Add safety limit to prevent infinite loops
+  let iterations = 0;
+  const maxIterations = 1000;
+  while (nextDue <= now && iterations < maxIterations) {
     nextDue = addFrequencyToDate(nextDue, frequency, frequencyUnit);
+    iterations++;
+  }
+
+  if (iterations >= maxIterations) {
+    console.warn('calculateNextDueDate: max iterations reached, returning null');
+    return null;
   }
 
   return nextDue;
@@ -480,10 +494,11 @@ export function formatDueDate(date: Date | null): string {
 // Check if maintenance is overdue
 export function isOverdue(
   purchaseDate: string,
-  frequency: number,
+  frequency: number | undefined,
   frequencyUnit: MaintenanceSchedule['frequencyUnit'],
   lastCompletionDate?: string
 ): boolean {
+  if (!frequency || !frequencyUnit) return false;
   const nextDue = calculateNextDueDate(purchaseDate, frequency, frequencyUnit, lastCompletionDate);
   if (!nextDue) return false;
   return nextDue < new Date();
@@ -492,10 +507,11 @@ export function isOverdue(
 // Check if maintenance is due soon (within 7 days)
 export function isDueSoon(
   purchaseDate: string,
-  frequency: number,
+  frequency: number | undefined,
   frequencyUnit: MaintenanceSchedule['frequencyUnit'],
   lastCompletionDate?: string
 ): boolean {
+  if (!frequency || !frequencyUnit) return false;
   const nextDue = calculateNextDueDate(purchaseDate, frequency, frequencyUnit, lastCompletionDate);
   if (!nextDue) return false;
   const now = new Date();
