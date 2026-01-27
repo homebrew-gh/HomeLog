@@ -140,7 +140,6 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
   const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceSchedule | undefined>();
   const [viewingMaintenance, setViewingMaintenance] = useState<MaintenanceSchedule | undefined>();
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [logDialogOpen, setLogDialogOpen] = useState(false);
 
   // Refs for maintenance sections
   const homeMaintenanceRef = useRef<HTMLDivElement | null>(null);
@@ -346,8 +345,6 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
               vehicleMaintenance={vehicleMaintenance}
               completions={completions}
               showArchived={showArchived}
-              onAddMaintenance={() => handleAddMaintenance('vehicle')}
-              onLogTask={() => setLogDialogOpen(true)}
               onViewMaintenance={setViewingMaintenance}
             />
           )}
@@ -378,11 +375,6 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
         isOpen={exportDialogOpen}
         onClose={() => setExportDialogOpen(false)}
         filter={activeTab}
-      />
-
-      <LogMaintenanceDialog
-        isOpen={logDialogOpen}
-        onClose={() => setLogDialogOpen(false)}
       />
     </section>
   );
@@ -735,8 +727,6 @@ interface VehicleMaintenanceSectionProps {
   vehicleMaintenance: MaintenanceSchedule[];
   completions: MaintenanceCompletion[];
   showArchived: boolean;
-  onAddMaintenance: () => void;
-  onLogTask: () => void;
   onViewMaintenance: (maint: MaintenanceSchedule) => void;
 }
 
@@ -838,15 +828,218 @@ function AddVehicleToMaintenanceDialog({
             Add & Configure
           </Button>
         </div>
+        </DialogContent>
+    </Dialog>
+  );
+}
+
+// Add Vehicle Maintenance Dialog - allows selecting vehicle and choosing log vs recurring
+function AddVehicleMaintenanceDialog({
+  isOpen,
+  onClose,
+  vehicles,
+  onLogTask,
+  onAddRecurring,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  vehicles: Vehicle[];
+  onLogTask: (vehicleId: string) => void;
+  onAddRecurring: (vehicleId: string) => void;
+}) {
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [step, setStep] = useState<'vehicle' | 'type'>('vehicle');
+
+  // Get only active vehicles
+  const activeVehicles = vehicles.filter(v => !v.isArchived);
+
+  // Reset when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedVehicleId('');
+      setStep('vehicle');
+    }
+  }, [isOpen]);
+
+  const selectedVehicle = activeVehicles.find(v => v.id === selectedVehicleId);
+  const VehicleIcon = selectedVehicle ? getVehicleTypeIcon(selectedVehicle.vehicleType) : Car;
+
+  const handleVehicleSelect = (vehicleId: string) => {
+    setSelectedVehicleId(vehicleId);
+  };
+
+  const handleContinue = () => {
+    if (selectedVehicleId) {
+      setStep('type');
+    }
+  };
+
+  const handleBack = () => {
+    setStep('vehicle');
+  };
+
+  const handleLogTask = () => {
+    onLogTask(selectedVehicleId);
+    onClose();
+  };
+
+  const handleAddRecurring = () => {
+    onAddRecurring(selectedVehicleId);
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5 text-primary" />
+            Add Vehicle Maintenance
+          </DialogTitle>
+        </DialogHeader>
+        
+        {step === 'vehicle' ? (
+          <>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Select a vehicle to add maintenance for.
+              </p>
+              
+              {activeVehicles.length === 0 ? (
+                <div className="text-center py-6">
+                  <Car className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground">No vehicles available. Add a vehicle first.</p>
+                </div>
+              ) : (
+                <ScrollArea className={activeVehicles.length > 4 ? "h-[240px]" : ""}>
+                  <div className="space-y-2 pr-4">
+                    {activeVehicles.map(vehicle => {
+                      const Icon = getVehicleTypeIcon(vehicle.vehicleType);
+                      const isSelected = selectedVehicleId === vehicle.id;
+                      
+                      return (
+                        <button
+                          key={vehicle.id}
+                          onClick={() => handleVehicleSelect(vehicle.id)}
+                          className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                            isSelected
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:bg-muted/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg shrink-0 ${isSelected ? 'bg-primary/20' : 'bg-muted'}`}>
+                              <Icon className={`h-5 w-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{vehicle.name}</p>
+                              <p className="text-xs text-muted-foreground">{vehicle.vehicleType}</p>
+                            </div>
+                            {isSelected && (
+                              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleContinue} 
+                disabled={!selectedVehicleId}
+                className="gap-2"
+              >
+                Continue
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-4 py-4">
+              {/* Selected vehicle display */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+                <div className="p-2 rounded-lg bg-primary/20 shrink-0">
+                  <VehicleIcon className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{selectedVehicle?.name}</p>
+                  <p className="text-xs text-muted-foreground">{selectedVehicle?.vehicleType}</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                What would you like to do?
+              </p>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={handleLogTask}
+                  className="w-full p-4 rounded-lg border border-border hover:bg-muted/50 text-left transition-colors group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 shrink-0 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
+                      <ClipboardList className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Log a Maintenance Task</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Record a one-time maintenance task that was completed (e.g., oil change, tire rotation).
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={handleAddRecurring}
+                  className="w-full p-4 rounded-lg border border-border hover:bg-muted/50 text-left transition-colors group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 shrink-0 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                      <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Setup Recurring Maintenance</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Create a recurring maintenance schedule with reminders (e.g., every 5,000 miles or 6 months).
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex justify-between gap-2">
+              <Button variant="outline" onClick={handleBack}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
 const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceSectionProps>(
-  ({ vehicles, vehicleMaintenance, completions, showArchived, onAddMaintenance, onLogTask, onViewMaintenance }, ref) => {
+  ({ vehicles, vehicleMaintenance, completions, showArchived, onViewMaintenance }, ref) => {
     const navigate = useNavigate();
     const [addVehicleDialogOpen, setAddVehicleDialogOpen] = useState(false);
+    const [addMaintenanceDialogOpen, setAddMaintenanceDialogOpen] = useState(false);
+    const [logDialogOpen, setLogDialogOpen] = useState(false);
+    const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
+    const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
     // Calculate upcoming maintenance (within 3 months) sorted chronologically
     const upcomingMaintenance = useMemo(() => {
       const threeMonthsFromNow = new Date();
@@ -918,6 +1111,9 @@ const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceS
     // Get vehicles that are NOT yet tracked (available to add)
     const untrackedVehicles = vehicles.filter(v => !v.isArchived && !trackedVehicleIds.has(v.id));
 
+    // Get all active vehicles (for the Add button)
+    const activeVehicles = vehicles.filter(v => !v.isArchived);
+
     if (vehicles.length === 0) {
       return (
         <Card ref={ref} className="bg-card border-border">
@@ -971,9 +1167,9 @@ const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceS
             </div>
             <span className="text-lg font-semibold text-foreground">Vehicle Maintenance</span>
           </div>
-          {untrackedVehicles.length > 0 && (
+          {activeVehicles.length > 0 && (
             <Button
-              onClick={() => setAddVehicleDialogOpen(true)}
+              onClick={() => setAddMaintenanceDialogOpen(true)}
               size="sm"
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
@@ -1167,11 +1363,47 @@ const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceS
           </Card>
         </div>
 
-        {/* Add Vehicle Dialog */}
+        {/* Add Vehicle Dialog (for untracked vehicles) */}
         <AddVehicleToMaintenanceDialog
           isOpen={addVehicleDialogOpen}
           onClose={() => setAddVehicleDialogOpen(false)}
           untrackedVehicles={untrackedVehicles}
+        />
+
+        {/* Add Vehicle Maintenance Dialog */}
+        <AddVehicleMaintenanceDialog
+          isOpen={addMaintenanceDialogOpen}
+          onClose={() => setAddMaintenanceDialogOpen(false)}
+          vehicles={vehicles}
+          onLogTask={(vehicleId) => {
+            setSelectedVehicleId(vehicleId);
+            setLogDialogOpen(true);
+          }}
+          onAddRecurring={(vehicleId) => {
+            setSelectedVehicleId(vehicleId);
+            setRecurringDialogOpen(true);
+          }}
+        />
+
+        {/* Log Maintenance Dialog */}
+        <LogMaintenanceDialog
+          isOpen={logDialogOpen}
+          onClose={() => {
+            setLogDialogOpen(false);
+            setSelectedVehicleId('');
+          }}
+          preselectedVehicleId={selectedVehicleId}
+        />
+
+        {/* Recurring Maintenance Dialog */}
+        <MaintenanceDialog
+          isOpen={recurringDialogOpen}
+          onClose={() => {
+            setRecurringDialogOpen(false);
+            setSelectedVehicleId('');
+          }}
+          mode="vehicle"
+          preselectedVehicleId={selectedVehicleId}
         />
       </div>
     );
