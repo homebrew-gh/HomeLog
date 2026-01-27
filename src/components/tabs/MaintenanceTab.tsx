@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus, Archive, ArrowLeft, ClipboardList, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { LogMaintenanceDialog } from '@/components/LogMaintenanceDialog';
@@ -81,6 +82,9 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
   
   // View mode: 'active' or 'archived'
   const [showArchived, setShowArchived] = useState(false);
+  
+  // Tab selection: 'home' or 'vehicle'
+  const [activeTab, setActiveTab] = useState<'home' | 'vehicle'>('home');
 
   // Filter and sort maintenance - all in one useMemo to avoid cascading recomputes
   const { applianceMaintenance, vehicleMaintenance, archivedCount } = useMemo(() => {
@@ -128,6 +132,13 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
   // Handle scroll to target when scrollTarget changes
   useEffect(() => {
     if (scrollTarget && !isLoading) {
+      // Set the appropriate tab based on scroll target
+      if (scrollTarget === 'home-maintenance') {
+        setActiveTab('home');
+      } else if (scrollTarget === 'vehicle-maintenance') {
+        setActiveTab('vehicle');
+      }
+      
       const timer = setTimeout(() => {
         let element: HTMLDivElement | null = null;
         
@@ -162,10 +173,14 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
     setDialogOpen(true);
   };
 
+  // Get counts for badges
+  const homeCount = applianceMaintenance.length;
+  const vehicleCount = vehicleMaintenance.length;
+
   return (
-    <section className="space-y-8">
+    <section className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
           {showArchived ? (
             <>
@@ -202,7 +217,7 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
                   Archived ({archivedCount})
                 </Button>
               )}
-              {allMaintenance.length > 0 && (
+              {((activeTab === 'home' && homeCount > 0) || (activeTab === 'vehicle' && vehicleCount > 0)) && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -218,6 +233,28 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
           )}
         </div>
       </div>
+
+      {/* Tab Toggle */}
+      {!showArchived && (
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'home' | 'vehicle')} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="home" className="flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              <span>Home</span>
+              <Badge variant="secondary" className="ml-1 bg-primary/10 text-primary text-xs px-1.5">
+                {homeCount}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="vehicle" className="flex items-center gap-2">
+              <Car className="h-4 w-4" />
+              <span>Vehicle</span>
+              <Badge variant="secondary" className="ml-1 bg-primary/10 text-primary text-xs px-1.5">
+                {vehicleCount}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
 
       {isLoading ? (
         <Card className="bg-card border-border">
@@ -236,118 +273,120 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
         </Card>
       ) : (
         <>
-          {/* Home/Appliance Maintenance Section */}
-          <Card 
-            ref={homeMaintenanceRef}
-            className="bg-card border-border"
-          >
-            <CardHeader className="pb-3 bg-gradient-to-r from-primary/10 to-transparent">
-              <CardTitle className="flex items-center justify-between">
+          {/* Home Maintenance Section */}
+          {activeTab === 'home' && (
+            <Card 
+              ref={homeMaintenanceRef}
+              className="bg-card border-border"
+            >
+              <div className="p-4 pb-3 border-b flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-primary/10">
                     <Home className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-lg text-foreground">Home Maintenance</span>
-                  <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary">
-                    {applianceMaintenance.length}
-                  </Badge>
+                  <span className="text-lg font-semibold text-foreground">
+                    {showArchived ? 'Archived Home Maintenance' : 'Home Maintenance'}
+                  </span>
                 </div>
-                <Button
-                  onClick={() => handleAddMaintenance('appliance')}
-                  size="sm"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4">
-              {applianceMaintenance.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">
-                  No home maintenance schedules yet.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {applianceMaintenance.map((maint) => (
-                    <MaintenanceItem
-                      key={maint.id}
-                      maintenance={maint}
-                      appliance={appliances.find(a => a.id === maint.applianceId)}
-                      completions={completions.filter(c => c.maintenanceId === maint.id)}
-                      onClick={() => setViewingMaintenance(maint)}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                {!showArchived && (
+                  <Button
+                    onClick={() => handleAddMaintenance('appliance')}
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Recurring
+                  </Button>
+                )}
+              </div>
+              <CardContent className="pt-4">
+                {applianceMaintenance.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-6">
+                    {showArchived ? 'No archived home maintenance.' : 'No home maintenance schedules yet.'}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {applianceMaintenance.map((maint) => (
+                      <MaintenanceItem
+                        key={maint.id}
+                        maintenance={maint}
+                        appliance={appliances.find(a => a.id === maint.applianceId)}
+                        completions={completions.filter(c => c.maintenanceId === maint.id)}
+                        onClick={() => setViewingMaintenance(maint)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Vehicle Maintenance Section */}
-          <Card 
-            ref={vehicleMaintenanceRef}
-            className="bg-card border-border"
-          >
-            <CardHeader className="pb-3 bg-gradient-to-r from-primary/10 to-transparent">
-              <CardTitle className="flex items-center justify-between flex-wrap gap-2">
+          {activeTab === 'vehicle' && (
+            <Card 
+              ref={vehicleMaintenanceRef}
+              className="bg-card border-border"
+            >
+              <div className="p-4 pb-3 border-b flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-primary/10">
                     <Car className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-lg text-foreground">Vehicle Maintenance</span>
-                  <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary">
-                    {vehicleMaintenance.length}
-                  </Badge>
+                  <span className="text-lg font-semibold text-foreground">
+                    {showArchived ? 'Archived Vehicle Maintenance' : 'Vehicle Maintenance'}
+                  </span>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setLogDialogOpen(true)}
-                    size="sm"
-                    variant="outline"
-                    className="border-primary text-primary hover:bg-primary/10"
-                    disabled={vehicles.length === 0}
-                  >
-                    <ClipboardList className="h-4 w-4 mr-1" />
-                    <span className="hidden sm:inline">Log Task</span>
-                    <span className="sm:hidden">Log</span>
-                  </Button>
-                  <Button
-                    onClick={() => handleAddMaintenance('vehicle')}
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    disabled={vehicles.length === 0}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    <span className="hidden sm:inline">Recurring</span>
-                    <span className="sm:hidden">Add</span>
-                  </Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4">
-              {vehicles.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">
-                  Add a vehicle first to create maintenance schedules.
-                </p>
-              ) : vehicleMaintenance.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">
-                  No vehicle maintenance schedules yet.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {vehicleMaintenance.map((maint) => (
-                    <VehicleMaintenanceItem
-                      key={maint.id}
-                      maintenance={maint}
-                      vehicle={vehicles.find(v => v.id === maint.vehicleId)}
-                      completions={completions.filter(c => c.maintenanceId === maint.id)}
-                      onClick={() => setViewingMaintenance(maint)}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                {!showArchived && (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setLogDialogOpen(true)}
+                      size="sm"
+                      variant="outline"
+                      className="border-primary text-primary hover:bg-primary/10"
+                      disabled={vehicles.length === 0}
+                    >
+                      <ClipboardList className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Log Task</span>
+                      <span className="sm:hidden">Log</span>
+                    </Button>
+                    <Button
+                      onClick={() => handleAddMaintenance('vehicle')}
+                      size="sm"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      disabled={vehicles.length === 0}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Recurring</span>
+                      <span className="sm:hidden">Add</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <CardContent className="pt-4">
+                {vehicles.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-6">
+                    Add a vehicle first to create maintenance schedules.
+                  </p>
+                ) : vehicleMaintenance.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-6">
+                    {showArchived ? 'No archived vehicle maintenance.' : 'No vehicle maintenance schedules yet.'}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {vehicleMaintenance.map((maint) => (
+                      <VehicleMaintenanceItem
+                        key={maint.id}
+                        maintenance={maint}
+                        vehicle={vehicles.find(v => v.id === maint.vehicleId)}
+                        completions={completions.filter(c => c.maintenanceId === maint.id)}
+                        onClick={() => setViewingMaintenance(maint)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 
@@ -374,6 +413,7 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
       <CalendarExportDialog
         isOpen={exportDialogOpen}
         onClose={() => setExportDialogOpen(false)}
+        filter={activeTab}
       />
 
       <LogMaintenanceDialog

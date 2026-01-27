@@ -15,6 +15,7 @@ import type { MaintenanceSchedule, Appliance, Vehicle, MaintenanceCompletion } f
 interface CalendarExportDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  filter?: 'home' | 'vehicle'; // Filter to show only home or vehicle maintenance
 }
 
 interface MaintenanceWithDueDate {
@@ -155,7 +156,7 @@ function downloadFile(content: string, filename: string, mimeType: string) {
   URL.revokeObjectURL(url);
 }
 
-export function CalendarExportDialog({ isOpen, onClose }: CalendarExportDialogProps) {
+export function CalendarExportDialog({ isOpen, onClose, filter }: CalendarExportDialogProps) {
   const { data: appliances = [] } = useAppliances();
   const { data: vehicles = [] } = useVehicles();
   const { data: allMaintenance = [] } = useMaintenance();
@@ -163,9 +164,17 @@ export function CalendarExportDialog({ isOpen, onClose }: CalendarExportDialogPr
   
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
-  // Build list of maintenance items with due dates
+  // Build list of maintenance items with due dates, filtered by type if specified
   const maintenanceWithDates = useMemo(() => {
-    return allMaintenance
+    // First filter by maintenance type if filter is provided
+    let filteredMaintenance = allMaintenance;
+    if (filter === 'home') {
+      filteredMaintenance = allMaintenance.filter(m => (m.applianceId || m.homeFeature) && !m.vehicleId);
+    } else if (filter === 'vehicle') {
+      filteredMaintenance = allMaintenance.filter(m => m.vehicleId && !m.applianceId);
+    }
+    
+    return filteredMaintenance
       .map(maint => {
         const info = getMaintenanceDueInfo(maint, appliances, vehicles, completions);
         return {
@@ -184,7 +193,7 @@ export function CalendarExportDialog({ isOpen, onClose }: CalendarExportDialogPr
         if (!b.dueDate) return -1;
         return a.dueDate.getTime() - b.dueDate.getTime();
       });
-  }, [allMaintenance, appliances, vehicles, completions]);
+  }, [allMaintenance, appliances, vehicles, completions, filter]);
   
   const handleToggle = (id: string) => {
     setSelectedIds(prev => {
@@ -235,10 +244,10 @@ export function CalendarExportDialog({ isOpen, onClose }: CalendarExportDialogPr
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarPlus className="h-5 w-5 text-primary" />
-            Export to Calendar
+            Export {filter === 'home' ? 'Home' : filter === 'vehicle' ? 'Vehicle' : ''} Maintenance to Calendar
           </DialogTitle>
           <DialogDescription>
-            Select maintenance events to export. Single events will be exported as .ics files, 
+            Select {filter === 'home' ? 'home ' : filter === 'vehicle' ? 'vehicle ' : ''}maintenance events to export. Single events will be exported as .ics files, 
             multiple events as a .csv file compatible with most calendar apps.
           </DialogDescription>
         </DialogHeader>
