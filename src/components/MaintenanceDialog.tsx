@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Info, Home, Car, Plus, TreePine, CheckCircle2, Wrench } from 'lucide-react';
+import { Calendar, Info, Home, Car, Plus, TreePine, CheckCircle2, Wrench, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate } from '@/hooks/useMaintenance';
 import { useCompletionsByMaintenance, useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
 import { toast } from '@/hooks/useToast';
-import { FREQUENCY_UNITS, type MaintenanceSchedule } from '@/lib/types';
+import { FREQUENCY_UNITS, type MaintenanceSchedule, type MaintenancePart } from '@/lib/types';
 
 interface MaintenanceDialogProps {
   isOpen: boolean;
@@ -37,6 +37,11 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomFeatureInput, setShowCustomFeatureInput] = useState(false);
   const [customFeatureName, setCustomFeatureName] = useState('');
+
+  // Parts state
+  const [parts, setParts] = useState<MaintenancePart[]>([]);
+  const [showAddPart, setShowAddPart] = useState(false);
+  const [newPart, setNewPart] = useState<MaintenancePart>({ name: '', partNumber: '', cost: '' });
 
   const [formData, setFormData] = useState({
     applianceId: '',
@@ -86,6 +91,9 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
     if (isOpen) {
       setShowCustomFeatureInput(false);
       setCustomFeatureName('');
+      setParts([]);
+      setShowAddPart(false);
+      setNewPart({ name: '', partNumber: '', cost: '' });
       if (maintenance) {
         setFormData({
           applianceId: maintenance.applianceId || '',
@@ -156,6 +164,29 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
     });
   };
 
+  const handleAddPart = () => {
+    if (!newPart.name.trim()) {
+      toast({
+        title: 'Part name required',
+        description: 'Please enter a name for the part.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setParts(prev => [...prev, { 
+      name: newPart.name.trim(), 
+      partNumber: newPart.partNumber?.trim() || undefined,
+      cost: newPart.cost?.trim() || undefined,
+    }]);
+    setNewPart({ name: '', partNumber: '', cost: '' });
+    setShowAddPart(false);
+  };
+
+  const handleRemovePart = (index: number) => {
+    setParts(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
     if (isVehicleMode && !formData.vehicleId) {
       toast({
@@ -206,7 +237,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
         homeFeature: isVehicleMode ? undefined : (formData.homeFeature || undefined),
         companyId: formData.companyId || undefined,
         description: formData.description.trim(),
-        partNumber: formData.partNumber.trim() || undefined,
+        parts: parts.length > 0 ? parts : undefined,
         frequency: frequency,
         frequencyUnit: formData.frequencyUnit,
         mileageInterval: mileageInterval && mileageInterval > 0 ? mileageInterval : undefined,
@@ -421,15 +452,101 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
             />
           </div>
 
-          {/* Part Number */}
+          {/* Parts Section */}
           <div className="space-y-2">
-            <Label htmlFor="partNumber">Part Number</Label>
-            <Input
-              id="partNumber"
-              value={formData.partNumber}
-              onChange={(e) => setFormData(prev => ({ ...prev, partNumber: e.target.value }))}
-              placeholder="Optional part number"
-            />
+            <Label className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Parts
+            </Label>
+            
+            {/* List of added parts */}
+            {parts.length > 0 && (
+              <div className="space-y-2">
+                {parts.map((part, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{part.name}</p>
+                      <div className="flex gap-3 text-xs text-muted-foreground">
+                        {part.partNumber && <span>Part #: {part.partNumber}</span>}
+                        {part.cost && <span>Cost: {part.cost}</span>}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => handleRemovePart(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add Part Form */}
+            {showAddPart ? (
+              <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                <div className="space-y-2">
+                  <Label htmlFor="partName" className="text-sm">Part Name *</Label>
+                  <Input
+                    id="partName"
+                    value={newPart.name}
+                    onChange={(e) => setNewPart(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Oil Filter"
+                    autoFocus
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="partNumber" className="text-sm">Part Number</Label>
+                    <Input
+                      id="partNumber"
+                      value={newPart.partNumber || ''}
+                      onChange={(e) => setNewPart(prev => ({ ...prev, partNumber: e.target.value }))}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="partCost" className="text-sm">Cost</Label>
+                    <Input
+                      id="partCost"
+                      value={newPart.cost || ''}
+                      onChange={(e) => setNewPart(prev => ({ ...prev, cost: e.target.value }))}
+                      placeholder="e.g., $12.99"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleAddPart} size="sm">
+                    Add Part
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowAddPart(false);
+                      setNewPart({ name: '', partNumber: '', cost: '' });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddPart(true)}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Part
+              </Button>
+            )}
           </div>
 
           {/* Company/Service Provider */}

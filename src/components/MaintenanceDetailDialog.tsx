@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check, Car, Gauge, TreePine, ClipboardList } from 'lucide-react';
+import { Calendar, Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check, Car, Gauge, TreePine, ClipboardList, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,11 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { useApplianceById } from '@/hooks/useAppliances';
-import { useVehicleById } from '@/hooks/useVehicles';
+import { useVehicleById, useVehicleActions } from '@/hooks/useVehicles';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletionActions, useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
 import { toast } from '@/hooks/useToast';
-import type { MaintenanceSchedule } from '@/lib/types';
+import type { MaintenanceSchedule, MaintenancePart } from '@/lib/types';
 
 interface MaintenanceDetailDialogProps {
   isOpen: boolean;
@@ -33,6 +33,7 @@ function getTodayFormatted(): string {
 export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }: MaintenanceDetailDialogProps) {
   const { deleteMaintenance } = useMaintenanceActions();
   const { createCompletion } = useMaintenanceCompletionActions();
+  const { updateVehicle } = useVehicleActions();
   const appliance = useApplianceById(maintenance.applianceId);
   const vehicle = useVehicleById(maintenance.vehicleId);
   const completions = useCompletionsByMaintenance(maintenance.id);
@@ -49,6 +50,11 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
   const [useToday, setUseToday] = useState(false);
   const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
 
+  // Parts state for completion
+  const [completionParts, setCompletionParts] = useState<MaintenancePart[]>([]);
+  const [showAddPart, setShowAddPart] = useState(false);
+  const [newPart, setNewPart] = useState<MaintenancePart>({ name: '', partNumber: '', cost: '' });
+
   // Reset completion form when dialog opens/closes
   useEffect(() => {
     if (isOpen) {
@@ -56,6 +62,9 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
       setCompletionDate('');
       setCompletionMileage('');
       setUseToday(false);
+      setCompletionParts([]);
+      setShowAddPart(false);
+      setNewPart({ name: '', partNumber: '', cost: '' });
     }
   }, [isOpen]);
 
@@ -140,7 +149,29 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
     try {
       // Pass mileage only if it's vehicle maintenance and a value was entered
       const mileageValue = isVehicleMaintenance && completionMileage.trim() ? completionMileage.trim() : undefined;
-      await createCompletion(maintenance.id, dateToUse, mileageValue);
+      
+      // Create the completion with parts
+      await createCompletion(
+        maintenance.id, 
+        dateToUse, 
+        mileageValue,
+        undefined, // notes
+        completionParts.length > 0 ? completionParts : undefined
+      );
+
+      // If mileage was provided, update the vehicle's mileage
+      if (mileageValue && vehicle) {
+        const currentMileage = vehicle.mileage ? parseInt(vehicle.mileage, 10) : 0;
+        const newMileage = parseInt(mileageValue, 10);
+        
+        // Only update if the new mileage is higher
+        if (!isNaN(newMileage) && newMileage > currentMileage) {
+          await updateVehicle(vehicle.id, {
+            ...vehicle,
+            mileage: newMileage.toString(),
+          });
+        }
+      }
       
       const mileageInfo = mileageValue ? ` at ${Number(mileageValue).toLocaleString()} miles` : '';
       toast({
@@ -151,6 +182,9 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
       setCompletionDate('');
       setCompletionMileage('');
       setUseToday(false);
+      setCompletionParts([]);
+      setShowAddPart(false);
+      setNewPart({ name: '', partNumber: '', cost: '' });
     } catch {
       toast({
         title: 'Error',
@@ -174,6 +208,29 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
     if (value) {
       setUseToday(false); // Uncheck "Today" when manually entering a date
     }
+  };
+
+  const handleAddPart = () => {
+    if (!newPart.name.trim()) {
+      toast({
+        title: 'Part name required',
+        description: 'Please enter a name for the part.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCompletionParts(prev => [...prev, { 
+      name: newPart.name.trim(), 
+      partNumber: newPart.partNumber?.trim() || undefined,
+      cost: newPart.cost?.trim() || undefined,
+    }]);
+    setNewPart({ name: '', partNumber: '', cost: '' });
+    setShowAddPart(false);
+  };
+
+  const handleRemovePart = (index: number) => {
+    setCompletionParts(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -272,7 +329,29 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
               </div>
             )}
 
-            {maintenance.partNumber && (
+            {/* Parts - show multiple parts or legacy single part number */}
+            {(maintenance.parts && maintenance.parts.length > 0) ? (
+              <div className="flex items-start gap-3">
+                <Package className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground">Parts</p>
+                  <div className="space-y-1 mt-1">
+                    {maintenance.parts.map((part, index) => (
+                      <div key={index} className="text-sm">
+                        <span className="font-medium">{part.name}</span>
+                        {(part.partNumber || part.cost) && (
+                          <span className="text-muted-foreground ml-2">
+                            {part.partNumber && `#${part.partNumber}`}
+                            {part.partNumber && part.cost && ' · '}
+                            {part.cost && part.cost}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : maintenance.partNumber ? (
               <div className="flex items-start gap-3">
                 <Package className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
@@ -280,7 +359,7 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
                   <p className="font-mono">{maintenance.partNumber}</p>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {purchaseDate && (
               <div className="flex items-start gap-3">
@@ -419,8 +498,104 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
                       placeholder="e.g., 45000"
                       disabled={isSubmittingCompletion}
                     />
+                    {vehicle?.mileage && (
+                      <p className="text-xs text-muted-foreground">
+                        Current vehicle mileage: {Number(vehicle.mileage).toLocaleString()} mi
+                      </p>
+                    )}
                   </div>
                 )}
+
+                {/* Parts Section */}
+                <div className="space-y-2">
+                  <Label className="text-sm flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Parts Used
+                  </Label>
+                  
+                  {/* List of added parts */}
+                  {completionParts.length > 0 && (
+                    <div className="space-y-1">
+                      {completionParts.map((part, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded text-sm"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{part.name}</p>
+                            <div className="flex gap-2 text-xs text-muted-foreground">
+                              {part.partNumber && <span>#{part.partNumber}</span>}
+                              {part.cost && <span>{part.cost}</span>}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0"
+                            onClick={() => handleRemovePart(index)}
+                            disabled={isSubmittingCompletion}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add Part Form */}
+                  {showAddPart ? (
+                    <div className="space-y-2 p-2 border rounded bg-white dark:bg-slate-800">
+                      <Input
+                        value={newPart.name}
+                        onChange={(e) => setNewPart(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Part name *"
+                        disabled={isSubmittingCompletion}
+                        autoFocus
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          value={newPart.partNumber || ''}
+                          onChange={(e) => setNewPart(prev => ({ ...prev, partNumber: e.target.value }))}
+                          placeholder="Part # (optional)"
+                          disabled={isSubmittingCompletion}
+                        />
+                        <Input
+                          value={newPart.cost || ''}
+                          onChange={(e) => setNewPart(prev => ({ ...prev, cost: e.target.value }))}
+                          placeholder="Cost (optional)"
+                          disabled={isSubmittingCompletion}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={handleAddPart} size="sm" disabled={isSubmittingCompletion}>
+                          Add
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShowAddPart(false);
+                            setNewPart({ name: '', partNumber: '', cost: '' });
+                          }}
+                          disabled={isSubmittingCompletion}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddPart(true)}
+                      className="w-full"
+                      disabled={isSubmittingCompletion}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Part
+                    </Button>
+                  )}
+                </div>
 
                 <div className="flex gap-2">
                   <Button
@@ -435,7 +610,11 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
                     onClick={() => {
                       setShowCompletionForm(false);
                       setCompletionDate('');
+                      setCompletionMileage('');
                       setUseToday(false);
+                      setCompletionParts([]);
+                      setShowAddPart(false);
+                      setNewPart({ name: '', partNumber: '', cost: '' });
                     }}
                     disabled={isSubmittingCompletion}
                   >

@@ -4,12 +4,25 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { MAINTENANCE_KIND, APPLIANCE_KIND, VEHICLE_KIND, COMPANY_KIND, type MaintenanceSchedule } from '@/lib/types';
+import { MAINTENANCE_KIND, APPLIANCE_KIND, VEHICLE_KIND, COMPANY_KIND, type MaintenanceSchedule, type MaintenancePart } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 
 // Helper to get tag value
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
   return event.tags.find(([name]) => name === tagName)?.[1];
+}
+
+// Parse part tags from event
+// Format: ["part", "<name>", "<partNumber>", "<cost>"]
+function parsePartTags(event: NostrEvent): MaintenancePart[] {
+  return event.tags
+    .filter(([name]) => name === 'part')
+    .map(tag => ({
+      name: tag[1] || '',
+      partNumber: tag[2] || undefined,
+      cost: tag[3] || undefined,
+    }))
+    .filter(part => part.name);
 }
 
 // Parse a Nostr event into a MaintenanceSchedule object
@@ -57,6 +70,9 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
 
   const mileageInterval = getTagValue(event, 'mileage_interval');
 
+  // Parse parts
+  const parts = parsePartTags(event);
+
   return {
     id,
     applianceId,
@@ -65,6 +81,7 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
     companyId,
     description,
     partNumber: getTagValue(event, 'part_number'),
+    parts: parts.length > 0 ? parts : undefined,
     frequency: frequency ? parseInt(frequency, 10) : undefined,
     frequencyUnit: frequencyUnit as MaintenanceSchedule['frequencyUnit'],
     mileageInterval: mileageInterval ? parseInt(mileageInterval, 10) : undefined,
@@ -281,7 +298,19 @@ export function useMaintenanceActions() {
       tags.push(['a', `${COMPANY_KIND}:${user.pubkey}:${data.companyId}`, '', 'company']);
     }
 
+    // Legacy single part number (for backwards compatibility)
     if (data.partNumber) tags.push(['part_number', data.partNumber]);
+    
+    // Add part tags
+    if (data.parts && data.parts.length > 0) {
+      for (const part of data.parts) {
+        const partTag = ['part', part.name];
+        if (part.partNumber) partTag.push(part.partNumber);
+        if (part.cost) partTag.push(part.cost);
+        tags.push(partTag);
+      }
+    }
+    
     if (data.mileageInterval) tags.push(['mileage_interval', data.mileageInterval.toString()]);
     if (data.isArchived) tags.push(['is_archived', 'true']);
 
@@ -339,7 +368,19 @@ export function useMaintenanceActions() {
       tags.push(['a', `${COMPANY_KIND}:${user.pubkey}:${data.companyId}`, '', 'company']);
     }
 
+    // Legacy single part number (for backwards compatibility)
     if (data.partNumber) tags.push(['part_number', data.partNumber]);
+    
+    // Add part tags
+    if (data.parts && data.parts.length > 0) {
+      for (const part of data.parts) {
+        const partTag = ['part', part.name];
+        if (part.partNumber) partTag.push(part.partNumber);
+        if (part.cost) partTag.push(part.cost);
+        tags.push(partTag);
+      }
+    }
+    
     if (data.mileageInterval) tags.push(['mileage_interval', data.mileageInterval.toString()]);
     if (data.isArchived) tags.push(['is_archived', 'true']);
 

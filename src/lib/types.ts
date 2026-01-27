@@ -70,7 +70,8 @@ export interface MaintenanceSchedule {
   homeFeature?: string; // Optional - for home feature maintenance (e.g., "Chimney", "Gutters")
   companyId?: string; // Optional - reference to a company/service provider
   description: string;
-  partNumber?: string;
+  partNumber?: string; // Legacy single part number (deprecated, use parts instead)
+  parts?: MaintenancePart[]; // Parts needed for this maintenance
   frequency?: number; // Optional for log-only maintenance
   frequencyUnit?: 'days' | 'weeks' | 'months' | 'years'; // Optional for log-only maintenance
   // Additional fields for mileage-based maintenance
