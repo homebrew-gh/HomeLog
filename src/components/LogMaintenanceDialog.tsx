@@ -1,0 +1,416 @@
+import { useState, useEffect } from 'react';
+import { Calendar, Car, Gauge, Wrench, Plus, X, Package, Building2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useVehicles, useVehicleActions } from '@/hooks/useVehicles';
+import { useCompanies } from '@/hooks/useCompanies';
+import { useMaintenanceActions } from '@/hooks/useMaintenance';
+import { useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
+import { toast } from '@/hooks/useToast';
+import type { MaintenancePart } from '@/lib/types';
+
+interface LogMaintenanceDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  preselectedVehicleId?: string;
+}
+
+// Get today's date in YYYY-MM-DD format for the date input
+function getTodayISO(): string {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+}
+
+// Convert YYYY-MM-DD to MM/DD/YYYY
+function isoToDisplay(isoDate: string): string {
+  if (!isoDate) return '';
+  const [year, month, day] = isoDate.split('-');
+  return `${month}/${day}/${year}`;
+}
+
+export function LogMaintenanceDialog({ isOpen, onClose, preselectedVehicleId }: LogMaintenanceDialogProps) {
+  const { data: vehicles = [] } = useVehicles();
+  const { data: companies = [] } = useCompanies();
+  const { updateVehicle } = useVehicleActions();
+  const { createMaintenance } = useMaintenanceActions();
+  const { createCompletion } = useMaintenanceCompletionActions();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    vehicleId: '',
+    description: '',
+    companyId: '',
+    mileage: '',
+    completedDate: getTodayISO(),
+  });
+
+  // Parts state
+  const [parts, setParts] = useState<MaintenancePart[]>([]);
+  const [showAddPart, setShowAddPart] = useState(false);
+  const [newPart, setNewPart] = useState<MaintenancePart>({ name: '', partNumber: '', cost: '' });
+
+  // Get the selected vehicle
+  const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        vehicleId: preselectedVehicleId || '',
+        description: '',
+        companyId: '',
+        mileage: '',
+        completedDate: getTodayISO(),
+      });
+      setParts([]);
+      setShowAddPart(false);
+      setNewPart({ name: '', partNumber: '', cost: '' });
+    }
+  }, [isOpen, preselectedVehicleId]);
+
+  const handleAddPart = () => {
+    if (!newPart.name.trim()) {
+      toast({
+        title: 'Part name required',
+        description: 'Please enter a name for the part.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setParts(prev => [...prev, { 
+      name: newPart.name.trim(), 
+      partNumber: newPart.partNumber?.trim() || undefined,
+      cost: newPart.cost?.trim() || undefined,
+    }]);
+    setNewPart({ name: '', partNumber: '', cost: '' });
+    setShowAddPart(false);
+  };
+
+  const handleRemovePart = (index: number) => {
+    setParts(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.vehicleId) {
+      toast({
+        title: 'Vehicle required',
+        description: 'Please select a vehicle.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      toast({
+        title: 'Description required',
+        description: 'Please enter a description of the maintenance performed.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!formData.completedDate) {
+      toast({
+        title: 'Date required',
+        description: 'Please select the date the maintenance was performed.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Create a log-only maintenance schedule
+      const maintenanceId = await createMaintenance({
+        vehicleId: formData.vehicleId,
+        description: formData.description.trim(),
+        companyId: formData.companyId || undefined,
+        isLogOnly: true,
+      });
+
+      // Create the completion record with parts
+      const displayDate = isoToDisplay(formData.completedDate);
+      await createCompletion(
+        maintenanceId,
+        displayDate,
+        formData.mileage.trim() || undefined,
+        undefined, // notes
+        parts.length > 0 ? parts : undefined
+      );
+
+      // If mileage was provided, update the vehicle's mileage
+      if (formData.mileage.trim() && selectedVehicle) {
+        const currentMileage = selectedVehicle.mileage ? parseInt(selectedVehicle.mileage, 10) : 0;
+        const newMileage = parseInt(formData.mileage.trim(), 10);
+        
+        // Only update if the new mileage is higher
+        if (!isNaN(newMileage) && newMileage > currentMileage) {
+          await updateVehicle(selectedVehicle.id, {
+            ...selectedVehicle,
+            mileage: newMileage.toString(),
+          });
+        }
+      }
+
+      toast({
+        title: 'Maintenance logged',
+        description: `Maintenance for ${selectedVehicle?.name || 'vehicle'} has been recorded.`,
+      });
+      onClose();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to log maintenance. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Wrench className="h-5 w-5 text-primary" />
+            Log Maintenance Task
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Vehicle Selection */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Car className="h-4 w-4" />
+              Vehicle *
+            </Label>
+            <Select
+              value={formData.vehicleId}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, vehicleId: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a vehicle" />
+              </SelectTrigger>
+              <SelectContent>
+                {vehicles.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground text-center">
+                    No vehicles found. Add a vehicle first.
+                  </div>
+                ) : (
+                  vehicles.map((vehicle) => (
+                    <SelectItem key={vehicle.id} value={vehicle.id}>
+                      {vehicle.name} ({vehicle.vehicleType})
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+
+            {/* Show vehicle current mileage if selected */}
+            {selectedVehicle?.mileage && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                <Gauge className="h-4 w-4" />
+                <span>Current mileage: {Number(selectedVehicle.mileage).toLocaleString()} mi</span>
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Description *</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Describe the maintenance performed (e.g., Oil change, Brake pad replacement)"
+              rows={3}
+            />
+          </div>
+
+          {/* Service Provider / Company */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Service Provider
+            </Label>
+            <Select
+              value={formData.companyId}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value === '__none__' ? '' : value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a company (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__" className="text-muted-foreground">
+                  None
+                </SelectItem>
+                {companies.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground text-center">
+                    No companies found. Add one in the Company/Service tab.
+                  </div>
+                ) : (
+                  companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name} ({company.serviceType})
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Parts Section */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Parts Used
+            </Label>
+            
+            {/* List of added parts */}
+            {parts.length > 0 && (
+              <div className="space-y-2">
+                {parts.map((part, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{part.name}</p>
+                      <div className="flex gap-3 text-xs text-muted-foreground">
+                        {part.partNumber && <span>Part #: {part.partNumber}</span>}
+                        {part.cost && <span>Cost: {part.cost}</span>}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => handleRemovePart(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add Part Form */}
+            {showAddPart ? (
+              <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                <div className="space-y-2">
+                  <Label htmlFor="partName" className="text-sm">Part Name *</Label>
+                  <Input
+                    id="partName"
+                    value={newPart.name}
+                    onChange={(e) => setNewPart(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Oil Filter"
+                    autoFocus
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="partNumber" className="text-sm">Part Number</Label>
+                    <Input
+                      id="partNumber"
+                      value={newPart.partNumber || ''}
+                      onChange={(e) => setNewPart(prev => ({ ...prev, partNumber: e.target.value }))}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="partCost" className="text-sm">Cost</Label>
+                    <Input
+                      id="partCost"
+                      value={newPart.cost || ''}
+                      onChange={(e) => setNewPart(prev => ({ ...prev, cost: e.target.value }))}
+                      placeholder="e.g., $12.99"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleAddPart} size="sm">
+                    Add Part
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowAddPart(false);
+                      setNewPart({ name: '', partNumber: '', cost: '' });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddPart(true)}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Part
+              </Button>
+            )}
+          </div>
+
+          {/* Mileage */}
+          <div className="space-y-2">
+            <Label htmlFor="mileage" className="flex items-center gap-2">
+              <Gauge className="h-4 w-4" />
+              Current Vehicle Mileage
+            </Label>
+            <Input
+              id="mileage"
+              type="number"
+              min="0"
+              value={formData.mileage}
+              onChange={(e) => setFormData(prev => ({ ...prev, mileage: e.target.value }))}
+              placeholder="e.g., 45000"
+            />
+            <p className="text-xs text-muted-foreground">
+              If entered, this will update the vehicle's current mileage on the Vehicles tab.
+            </p>
+          </div>
+
+          {/* Date */}
+          <div className="space-y-2">
+            <Label htmlFor="completedDate" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Date Performed *
+            </Label>
+            <Input
+              id="completedDate"
+              type="date"
+              value={formData.completedDate}
+              onChange={(e) => setFormData(prev => ({ ...prev, completedDate: e.target.value }))}
+              max={getTodayISO()}
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-start gap-2 pt-4 border-t">
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting || vehicles.length === 0}
+          >
+            {isSubmitting ? 'Saving...' : 'Log Maintenance'}
+          </Button>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

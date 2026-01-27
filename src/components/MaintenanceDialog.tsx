@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Info, Home, Car, Plus, TreePine, CheckCircle2, Wrench, ClipboardList } from 'lucide-react';
+import { Calendar, Info, Home, Car, Plus, TreePine, CheckCircle2, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
 import { useCompanies } from '@/hooks/useCompanies';
@@ -50,7 +49,6 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
     frequencyUnit: 'months' as NonNullable<MaintenanceSchedule['frequencyUnit']>,
     mileageInterval: '',
     lastCompletedDate: '', // Optional initial completion date
-    isLogOnly: false, // Log-only mode - just track completions without a schedule
   });
 
   const isEditing = !!maintenance;
@@ -73,8 +71,8 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
   // For preview, use lastCompletedDate if available, otherwise use purchaseDate or today
   const previewBaseDateStr = formData.lastCompletedDate || purchaseDate || new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
   
-  // Only calculate preview for scheduled (non-log-only) maintenance
-  const previewDueDate = !formData.isLogOnly && formData.frequency
+  // Calculate preview for scheduled maintenance
+  const previewDueDate = formData.frequency
     ? calculateNextDueDate(
         previewBaseDateStr,
         parseInt(formData.frequency, 10),
@@ -100,7 +98,6 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           frequencyUnit: maintenance.frequencyUnit || 'months',
           mileageInterval: maintenance.mileageInterval?.toString() || '',
           lastCompletedDate: '', // Not editable when editing - use the completion records
-          isLogOnly: maintenance.isLogOnly || false,
         });
       } else {
         setFormData({
@@ -114,7 +111,6 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           frequencyUnit: 'months',
           mileageInterval: '',
           lastCompletedDate: '',
-          isLogOnly: false,
         });
       }
     }
@@ -189,22 +185,12 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
       return;
     }
 
-    // For scheduled (non-log-only) maintenance, frequency is required
+    // Frequency is required for recurring maintenance
     const frequency = parseInt(formData.frequency, 10);
-    if (!formData.isLogOnly && (!frequency || frequency < 1)) {
+    if (!frequency || frequency < 1) {
       toast({
         title: 'Valid frequency required',
         description: 'Please enter a valid frequency number for scheduled maintenance.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // For log-only maintenance, require a last completed date
-    if (formData.isLogOnly && !isEditing && !formData.lastCompletedDate) {
-      toast({
-        title: 'Completion date required',
-        description: 'Please enter when this task was last completed.',
         variant: 'destructive',
       });
       return;
@@ -221,17 +207,16 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
         companyId: formData.companyId || undefined,
         description: formData.description.trim(),
         partNumber: formData.partNumber.trim() || undefined,
-        frequency: formData.isLogOnly ? undefined : frequency,
-        frequencyUnit: formData.isLogOnly ? undefined : formData.frequencyUnit,
+        frequency: frequency,
+        frequencyUnit: formData.frequencyUnit,
         mileageInterval: mileageInterval && mileageInterval > 0 ? mileageInterval : undefined,
-        isLogOnly: formData.isLogOnly || undefined,
       };
 
       if (isEditing && maintenance) {
         await updateMaintenance(maintenance.id, data);
         toast({
           title: 'Maintenance updated',
-          description: formData.isLogOnly ? 'Your maintenance log has been updated.' : 'Your maintenance schedule has been updated.',
+          description: 'Your maintenance schedule has been updated.',
         });
       } else {
         const maintenanceId = await createMaintenance(data);
@@ -247,8 +232,8 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
         }
         
         toast({
-          title: formData.isLogOnly ? 'Maintenance log added' : 'Maintenance added',
-          description: formData.isLogOnly ? 'Your maintenance log has been added.' : 'Your maintenance schedule has been added.',
+          title: 'Maintenance added',
+          description: 'Your maintenance schedule has been added.',
         });
       }
       onClose();
@@ -482,29 +467,8 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
             </p>
           </div>
 
-          {/* Log Only Toggle (for vehicles only) */}
-          {isVehicleMode && (
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label htmlFor="log-only" className="flex items-center gap-2 cursor-pointer">
-                  <ClipboardList className="h-4 w-4 text-blue-600" />
-                  Log Only Mode
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Just track when this task was completed, without a recurring schedule
-                </p>
-              </div>
-              <Switch
-                id="log-only"
-                checked={formData.isLogOnly}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isLogOnly: checked }))}
-                disabled={isEditing}
-              />
-            </div>
-          )}
-
-          {/* Frequency - only shown for scheduled (non-log-only) maintenance */}
-          {!formData.isLogOnly && (
+          {/* Frequency */}
+          {(
             <div className="space-y-2">
               <Label>Frequency *</Label>
               <div className="flex gap-2">
@@ -539,7 +503,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           )}
 
           {/* Mileage Interval (for vehicles only) */}
-          {isVehicleMode && !formData.isLogOnly && (
+          {isVehicleMode && (
             <div className="space-y-2">
               <Label htmlFor="mileageInterval">Mileage Interval (optional)</Label>
               <Input
@@ -561,7 +525,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
             <div className="space-y-2">
               <Label htmlFor="lastCompletedDate" className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                {formData.isLogOnly ? 'Last Completed Date *' : 'Last Completed Date (optional)'}
+                Last Completed Date (optional)
               </Label>
               <Input
                 id="lastCompletedDate"
@@ -589,9 +553,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
                 max={new Date().toISOString().split('T')[0]} // Can't be in the future
               />
               <p className="text-xs text-muted-foreground">
-                {formData.isLogOnly 
-                  ? 'When was this task last completed?' 
-                  : 'When was this task last completed? This will be used to calculate the next due date.'}
+                When was this task last completed? This will be used to calculate the next due date.
               </p>
             </div>
           )}

@@ -81,12 +81,20 @@ export interface MaintenanceSchedule {
   createdAt: number;
 }
 
+// Part used in maintenance
+export interface MaintenancePart {
+  name: string;
+  partNumber?: string;
+  cost?: string;
+}
+
 export interface MaintenanceCompletion {
   id: string;
   maintenanceId: string;
   completedDate: string; // MM/DD/YYYY format
   mileageAtCompletion?: string; // For vehicle maintenance tracking
   notes?: string;
+  parts?: MaintenancePart[]; // Parts used in this maintenance
   pubkey: string;
   createdAt: number;
 }

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus, Archive, ArrowLeft, ClipboardList } from 'lucide-react';
+import { Plus, Wrench, AlertTriangle, Clock, Calendar, ChevronDown, ChevronRight, Car, Home, TreePine, Gauge, CalendarPlus, Archive, ArrowLeft, ClipboardList, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
+import { LogMaintenanceDialog } from '@/components/LogMaintenanceDialog';
 import { CalendarExportDialog } from '@/components/CalendarExportDialog';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
@@ -118,6 +119,7 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
   const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceSchedule | undefined>();
   const [viewingMaintenance, setViewingMaintenance] = useState<MaintenanceSchedule | undefined>();
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [logDialogOpen, setLogDialogOpen] = useState(false);
 
   // Refs for maintenance sections
   const homeMaintenanceRef = useRef<HTMLDivElement | null>(null);
@@ -287,7 +289,7 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
             className="bg-card border-border"
           >
             <CardHeader className="pb-3 bg-gradient-to-r from-primary/10 to-transparent">
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-primary/10">
                     <Car className="h-4 w-4 text-primary" />
@@ -297,15 +299,29 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
                     {vehicleMaintenance.length}
                   </Badge>
                 </div>
-                <Button
-                  onClick={() => handleAddMaintenance('vehicle')}
-                  size="sm"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                  disabled={vehicles.length === 0}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setLogDialogOpen(true)}
+                    size="sm"
+                    variant="outline"
+                    className="border-primary text-primary hover:bg-primary/10"
+                    disabled={vehicles.length === 0}
+                  >
+                    <ClipboardList className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">Log Task</span>
+                    <span className="sm:hidden">Log</span>
+                  </Button>
+                  <Button
+                    onClick={() => handleAddMaintenance('vehicle')}
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    disabled={vehicles.length === 0}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">Recurring</span>
+                    <span className="sm:hidden">Add</span>
+                  </Button>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
@@ -358,6 +374,11 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
       <CalendarExportDialog
         isOpen={exportDialogOpen}
         onClose={() => setExportDialogOpen(false)}
+      />
+
+      <LogMaintenanceDialog
+        isOpen={logDialogOpen}
+        onClose={() => setLogDialogOpen(false)}
       />
     </section>
   );
@@ -671,20 +692,30 @@ function VehicleMaintenanceItem({
           {completions.map((completion) => (
             <div
               key={completion.id}
-              className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-900 text-sm flex-wrap"
+              className="p-2 rounded bg-green-50 dark:bg-green-900 text-sm space-y-1"
             >
-              <Calendar className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
-              <span className="text-green-800 dark:text-green-200">
-                {completion.completedDate}
-              </span>
-              {completion.mileageAtCompletion && (
-                <>
-                  <span className="text-green-600 dark:text-green-400">•</span>
-                  <Gauge className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
-                  <span className="text-green-800 dark:text-green-200">
-                    {Number(completion.mileageAtCompletion).toLocaleString()} mi
+              <div className="flex items-center gap-2 flex-wrap">
+                <Calendar className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                <span className="text-green-800 dark:text-green-200">
+                  {completion.completedDate}
+                </span>
+                {completion.mileageAtCompletion && (
+                  <>
+                    <span className="text-green-600 dark:text-green-400">•</span>
+                    <Gauge className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                    <span className="text-green-800 dark:text-green-200">
+                      {Number(completion.mileageAtCompletion).toLocaleString()} mi
+                    </span>
+                  </>
+                )}
+              </div>
+              {completion.parts && completion.parts.length > 0 && (
+                <div className="flex items-start gap-2 pt-1 pl-6 flex-wrap">
+                  <Package className="h-3 w-3 text-green-500 dark:text-green-400 shrink-0 mt-0.5" />
+                  <span className="text-xs text-green-700 dark:text-green-300">
+                    Parts: {completion.parts.map(p => p.name).join(', ')}
                   </span>
-                </>
+                </div>
               )}
             </div>
           ))}

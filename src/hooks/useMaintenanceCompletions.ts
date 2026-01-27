@@ -3,12 +3,25 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { MAINTENANCE_COMPLETION_KIND, MAINTENANCE_KIND, type MaintenanceCompletion } from '@/lib/types';
+import { MAINTENANCE_COMPLETION_KIND, MAINTENANCE_KIND, type MaintenanceCompletion, type MaintenancePart } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
 
 // Helper to get tag value
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
   return event.tags.find(([name]) => name === tagName)?.[1];
+}
+
+// Parse part tags from event
+// Format: ["part", "<name>", "<partNumber>", "<cost>"]
+function parsePartTags(event: NostrEvent): MaintenancePart[] {
+  return event.tags
+    .filter(([name]) => name === 'part')
+    .map(tag => ({
+      name: tag[1] || '',
+      partNumber: tag[2] || undefined,
+      cost: tag[3] || undefined,
+    }))
+    .filter(part => part.name);
 }
 
 // Parse a Nostr event into a MaintenanceCompletion object
@@ -24,12 +37,16 @@ function parseCompletion(event: NostrEvent): MaintenanceCompletion | null {
   
   if (!id || !completedDate || !maintenanceId) return null;
 
+  // Parse parts
+  const parts = parsePartTags(event);
+
   return {
     id,
     maintenanceId,
     completedDate,
     mileageAtCompletion,
     notes,
+    parts: parts.length > 0 ? parts : undefined,
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
@@ -125,7 +142,8 @@ export function useMaintenanceCompletionActions() {
     maintenanceId: string, 
     completedDate: string, 
     mileageAtCompletion?: string,
-    notes?: string
+    notes?: string,
+    parts?: MaintenancePart[]
   ) => {
     if (!user) throw new Error('Must be logged in');
 
@@ -143,6 +161,16 @@ export function useMaintenanceCompletionActions() {
     // Add optional notes tag
     if (notes) {
       tags.push(['notes', notes]);
+    }
+
+    // Add part tags
+    if (parts && parts.length > 0) {
+      for (const part of parts) {
+        const partTag = ['part', part.name];
+        if (part.partNumber) partTag.push(part.partNumber);
+        if (part.cost) partTag.push(part.cost);
+        tags.push(partTag);
+      }
     }
 
     const event = await publishEvent({
