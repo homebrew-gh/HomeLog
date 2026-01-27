@@ -350,6 +350,21 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     });
   }, [subscriptions]);
 
+  // Get unique warranty types from warranties
+  const usedWarrantyTypes = useMemo(() => {
+    const types = new Set<string>();
+    warranties.forEach(warranty => {
+      if (warranty.warrantyType) {
+        types.add(warranty.warrantyType);
+      }
+    });
+    return Array.from(types).sort((a, b) => {
+      if (a === 'Uncategorized' || a === 'Other') return 1;
+      if (b === 'Uncategorized' || b === 'Other') return -1;
+      return a.localeCompare(b);
+    });
+  }, [warranties]);
+
   // Calculate total monthly cost estimate for subscriptions with currency conversion
   const { totalMonthlyCost, formattedTotalMonthlyCost } = useMemo(() => {
     let total = 0;
@@ -1123,61 +1138,104 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                     >
                       {warranties.length === 0 ? (
                         <p className="text-muted-foreground text-sm">No warranties tracked yet</p>
-                      ) : nextExpiringWarranties.length === 0 ? (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-900/30">
-                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                          <span className="text-sm text-green-700 dark:text-green-300">All warranties are far from expiring</span>
-                        </div>
                       ) : (
-                        <div className="space-y-2">
-                          {nextExpiringWarranties.map(({ warranty, expiringSoon }) => {
-                            const WarrantyIcon = getWarrantyTypeIcon(warranty);
-                            const linkedName = getWarrantyLinkedItemName(warranty);
-                            const timeRemaining = formatWarrantyTimeRemaining(warranty);
-                            
-                            return (
-                              <div
-                                key={warranty.id}
-                                className={cn(
-                                  "flex items-center justify-between text-sm p-2 rounded-lg",
-                                  expiringSoon 
-                                    ? 'bg-amber-50 dark:bg-amber-900/30' 
-                                    : 'bg-slate-50 dark:bg-slate-700/30'
-                                )}
-                              >
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <WarrantyIcon className={cn(
-                                    "h-4 w-4 shrink-0",
-                                    expiringSoon ? "text-amber-600 dark:text-amber-400" : "text-primary"
-                                  )} />
-                                  <div className="min-w-0">
-                                    <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
-                                      {warranty.name}
-                                    </p>
-                                    {linkedName && (
-                                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                        {linkedName}
-                                      </p>
+                        <div className="space-y-3">
+                          {/* Warranty status section */}
+                          {nextExpiringWarranties.length === 0 ? (
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-900/30">
+                              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                              <span className="text-sm text-green-700 dark:text-green-300">All warranties are far from expiring</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {nextExpiringWarranties.map(({ warranty, expiringSoon }) => {
+                                const WarrantyIcon = getWarrantyTypeIcon(warranty);
+                                const linkedName = getWarrantyLinkedItemName(warranty);
+                                const timeRemaining = formatWarrantyTimeRemaining(warranty);
+                                
+                                return (
+                                  <div
+                                    key={warranty.id}
+                                    className={cn(
+                                      "flex items-center justify-between text-sm p-2 rounded-lg",
+                                      expiringSoon 
+                                        ? 'bg-amber-50 dark:bg-amber-900/30' 
+                                        : 'bg-slate-50 dark:bg-slate-700/30'
                                     )}
+                                  >
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <WarrantyIcon className={cn(
+                                        "h-4 w-4 shrink-0",
+                                        expiringSoon ? "text-amber-600 dark:text-amber-400" : "text-primary"
+                                      )} />
+                                      <div className="min-w-0">
+                                        <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
+                                          {warranty.name}
+                                        </p>
+                                        {linkedName && (
+                                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                            {linkedName}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="text-right shrink-0 ml-2">
+                                      <p className={cn(
+                                        "text-xs font-medium",
+                                        expiringSoon
+                                          ? 'text-amber-600 dark:text-amber-400'
+                                          : 'text-slate-600 dark:text-slate-300'
+                                      )}>
+                                        {timeRemaining}
+                                      </p>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="text-right shrink-0 ml-2">
-                                  <p className={cn(
-                                    "text-xs font-medium",
-                                    expiringSoon
-                                      ? 'text-amber-600 dark:text-amber-400'
-                                      : 'text-slate-600 dark:text-slate-300'
-                                  )}>
-                                    {timeRemaining}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {warranties.length > 3 && (
-                            <p className="text-xs text-muted-foreground text-center">
-                              +{warranties.length - 3} more warranties
-                            </p>
+                                );
+                              })}
+                              {warranties.length > 3 && (
+                                <p className="text-xs text-muted-foreground text-center">
+                                  +{warranties.length - 3} more warranties
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Warranty type buttons */}
+                          {usedWarrantyTypes.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {usedWarrantyTypes.slice(0, 6).map(type => {
+                                const count = warranties.filter(w => w.warrantyType === type).length;
+                                return (
+                                  <button
+                                    key={type}
+                                    onClick={(e) => {
+                                      if (isEditMode) {
+                                        e.stopPropagation();
+                                        return;
+                                      }
+                                      e.stopPropagation();
+                                      onNavigateToTab('warranties', `type-${type}`);
+                                    }}
+                                    disabled={isEditMode}
+                                    className={cn(
+                                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary transition-colors",
+                                      !isEditMode && "hover:bg-primary/20"
+                                    )}
+                                  >
+                                    <Shield className="h-3.5 w-3.5" />
+                                    {type}
+                                    <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-primary/20">
+                                      {count}
+                                    </Badge>
+                                  </button>
+                                );
+                              })}
+                              {usedWarrantyTypes.length > 6 && (
+                                <span className="text-sm text-muted-foreground self-center">
+                                  +{usedWarrantyTypes.length - 6} more
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
