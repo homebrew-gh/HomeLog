@@ -91,17 +91,34 @@ export function WarrantiesTab({ scrollTarget }: WarrantiesTabProps) {
       const timer = setTimeout(() => {
         const element = typeRefs.current[typeName];
         if (element) {
+          // Expand the type if it's collapsed
           setCollapsedTypes(prev => {
             const newSet = new Set(prev);
             newSet.delete(typeName);
             return newSet;
           });
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          setTimeout(() => {
-            window.scrollBy({ top: -120, behavior: 'smooth' });
-          }, 100);
+          
+          // Check if element needs scrolling
+          const rect = element.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+          const headerOffset = 120; // Sticky header height
+          const halfwayPoint = viewportHeight / 2;
+          
+          // Only scroll if:
+          // 1. Element is above the visible area (top < headerOffset)
+          // 2. Element is below the viewport (top > viewportHeight)
+          // 3. Element's top is below the halfway point of the screen
+          const needsScroll = rect.top < headerOffset || 
+                             rect.top > viewportHeight || 
+                             rect.top > halfwayPoint;
+          
+          if (needsScroll) {
+            // Calculate target scroll position (element at top with header offset)
+            const targetY = window.scrollY + rect.top - headerOffset;
+            window.scrollTo({ top: targetY, behavior: 'smooth' });
+          }
         }
-      }, 100);
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [scrollTarget, isLoading]);

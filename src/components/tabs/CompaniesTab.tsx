@@ -99,14 +99,28 @@ export function CompaniesTab({ scrollTarget }: CompaniesTabProps) {
             newSet.delete(typeName);
             return newSet;
           });
-          // Scroll into view with offset for sticky header
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // Adjust for sticky header (approximately 120px)
-          setTimeout(() => {
-            window.scrollBy({ top: -120, behavior: 'smooth' });
-          }, 100);
+          
+          // Check if element needs scrolling
+          const rect = element.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+          const headerOffset = 120; // Sticky header height
+          const halfwayPoint = viewportHeight / 2;
+          
+          // Only scroll if:
+          // 1. Element is above the visible area (top < headerOffset)
+          // 2. Element is below the viewport (top > viewportHeight)
+          // 3. Element's top is below the halfway point of the screen
+          const needsScroll = rect.top < headerOffset || 
+                             rect.top > viewportHeight || 
+                             rect.top > halfwayPoint;
+          
+          if (needsScroll) {
+            // Calculate target scroll position (element at top with header offset)
+            const targetY = window.scrollY + rect.top - headerOffset;
+            window.scrollTo({ top: targetY, behavior: 'smooth' });
+          }
         }
-      }, 100);
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [scrollTarget, isLoading]);
