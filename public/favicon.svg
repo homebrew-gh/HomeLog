@@ -1,39 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- Solid background for visibility -->
-  <rect width="32" height="32" rx="6" fill="#8B4513"/>
+  <!-- Black background -->
+  <rect width="32" height="32" rx="4" fill="#000000"/>
   
-  <!-- Log cabin design optimized for small favicon -->
-  <!-- Sky/background area -->
-  <rect x="2" y="2" width="28" height="12" rx="2" fill="#87CEEB"/>
+  <!-- Lock shackle (arc) -->
+  <path d="M10 14 L10 10 Q10 4 16 4 Q22 4 22 10 L22 14" 
+        fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
   
-  <!-- Cabin roof (A-frame) -->
-  <polygon points="16,5 4,14 28,14" fill="#5D3A1A"/>
-  <polygon points="16,7 6,14 26,14" fill="#704214"/>
+  <!-- House body with lock shape -->
+  <g fill="none" stroke="white" stroke-width="1.5">
+    <!-- House roof peak -->
+    <path d="M8 16 L16 11 L24 16" stroke-width="2"/>
+    
+    <!-- House body outline -->
+    <rect x="8" y="16" width="16" height="12" rx="1" fill="#111"/>
+    
+    <!-- Circuit board pattern inside house -->
+    <path d="M10 20 L12 20 L12 18" stroke-width="0.8"/>
+    <path d="M10 24 L13 24 L13 22" stroke-width="0.8"/>
+    <path d="M22 20 L20 20 L20 18" stroke-width="0.8"/>
+    <path d="M22 24 L19 24 L19 22" stroke-width="0.8"/>
+    <path d="M14 19 L14 17" stroke-width="0.8"/>
+    <path d="M18 19 L18 17" stroke-width="0.8"/>
+    <path d="M11 26 L11 25" stroke-width="0.8"/>
+    <path d="M21 26 L21 25" stroke-width="0.8"/>
+    
+    <!-- Circuit dots -->
+    <circle cx="12" cy="20" r="0.6" fill="white"/>
+    <circle cx="13" cy="24" r="0.6" fill="white"/>
+    <circle cx="20" cy="20" r="0.6" fill="white"/>
+    <circle cx="19" cy="24" r="0.6" fill="white"/>
+    <circle cx="14" cy="19" r="0.6" fill="white"/>
+    <circle cx="18" cy="19" r="0.6" fill="white"/>
+  </g>
   
-  <!-- Cabin body with log texture -->
-  <rect x="6" y="14" width="20" height="14" fill="#CD853F"/>
+  <!-- Keyhole -->
+  <ellipse cx="16" cy="21" rx="2" ry="2.5" fill="#000"/>
+  <rect x="15" y="22" width="2" height="4" fill="#000"/>
   
-  <!-- Horizontal log lines -->
-  <line x1="6" y1="17" x2="26" y2="17" stroke="#8B4513" stroke-width="0.8"/>
-  <line x1="6" y1="20" x2="26" y2="20" stroke="#8B4513" stroke-width="0.8"/>
-  <line x1="6" y1="23" x2="26" y2="23" stroke="#8B4513" stroke-width="0.8"/>
-  <line x1="6" y1="26" x2="26" y2="26" stroke="#8B4513" stroke-width="0.8"/>
-  
-  <!-- Door -->
-  <rect x="13" y="20" width="6" height="8" rx="1" fill="#5D3A1A"/>
-  <circle cx="17.5" cy="24" r="0.8" fill="#FFD700"/>
-  
-  <!-- Window -->
-  <rect x="8" y="16" width="4" height="4" rx="0.5" fill="#87CEEB" stroke="#5D3A1A" stroke-width="0.5"/>
-  <line x1="10" y1="16" x2="10" y2="20" stroke="#5D3A1A" stroke-width="0.5"/>
-  <line x1="8" y1="18" x2="12" y2="18" stroke="#5D3A1A" stroke-width="0.5"/>
-  
-  <!-- Window right -->
-  <rect x="20" y="16" width="4" height="4" rx="0.5" fill="#87CEEB" stroke="#5D3A1A" stroke-width="0.5"/>
-  <line x1="22" y1="16" x2="22" y2="20" stroke="#5D3A1A" stroke-width="0.5"/>
-  <line x1="20" y1="18" x2="24" y2="18" stroke="#5D3A1A" stroke-width="0.5"/>
-  
-  <!-- Chimney -->
-  <rect x="21" y="4" width="3" height="6" fill="#8B4513"/>
-  <rect x="20.5" y="3.5" width="4" height="1.5" fill="#5D3A1A"/>
+  <!-- Glow effect -->
+  <ellipse cx="16" cy="21" rx="1.5" ry="2" fill="none" stroke="white" stroke-width="0.5" opacity="0.6"/>
 </svg>

@@ -1,42 +1,83 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Solid warm background for maskable icon -->
-  <rect width="512" height="512" fill="#CD853F"/>
+  <!-- Solid black background for maskable icon (no rounded corners) -->
+  <rect width="512" height="512" fill="#000000"/>
   
-  <!-- Sky background (in safe zone) -->
-  <rect x="80" y="80" width="352" height="140" rx="20" fill="#87CEEB"/>
-  
-  <!-- Sun -->
-  <circle cx="380" cy="130" r="35" fill="#FFD700" opacity="0.9"/>
-  
-  <!-- Cabin roof (A-frame) - in safe zone -->
-  <polygon points="256,130 100,220 412,220" fill="#5D3A1A"/>
-  <polygon points="256,145 120,220 392,220" fill="#704214"/>
-  
-  <!-- Cabin body with log texture -->
-  <rect x="120" y="220" width="272" height="200" fill="#CD853F"/>
-  
-  <!-- Horizontal log lines -->
-  <line x1="120" y1="255" x2="392" y2="255" stroke="#8B4513" stroke-width="4"/>
-  <line x1="120" y1="290" x2="392" y2="290" stroke="#8B4513" stroke-width="4"/>
-  <line x1="120" y1="325" x2="392" y2="325" stroke="#8B4513" stroke-width="4"/>
-  <line x1="120" y1="360" x2="392" y2="360" stroke="#8B4513" stroke-width="4"/>
-  <line x1="120" y1="395" x2="392" y2="395" stroke="#8B4513" stroke-width="4"/>
-  
-  <!-- Door -->
-  <rect x="216" y="300" width="80" height="120" rx="6" fill="#5D3A1A"/>
-  <circle cx="280" cy="360" r="8" fill="#FFD700"/>
-  
-  <!-- Window left -->
-  <rect x="140" y="245" width="55" height="55" rx="4" fill="#87CEEB" stroke="#5D3A1A" stroke-width="5"/>
-  <line x1="167.5" y1="245" x2="167.5" y2="300" stroke="#5D3A1A" stroke-width="3"/>
-  <line x1="140" y1="272.5" x2="195" y2="272.5" stroke="#5D3A1A" stroke-width="3"/>
-  
-  <!-- Window right -->
-  <rect x="317" y="245" width="55" height="55" rx="4" fill="#87CEEB" stroke="#5D3A1A" stroke-width="5"/>
-  <line x1="344.5" y1="245" x2="344.5" y2="300" stroke="#5D3A1A" stroke-width="3"/>
-  <line x1="317" y1="272.5" x2="372" y2="272.5" stroke="#5D3A1A" stroke-width="3"/>
-  
-  <!-- Chimney -->
-  <rect x="320" y="110" width="40" height="70" fill="#8B4513"/>
-  <rect x="315" y="102" width="50" height="16" fill="#5D3A1A"/>
+  <!-- Content positioned in safe zone (center 80% area: 51.2px margin) -->
+  <g transform="translate(256, 256) scale(0.7) translate(-256, -256)">
+    <!-- Outer glow effect -->
+    <defs>
+      <filter id="glow-mask" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    
+    <g filter="url(#glow-mask)">
+      <!-- Lock shackle (arc) -->
+      <path d="M160 224 L160 160 Q160 64 256 64 Q352 64 352 160 L352 224" 
+            fill="none" stroke="white" stroke-width="32" stroke-linecap="round"/>
+      
+      <!-- House body outline -->
+      <g fill="none" stroke="white" stroke-width="8">
+        <!-- House roof peak -->
+        <path d="M128 256 L256 176 L384 256" stroke-width="16" stroke-linejoin="round"/>
+        
+        <!-- House body outline -->
+        <rect x="128" y="256" width="256" height="192" rx="8" fill="#0a0a0a" stroke-width="12"/>
+      </g>
+      
+      <!-- Circuit board pattern inside house -->
+      <g fill="none" stroke="white" stroke-width="4" opacity="0.9">
+        <!-- Left side circuits -->
+        <path d="M152 296 L184 296 L184 272"/>
+        <path d="M152 328 L176 328 L176 312"/>
+        <path d="M152 360 L168 360 L168 344"/>
+        <path d="M152 392 L192 392 L192 376"/>
+        <path d="M152 424 L176 424"/>
+        
+        <!-- Right side circuits -->
+        <path d="M360 296 L328 296 L328 272"/>
+        <path d="M360 328 L336 328 L336 312"/>
+        <path d="M360 360 L344 360 L344 344"/>
+        <path d="M360 392 L320 392 L320 376"/>
+        <path d="M360 424 L336 424"/>
+        
+        <!-- Top circuits -->
+        <path d="M216 272 L216 288"/>
+        <path d="M240 264 L240 284"/>
+        <path d="M272 264 L272 284"/>
+        <path d="M296 272 L296 288"/>
+        
+        <!-- Bottom circuits -->
+        <path d="M200 440 L200 420"/>
+        <path d="M312 440 L312 420"/>
+        
+        <!-- Circuit dots/nodes -->
+        <circle cx="184" cy="296" r="6" fill="white"/>
+        <circle cx="176" cy="328" r="6" fill="white"/>
+        <circle cx="168" cy="360" r="6" fill="white"/>
+        <circle cx="192" cy="392" r="6" fill="white"/>
+        <circle cx="328" cy="296" r="6" fill="white"/>
+        <circle cx="336" cy="328" r="6" fill="white"/>
+        <circle cx="344" cy="360" r="6" fill="white"/>
+        <circle cx="320" cy="392" r="6" fill="white"/>
+        <circle cx="216" cy="288" r="6" fill="white"/>
+        <circle cx="240" cy="284" r="6" fill="white"/>
+        <circle cx="272" cy="284" r="6" fill="white"/>
+        <circle cx="296" cy="288" r="6" fill="white"/>
+        <circle cx="200" cy="420" r="6" fill="white"/>
+        <circle cx="312" cy="420" r="6" fill="white"/>
+      </g>
+      
+      <!-- Keyhole -->
+      <ellipse cx="256" cy="336" rx="32" ry="40" fill="#000"/>
+      <rect x="240" y="352" width="32" height="64" fill="#000"/>
+      
+      <!-- Keyhole inner glow -->
+      <ellipse cx="256" cy="336" rx="24" ry="32" fill="none" stroke="white" stroke-width="3" opacity="0.4"/>
+    </g>
+  </g>
 </svg>
