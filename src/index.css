@@ -35,6 +35,9 @@
     --ring: 199 89% 48%;
 
     --radius: 0.75rem;
+    
+    /* Logo filter - dark logo on light backgrounds */
+    --logo-filter: invert(1);
 
     --sidebar-background: 200 40% 97%;
     --sidebar-foreground: 215 20% 25%;
@@ -83,6 +86,9 @@
     --border: 220 15% 20%;
     --input: 220 15% 20%;
     --ring: 199 89% 55%;
+    
+    /* Logo filter - white logo on dark backgrounds (no invert needed) */
+    --logo-filter: none;
 
     --sidebar-background: 220 18% 11%;
     --sidebar-foreground: 200 15% 90%;
