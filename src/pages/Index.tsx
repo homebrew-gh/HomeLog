@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { LoginArea } from '@/components/auth/LoginArea';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Logo } from '@/components/Logo';
 import { RoomManagementDialog } from '@/components/RoomManagementDialog';
 import { RelayManagementDialog } from '@/components/RelayManagementDialog';
 import { VehicleTypeManagementDialog } from '@/components/VehicleTypeManagementDialog';
@@ -217,7 +218,7 @@ const Index = () => {
                 onClick={() => setActiveTab('home')}
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
-                <img src="/logo.png" alt="Cypher Log" className="h-10 w-10" />
+                <Logo className="h-10 w-10" />
                 <span className="font-bold text-xl text-theme-heading">Cypher Log</span>
               </button>
             </div>
@@ -253,7 +254,7 @@ const Index = () => {
           <div className="max-w-2xl mx-auto text-center py-16">
             <div className="mb-8">
               <div className="inline-flex items-center justify-center w-40 h-40 rounded-3xl mb-6 overflow-hidden shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-                <img src="/logo.png" alt="Cypher Log" className="h-36 w-36 object-contain" />
+                <Logo className="h-36 w-36 object-contain" />
               </div>
               <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-4">
                 Welcome to Cypher Log
