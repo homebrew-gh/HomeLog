@@ -275,8 +275,11 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     return { maint, dueDate, isOverdue: overdue, isDueSoon: dueSoon };
   };
 
-  // Get next 5 home maintenance tasks sorted by due date
+  // Get home maintenance tasks due within 6 months, sorted by due date
   const upcomingHomeMaintenance = useMemo(() => {
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+    
     const tasks = applianceMaintenance.map(maint => {
       const appliance = appliances.find(a => a.id === maint.applianceId);
       return {
@@ -285,8 +288,13 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       };
     });
     
-    // Sort by due date (earliest first), with null dates at the end
+    // Filter to only include tasks due within 6 months (or overdue), then sort
     return tasks
+      .filter(task => {
+        if (!task.dueDate) return false;
+        // Include if overdue or within 6 months
+        return task.dueDate <= sixMonthsFromNow;
+      })
       .sort((a, b) => {
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
@@ -296,8 +304,11 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       .slice(0, 5);
   }, [applianceMaintenance, appliances, completions]);
 
-  // Get next 5 vehicle maintenance tasks sorted by due date
+  // Get vehicle maintenance tasks due within 6 months, sorted by due date
   const upcomingVehicleMaintenance = useMemo(() => {
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+    
     const tasks = vehicleMaintenance.map(maint => {
       const vehicle = vehicles.find(v => v.id === maint.vehicleId);
       return {
@@ -306,8 +317,13 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       };
     });
     
-    // Sort by due date (earliest first), with null dates at the end
+    // Filter to only include tasks due within 6 months (or overdue), then sort
     return tasks
+      .filter(task => {
+        if (!task.dueDate) return false;
+        // Include if overdue or within 6 months
+        return task.dueDate <= sixMonthsFromNow;
+      })
       .sort((a, b) => {
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
@@ -967,7 +983,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                       } : undefined}
                     >
                       {upcomingHomeMaintenance.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No home maintenance tasks</p>
+                        <p className="text-muted-foreground text-sm">No maintenance needed in the next 6 months</p>
                       ) : (
                         <div className="space-y-2">
                           {upcomingHomeMaintenance.slice(0, 3).map(({ maint, dueDate, isOverdue: itemOverdue, isDueSoon: itemDueSoon, appliance }) => (
@@ -1030,7 +1046,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                       } : undefined}
                     >
                       {upcomingVehicleMaintenance.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No vehicle maintenance tasks</p>
+                        <p className="text-muted-foreground text-sm">No maintenance needed in the next 6 months</p>
                       ) : (
                         <div className="space-y-2">
                           {upcomingVehicleMaintenance.slice(0, 3).map(({ maint, dueDate, isOverdue: vehOverdue, isDueSoon: vehDueSoon, vehicle }) => (

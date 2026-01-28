@@ -723,10 +723,10 @@ const HomeMaintenanceSection = forwardRef<HTMLDivElement, HomeMaintenanceSection
     // Toggle between Home Features and Appliances (My Stuff)
     const [rightPanelView, setRightPanelView] = useState<'features' | 'appliances'>('features');
 
-    // Calculate upcoming maintenance (within 3 months) sorted chronologically
+    // Calculate upcoming maintenance (within 6 months) sorted chronologically
     const upcomingMaintenance = useMemo(() => {
-      const threeMonthsFromNow = new Date();
-      threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+      const sixMonthsFromNow = new Date();
+      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
       
       const items: {
         maintenance: MaintenanceSchedule;
@@ -750,8 +750,8 @@ const HomeMaintenanceSection = forwardRef<HTMLDivElement, HomeMaintenanceSection
         const nextDue = calculateNextDueDate(effectiveDate, maint.frequency, maint.frequencyUnit, lastCompletion?.completedDate);
         if (!nextDue) continue;
         
-        // Include if overdue or within 3 months
-        if (nextDue <= threeMonthsFromNow) {
+        // Include if overdue or within 6 months
+        if (nextDue <= sixMonthsFromNow) {
           items.push({
             maintenance: maint,
             appliance,
@@ -1762,10 +1762,10 @@ const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceS
     const [logDialogOpen, setLogDialogOpen] = useState(false);
     const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
     const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
-    // Calculate upcoming maintenance (within 3 months) sorted chronologically
+    // Calculate upcoming maintenance (within 6 months) sorted chronologically
     const upcomingMaintenance = useMemo(() => {
-      const threeMonthsFromNow = new Date();
-      threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+      const sixMonthsFromNow = new Date();
+      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
       
       const items: {
         maintenance: MaintenanceSchedule;
@@ -1786,8 +1786,8 @@ const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceS
         const nextDue = calculateNextDueDate(purchaseDate, maint.frequency, maint.frequencyUnit, lastCompletion?.completedDate);
         if (!nextDue) continue;
         
-        // Include if overdue or within 3 months
-        if (nextDue <= threeMonthsFromNow) {
+        // Include if overdue or within 6 months
+        if (nextDue <= sixMonthsFromNow) {
           items.push({
             maintenance: maint,
             vehicle,
