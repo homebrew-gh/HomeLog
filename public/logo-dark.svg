@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Transparent background - dark logo only -->
+  <!-- Use this version on light backgrounds -->
+  
+  <!-- Shadow filter for depth -->
+  <defs>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <g filter="url(#shadow)">
+    <!-- Lock shackle (arc) -->
+    <path d="M160 208 L160 144 Q160 48 256 48 Q352 48 352 144 L352 208" 
+          fill="none" stroke="#1a1a1a" stroke-width="32" stroke-linecap="round"/>
+    
+    <!-- House roof peak -->
+    <path d="M112 240 L256 144 L400 240" fill="none" stroke="#1a1a1a" stroke-width="20" stroke-linejoin="round"/>
+    
+    <!-- House body outline -->
+    <path d="M112 240 L112 448 L400 448 L400 240" fill="none" stroke="#1a1a1a" stroke-width="16"/>
+    
+    <!-- Circuit board pattern inside house -->
+    <g fill="none" stroke="#333333" stroke-width="4" opacity="0.9">
+      <!-- Left side circuits -->
+      <path d="M144 288 L176 288 L176 264"/>
+      <path d="M144 336 L168 336 L168 312"/>
+      <path d="M144 384 L160 384 L160 360"/>
+      <path d="M144 432 L184 432 L184 408"/>
+      
+      <!-- Right side circuits -->
+      <path d="M368 288 L336 288 L336 264"/>
+      <path d="M368 336 L344 336 L344 312"/>
+      <path d="M368 384 L352 384 L352 360"/>
+      <path d="M368 432 L328 432 L328 408"/>
+      
+      <!-- Top circuits -->
+      <path d="M208 264 L208 288"/>
+      <path d="M232 256 L232 280"/>
+      <path d="M280 256 L280 280"/>
+      <path d="M304 264 L304 288"/>
+      
+      <!-- Bottom circuits -->
+      <path d="M192 448 L192 424"/>
+      <path d="M320 448 L320 424"/>
+      
+      <!-- Circuit dots/nodes -->
+      <circle cx="176" cy="288" r="8" fill="#333333"/>
+      <circle cx="168" cy="336" r="8" fill="#333333"/>
+      <circle cx="160" cy="384" r="8" fill="#333333"/>
+      <circle cx="184" cy="432" r="8" fill="#333333"/>
+      <circle cx="336" cy="288" r="8" fill="#333333"/>
+      <circle cx="344" cy="336" r="8" fill="#333333"/>
+      <circle cx="352" cy="384" r="8" fill="#333333"/>
+      <circle cx="328" cy="432" r="8" fill="#333333"/>
+      <circle cx="208" cy="288" r="8" fill="#333333"/>
+      <circle cx="232" cy="280" r="8" fill="#333333"/>
+      <circle cx="280" cy="280" r="8" fill="#333333"/>
+      <circle cx="304" cy="288" r="8" fill="#333333"/>
+      <circle cx="192" cy="424" r="8" fill="#333333"/>
+      <circle cx="320" cy="424" r="8" fill="#333333"/>
+    </g>
+    
+    <!-- Keyhole outline -->
+    <ellipse cx="256" cy="320" rx="32" ry="40" fill="none" stroke="#1a1a1a" stroke-width="8"/>
+    <path d="M232 344 L232 408 L280 408 L280 344" fill="none" stroke="#1a1a1a" stroke-width="8"/>
+  </g>
+</svg>
