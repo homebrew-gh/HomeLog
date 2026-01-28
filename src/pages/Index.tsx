@@ -253,8 +253,8 @@ const Index = () => {
           // Not logged in - Welcome screen
           <div className="max-w-2xl mx-auto text-center py-16">
             <div className="mb-8">
-              <div className="inline-flex items-center justify-center w-40 h-40 rounded-3xl mb-6 overflow-hidden shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-                <Logo className="h-36 w-36 object-contain" />
+              <div className="inline-flex items-center justify-center w-40 h-40 rounded-3xl mb-6 overflow-hidden shadow-xl bg-white/80 dark:bg-[#3a3a3a] backdrop-blur-sm">
+                <Logo className="h-40 w-40 object-cover" />
               </div>
               <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-4">
                 Welcome to Cypher Log
