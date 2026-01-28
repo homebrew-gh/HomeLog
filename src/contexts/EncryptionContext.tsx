@@ -91,7 +91,7 @@ export const CATEGORY_INFO: Record<EncryptableCategory, {
   recommendEncryption: boolean;
 }> = {
   appliances: {
-    label: 'Appliances',
+    label: 'My Stuff',
     description: 'Home appliances and equipment details',
     recommendEncryption: true,
   },

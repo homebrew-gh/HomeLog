@@ -1,5 +1,15 @@
 // Home Log Types
 
+/**
+ * Appliance - "My Stuff" Data Type
+ * 
+ * NOTE: This type represents items in the "My Stuff" tab (displayed in UI),
+ * but uses "Appliance" naming in code for backwards compatibility with
+ * existing Nostr events and data structures.
+ * 
+ * UI Label: "My Stuff"
+ * Code/Data: "Appliance" / "appliances"
+ */
 export interface Appliance {
   id: string;
   model: string;

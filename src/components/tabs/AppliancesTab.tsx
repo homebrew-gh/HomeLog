@@ -1,3 +1,13 @@
+/**
+ * AppliancesTab - "My Stuff" Tab
+ * 
+ * NOTE: This tab is displayed as "My Stuff" in the UI, but the underlying
+ * data model and variables still use "appliance" terminology for backwards
+ * compatibility with existing data and to maintain code stability.
+ * 
+ * UI Label: "My Stuff"
+ * Code/Data: "appliance" / "appliances"
+ */
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, ChevronDown, ChevronRight, Home, Package, List, LayoutGrid, Calendar, Building2, FileText, Archive, ArrowLeft } from 'lucide-react';
@@ -127,12 +137,12 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
           {showArchived ? (
             <>
               <Archive className="h-6 w-6 text-muted-foreground" />
-              Archived Appliances
+              Archived Items
             </>
           ) : (
             <>
               <Package className="h-6 w-6 text-primary" />
-              Appliances
+              My Stuff
             </>
           )}
         </h2>
@@ -145,7 +155,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
               onClick={() => setShowArchived(false)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Appliances
+              Back to My Stuff
             </Button>
           ) : (
             <>
@@ -239,21 +249,21 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
               <>
                 <Archive className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
                 <p className="text-muted-foreground mb-4">
-                  No archived appliances.
+                  No archived items.
                 </p>
                 <Button
                   onClick={() => setShowArchived(false)}
                   variant="outline"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Appliances
+                  Back to My Stuff
                 </Button>
               </>
             ) : (
               <>
                 <Package className="h-12 w-12 text-primary/30 mx-auto mb-4" />
                 <p className="text-muted-foreground mb-4">
-                  No appliances added yet. Start tracking your home equipment!
+                  No items added yet. Start tracking your stuff!
                 </p>
                 <Button
                   onClick={() => {
@@ -264,7 +274,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
                   className="border-primary/30 hover:bg-primary/10"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Your First Appliance
+                  Add Your First Item
                 </Button>
               </>
             )}

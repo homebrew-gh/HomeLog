@@ -1,3 +1,13 @@
+/**
+ * useAppliances - "My Stuff" Data Hook
+ * 
+ * NOTE: This hook manages data for the "My Stuff" tab (displayed in UI),
+ * but uses "appliance" terminology in code for backwards compatibility
+ * with existing Nostr events and data structures.
+ * 
+ * UI Label: "My Stuff"
+ * Code/Data: "appliance" / "appliances"
+ */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
 

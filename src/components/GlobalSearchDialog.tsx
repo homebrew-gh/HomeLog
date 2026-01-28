@@ -39,8 +39,9 @@ const typeIcons: Record<SearchResultType, React.ReactNode> = {
 };
 
 // Labels for each result type
+// NOTE: "appliance" type is displayed as "My Stuff" in the UI
 const typeLabels: Record<SearchResultType, string> = {
-  appliance: 'Appliances',
+  appliance: 'My Stuff',
   vehicle: 'Vehicles',
   company: 'Companies',
   subscription: 'Subscriptions',

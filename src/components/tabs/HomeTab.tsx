@@ -1,3 +1,12 @@
+/**
+ * HomeTab - Dashboard/Home Tab
+ * 
+ * NOTE: The "My Stuff" widget (previously "Appliances") uses "appliance" 
+ * terminology in the code/data model for backwards compatibility.
+ * 
+ * UI Label: "My Stuff"
+ * Code/Data: "appliance" / "appliances"
+ */
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Home, 
@@ -81,7 +90,7 @@ interface WidgetConfig {
 }
 
 const WIDGET_CONFIGS: WidgetConfig[] = [
-  { id: 'appliances', tabId: 'appliances', label: 'Appliances', icon: Package, colSpan: 1 },
+  { id: 'appliances', tabId: 'appliances', label: 'My Stuff', icon: Package, colSpan: 1 },
   { id: 'vehicles', tabId: 'vehicles', label: 'Vehicles', icon: Car, colSpan: 1 },
   { id: 'companies', tabId: 'companies', label: 'Companies & Services', icon: Users, colSpan: 1 },
   { id: 'home-maintenance', tabId: 'maintenance', label: 'Upcoming Home Maintenance', icon: Home, colSpan: 1 },
@@ -801,14 +810,14 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                 case 'appliances':
                   return (
                     <WidgetCard
-                      title="Appliances"
+                      title="My Stuff"
                       icon={Package}
                       onClick={() => !isEditMode && onNavigateToTab('appliances')}
                       isLoading={showAppliancesLoading}
                       clickable={!isEditMode}
                     >
                       {appliances.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No appliances tracked yet</p>
+                        <p className="text-muted-foreground text-sm">No items tracked yet</p>
                       ) : usedRooms.length === 0 ? (
                         <p className="text-muted-foreground text-sm">No rooms assigned yet</p>
                       ) : (
