@@ -201,6 +201,14 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const widgetRefs = useRef<Map<WidgetId, HTMLDivElement>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
   
+  // Long press state for touch drag (allows scrolling with quick swipes)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const pendingDragWidgetRef = useRef<WidgetId | null>(null);
+  const [isLongPressing, setIsLongPressing] = useState(false);
+  const LONG_PRESS_DURATION = 300; // ms to hold before drag starts
+  const LONG_PRESS_MOVE_THRESHOLD = 10; // px movement allowed during long press
+  
   // Widget order state - stored separately from tab order
   const [widgetOrder, setWidgetOrder] = useLocalStorage<WidgetId[]>('homelog-widget-order', []);
   
@@ -649,34 +657,74 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     endDrag();
   }, [endDrag]);
 
+  // Cancel any pending long press
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartPosRef.current = null;
+    pendingDragWidgetRef.current = null;
+    setIsLongPressing(false);
+  }, []);
+
   // Touch-based drag and drop handlers for mobile
+  // Uses long-press to initiate drag, allowing normal scrolling with quick swipes
   const handleTouchStart = useCallback((e: React.TouchEvent, widgetId: WidgetId) => {
     if (!isEditMode) return;
     
     const touch = e.touches[0];
     if (!touch) return;
     
-    startDrag(touch.clientX, touch.clientY, widgetId);
+    // Store touch start position and widget for potential long press
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    pendingDragWidgetRef.current = widgetId;
     
-    // Prevent scrolling while dragging
-    e.preventDefault();
+    // Start long press timer
+    longPressTimerRef.current = setTimeout(() => {
+      // Long press detected - start dragging
+      if (touchStartPosRef.current && pendingDragWidgetRef.current) {
+        setIsLongPressing(false);
+        startDrag(touchStartPosRef.current.x, touchStartPosRef.current.y, pendingDragWidgetRef.current);
+      }
+      longPressTimerRef.current = null;
+    }, LONG_PRESS_DURATION);
+    
+    setIsLongPressing(true);
+    
+    // Don't prevent default here - allow scrolling until long press is confirmed
   }, [isEditMode, startDrag]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (!draggedWidget) return;
-    
     const touch = e.touches[0];
     if (!touch) return;
     
-    moveDrag(touch.clientX, touch.clientY);
+    // If we're actively dragging, handle the drag
+    if (draggedWidget) {
+      moveDrag(touch.clientX, touch.clientY);
+      // Prevent scrolling while dragging
+      e.preventDefault();
+      return;
+    }
     
-    // Prevent scrolling while dragging
-    e.preventDefault();
-  }, [draggedWidget, moveDrag]);
+    // If we're waiting for long press, check if user moved too much (they want to scroll)
+    if (touchStartPosRef.current && longPressTimerRef.current) {
+      const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+      const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+      
+      if (dx > LONG_PRESS_MOVE_THRESHOLD || dy > LONG_PRESS_MOVE_THRESHOLD) {
+        // User moved too much - they want to scroll, cancel long press
+        cancelLongPress();
+      }
+    }
+  }, [draggedWidget, moveDrag, cancelLongPress]);
 
   const handleTouchEnd = useCallback(() => {
+    // Cancel any pending long press
+    cancelLongPress();
+    // End any active drag
     endDrag();
-  }, [endDrag]);
+  }, [cancelLongPress, endDrag]);
 
   // Add and remove global mouse event listeners
   useEffect(() => {
@@ -697,14 +745,15 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   }, [draggedWidget, handleMouseMove, handleMouseUp]);
 
   // Add and remove global touch event listeners
+  // Listen when dragging OR when waiting for long press (to detect scroll attempts)
   useEffect(() => {
-    if (draggedWidget) {
-      // Use passive: false to allow preventDefault on touchmove
-      // This prevents native scrolling so our auto-scroll can take over
+    const shouldListen = draggedWidget || isLongPressing;
+    
+    if (shouldListen) {
+      // Use passive: false to allow preventDefault on touchmove when actively dragging
       document.addEventListener('touchmove', handleTouchMove, { passive: false });
       document.addEventListener('touchend', handleTouchEnd);
       document.addEventListener('touchcancel', handleTouchEnd);
-      // Note: We don't set overflow:hidden anymore - auto-scroll handles scrolling
     }
     
     return () => {
@@ -712,7 +761,16 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       document.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [draggedWidget, handleTouchMove, handleTouchEnd]);
+  }, [draggedWidget, isLongPressing, handleTouchMove, handleTouchEnd]);
+  
+  // Cleanup long press timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
 
   // Hide a widget
   const hideWidget = useCallback((widgetId: WidgetId) => {
@@ -1309,11 +1367,14 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                     }
                   }}
                   className={cn(
-                    "relative",
+                    "relative transition-transform",
                     isDragging && "dashboard-card-placeholder",
                     isEditMode && !isDragging && getWiggleClass(index),
                     isEditMode && !isDragging && "cursor-grab",
-                    isEditMode && "touch-none" // Prevent default touch actions in edit mode
+                    // Only use touch-none when actively dragging to allow scrolling otherwise
+                    draggedWidget && "touch-none",
+                    // Visual feedback when this widget is being long-pressed
+                    isLongPressing && pendingDragWidgetRef.current === widgetId && "scale-[1.02] shadow-lg"
                   )}
                   style={isEditMode && !isDragging ? getAnimationStyle(widgetId) : undefined}
                   onMouseDown={(e) => handleMouseDown(e, widgetId)}
