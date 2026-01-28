@@ -5,7 +5,7 @@ import { useNostrLogin } from '@nostrify/react/login';
  * Session key to track if the session is active
  * This is stored in sessionStorage (cleared on browser close) rather than localStorage
  */
-const SESSION_ACTIVE_KEY = 'homelog:session-active';
+const SESSION_ACTIVE_KEY = 'cypherlog:session-active';
 
 /**
  * SessionManager

@@ -51,7 +51,7 @@ export function ApplianceMaintenancePage() {
 
   // SEO
   useSeoMeta({
-    title: appliance ? `${appliance.model} - Maintenance History | Home Log` : 'Appliance Maintenance | Home Log',
+    title: appliance ? `${appliance.model} - Maintenance History | Cypher Log` : 'Appliance Maintenance | Cypher Log',
     description: appliance ? `View and manage maintenance history for ${appliance.model}` : 'View appliance maintenance history',
   });
 

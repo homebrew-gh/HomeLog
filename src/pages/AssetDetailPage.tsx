@@ -464,7 +464,7 @@ function ApplianceDetailContent({ id }: { id: string }) {
   );
 
   useSeoMeta({
-    title: appliance ? `${appliance.model} - Home Log` : 'Appliance Details - Home Log',
+    title: appliance ? `${appliance.model} - Cypher Log` : 'Appliance Details - Cypher Log',
     description: appliance ? `Details for ${appliance.model}${appliance.manufacturer ? ` by ${appliance.manufacturer}` : ''}` : 'View appliance details',
   });
 
@@ -700,7 +700,7 @@ function VehicleDetailContent({ id }: { id: string }) {
   );
 
   useSeoMeta({
-    title: vehicle ? `${vehicle.name} - Home Log` : 'Vehicle Details - Home Log',
+    title: vehicle ? `${vehicle.name} - Cypher Log` : 'Vehicle Details - Cypher Log',
     description: vehicle ? `Details for ${vehicle.name}` : 'View vehicle details',
   });
 
@@ -1059,7 +1059,7 @@ function HomeFeatureDetailContent({ featureName }: { featureName: string }) {
   const uniqueCompanyIds = [...new Set(companyIds)];
 
   useSeoMeta({
-    title: `${featureName} - Home Log`,
+    title: `${featureName} - Cypher Log`,
     description: `Details for ${featureName} home feature`,
   });
 
@@ -1209,7 +1209,7 @@ function CompanyDetailContent({ id }: { id: string }) {
   const linkedHomeFeatures = [...new Set(maintenance.filter(m => m.homeFeature).map(m => m.homeFeature!))];
 
   useSeoMeta({
-    title: company ? `${company.name} - Home Log` : 'Company Details - Home Log',
+    title: company ? `${company.name} - Cypher Log` : 'Company Details - Cypher Log',
     description: company ? `Details for ${company.name}${company.serviceType ? ` - ${company.serviceType}` : ''}` : 'View company details',
   });
 

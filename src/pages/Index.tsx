@@ -46,7 +46,7 @@ import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
 
 const Index = () => {
   useSeoMeta({
-    title: 'Home Log - Home Ownership Management',
+    title: 'Cypher Log - Home Ownership Management',
     description: 'Manage your home appliances and maintenance schedules with Nostr.',
   });
 
@@ -217,8 +217,8 @@ const Index = () => {
                 onClick={() => setActiveTab('home')}
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
-                <img src="/logo.png" alt="Home Log" className="h-10 w-10" />
-                <span className="font-bold text-xl text-theme-heading">Home Log</span>
+                <img src="/logo.png" alt="Cypher Log" className="h-10 w-10" />
+                <span className="font-bold text-xl text-theme-heading">Cypher Log</span>
               </button>
             </div>
 
@@ -253,10 +253,10 @@ const Index = () => {
           <div className="max-w-2xl mx-auto text-center py-16">
             <div className="mb-8">
               <div className="inline-flex items-center justify-center w-40 h-40 rounded-3xl mb-6 overflow-hidden shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-                <img src="/logo.png" alt="Home Log" className="h-36 w-36 object-contain" />
+                <img src="/logo.png" alt="Cypher Log" className="h-36 w-36 object-contain" />
               </div>
               <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-                Welcome to Home Log
+                Welcome to Cypher Log
               </h1>
               <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
                 Keep track of home appliances, vehicle maintenance, general home maintenance, companies/service providers, subscriptions, warranties, and future home projects. Caring for your home has never been easier or more organized!

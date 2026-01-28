@@ -12,8 +12,8 @@
  * 4. Set the session marker for this browser session
  */
 
-const LOGOUT_ON_CLOSE_KEY = 'homelog:logout-on-close';
-const SESSION_ACTIVE_KEY = 'homelog:session-active';
+const LOGOUT_ON_CLOSE_KEY = 'cypherlog:logout-on-close';
+const SESSION_ACTIVE_KEY = 'cypherlog:session-active';
 const NOSTR_LOGIN_KEY = 'nostr:login';
 const NWC_CONNECTIONS_KEY = 'nwc-connections';
 const NWC_ACTIVE_CONNECTION_KEY = 'nwc-active-connection';

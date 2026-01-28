@@ -8,8 +8,8 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 
 export function License() {
   useSeoMeta({
-    title: 'License - Home Log',
-    description: 'MIT License information for Home Log - an open-source home management application.',
+    title: 'License - Cypher Log',
+    description: 'MIT License information for Cypher Log - an open-source home management application.',
   });
 
   return (
@@ -25,7 +25,7 @@ export function License() {
             </Link>
             <div className="flex items-center gap-2">
               <Home className="h-6 w-6 text-sky-600 dark:text-sky-400" />
-              <span className="font-bold text-xl text-sky-700 dark:text-sky-300">Home Log</span>
+              <span className="font-bold text-xl text-sky-700 dark:text-sky-300">Cypher Log</span>
             </div>
           </div>
           <ThemeToggle />
@@ -51,7 +51,7 @@ export function License() {
         <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700 mb-6">
           <CardContent className="pt-6">
             <p className="text-slate-600 dark:text-slate-400 mb-4">
-              Home Log is open-source software released under the MIT License. This means you're free to use, modify, and distribute the software with minimal restrictions.
+              Cypher Log is open-source software released under the MIT License. This means you're free to use, modify, and distribute the software with minimal restrictions.
             </p>
             <div className="grid sm:grid-cols-2 gap-4 mt-6">
               <div className="flex items-start gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
@@ -139,11 +139,11 @@ export function License() {
             <div className="space-y-3">
               <p className="font-medium text-slate-800 dark:text-slate-200">You CAN:</p>
               <ul className="list-disc list-inside space-y-2 ml-2">
-                <li>Use Home Log for personal or commercial purposes</li>
+                <li>Use Cypher Log for personal or commercial purposes</li>
                 <li>Modify the source code to fit your needs</li>
-                <li>Distribute copies of Home Log</li>
-                <li>Include Home Log in your own projects</li>
-                <li>Sell products that include Home Log</li>
+                <li>Distribute copies of Cypher Log</li>
+                <li>Include Cypher Log in your own projects</li>
+                <li>Sell products that include Cypher Log</li>
               </ul>
             </div>
             
@@ -175,10 +175,10 @@ export function License() {
           </CardHeader>
           <CardContent className="text-sm text-slate-600 dark:text-slate-400">
             <p className="mb-4">
-              Home Log is open source and the complete source code is available on GitHub:
+              Cypher Log is open source and the complete source code is available on GitHub:
             </p>
             <a 
-              href="https://github.com/homebrew-gh/HomeLog.git" 
+              href="https://github.com/homebrew-gh/CypherLog.git" 
               target="_blank" 
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors"
@@ -203,7 +203,7 @@ export function License() {
             </Link>
             <span className="text-slate-300 dark:text-slate-600">•</span>
             <Link to="/" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
-              Back to Home Log
+              Back to Cypher Log
             </Link>
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400">

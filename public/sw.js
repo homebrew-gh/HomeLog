@@ -1,8 +1,8 @@
-// Home Log Service Worker
+// Cypher Log Service Worker
 // Version should be updated when deploying new versions
-const CACHE_VERSION = 'v3';
-const STATIC_CACHE = `homelog-static-${CACHE_VERSION}`;
-const DYNAMIC_CACHE = `homelog-dynamic-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v4';
+const STATIC_CACHE = `cypherlog-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `cypherlog-dynamic-${CACHE_VERSION}`;
 
 // Core app shell files that should always be cached
 const APP_SHELL = [
@@ -53,7 +53,7 @@ self.addEventListener('activate', (event) => {
           cacheNames
             .filter((name) => {
               // Delete caches that don't match current version
-              return name.startsWith('homelog-') && 
+              return name.startsWith('cypherlog-') && 
                      name !== STATIC_CACHE && 
                      name !== DYNAMIC_CACHE;
             })
@@ -232,7 +232,7 @@ self.addEventListener('message', (event) => {
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames
-            .filter((name) => name.startsWith('homelog-'))
+            .filter((name) => name.startsWith('cypherlog-'))
             .map((name) => caches.delete(name))
         );
       })
@@ -260,7 +260,7 @@ self.addEventListener('push', (event) => {
       },
     };
     event.waitUntil(
-      self.registration.showNotification(data.title || 'Home Log', options)
+      self.registration.showNotification(data.title || 'Cypher Log', options)
     );
   }
 });

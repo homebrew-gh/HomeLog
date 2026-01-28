@@ -3,7 +3,7 @@ import { useEffect, useCallback, useState } from 'react';
 /**
  * Key for logout on close preference
  */
-export const LOGOUT_ON_CLOSE_KEY = 'homelog:logout-on-close';
+export const LOGOUT_ON_CLOSE_KEY = 'cypherlog:logout-on-close';
 
 /**
  * Storage keys that are safe to persist (non-sensitive data)
@@ -14,17 +14,17 @@ export const SAFE_STORAGE_KEYS = {
   APP_CONFIG: 'nostr:app-config',
   
   // UI preferences
-  WIDGET_ORDER: 'homelog-widget-order',
-  PWA_PROMPT_SEEN: 'homelog-install-prompt-seen',
+  WIDGET_ORDER: 'cypherlog-widget-order',
+  PWA_PROMPT_SEEN: 'cypherlog-install-prompt-seen',
   
   // Encryption settings (just toggles, not actual encrypted data)
-  ENCRYPTION_SETTINGS: 'homelog-encryption-settings',
-  CATEGORY_RELAY_CONFIG: 'homelog-category-relay-config',
-  PRIVATE_RELAYS: 'homelog-private-relays',
-  CACHING_RELAY: 'homelog-caching-relay',
+  ENCRYPTION_SETTINGS: 'cypherlog-encryption-settings',
+  CATEGORY_RELAY_CONFIG: 'cypherlog-category-relay-config',
+  PRIVATE_RELAYS: 'cypherlog-private-relays',
+  CACHING_RELAY: 'cypherlog-caching-relay',
   
   // Persistent storage preference
-  PERSISTENT_STORAGE_PREF: 'homelog:persistent-storage-preference',
+  PERSISTENT_STORAGE_PREF: 'cypherlog:persistent-storage-preference',
   
   // Logout on close preference
   LOGOUT_ON_CLOSE: LOGOUT_ON_CLOSE_KEY,
@@ -48,10 +48,10 @@ export const SENSITIVE_STORAGE_KEYS = {
  */
 export const INDEXED_DB_DATABASES = {
   // Event cache - contains encrypted Nostr events
-  EVENT_CACHE: 'homelog-event-cache',
+  EVENT_CACHE: 'cypherlog-event-cache',
   
   // DM message store - contains encrypted DMs
-  DM_MESSAGES: 'homelog-dm-messages',
+  DM_MESSAGES: 'cypherlog-dm-messages',
 } as const;
 
 interface PersistentStorageState {
@@ -170,7 +170,7 @@ export function getAppLocalStorageKeys(): string[] {
     if (key) {
       // Filter to only include keys that look like they belong to our app
       if (
-        key.startsWith('homelog') ||
+        key.startsWith('cypherlog') ||
         key.startsWith('nostr:') ||
         key.startsWith('nwc-')
       ) {

@@ -5,11 +5,11 @@ import { useCurrentUser } from "./useCurrentUser";
 
 import type { NostrEvent } from "@nostrify/nostrify";
 
-// HomeLog client identifier for NIP-89 client tag
-// This allows other clients to identify events created by HomeLog
-// and enables discovery of HomeLog users among follows
-const HOMELOG_CLIENT_NAME = "Home Log";
-const HOMELOG_CLIENT_URL = "https://homelog.shakespeare.wtf";
+// CypherLog client identifier for NIP-89 client tag
+// This allows other clients to identify events created by CypherLog
+// and enables discovery of CypherLog users among follows
+const CYPHERLOG_CLIENT_NAME = "Cypher Log";
+const CYPHERLOG_CLIENT_URL = "https://cypherlog.shakespeare.wtf";
 
 export function useNostrPublish(): UseMutationResult<NostrEvent> {
   const { nostr } = useNostr();
@@ -20,11 +20,11 @@ export function useNostrPublish(): UseMutationResult<NostrEvent> {
       if (user) {
         const tags = t.tags ?? [];
 
-        // Add the HomeLog client tag if it doesn't exist (NIP-89)
+        // Add the CypherLog client tag if it doesn't exist (NIP-89)
         // Format: ["client", "<app-name>", "<app-url>"]
-        // This enables discovery of HomeLog users among follows
+        // This enables discovery of CypherLog users among follows
         if (!tags.some(([name]) => name === "client")) {
-          tags.push(["client", HOMELOG_CLIENT_NAME, HOMELOG_CLIENT_URL]);
+          tags.push(["client", CYPHERLOG_CLIENT_NAME, CYPHERLOG_CLIENT_URL]);
         }
 
         const event = await user.signer.signEvent({
@@ -50,4 +50,4 @@ export function useNostrPublish(): UseMutationResult<NostrEvent> {
 }
 
 // Export constants for use in other parts of the app (e.g., discovery)
-export { HOMELOG_CLIENT_NAME, HOMELOG_CLIENT_URL };
+export { CYPHERLOG_CLIENT_NAME, CYPHERLOG_CLIENT_URL };

@@ -7,7 +7,7 @@
 
 import type { NostrEvent } from '@nostrify/nostrify';
 
-const DB_NAME = 'homelog-event-cache';
+const DB_NAME = 'cypherlog-event-cache';
 const DB_VERSION = 1;
 const EVENTS_STORE = 'events';
 const META_STORE = 'meta';

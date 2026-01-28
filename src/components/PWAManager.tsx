@@ -54,7 +54,7 @@ export function PWAManager() {
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       
       // Show install prompt after a delay (don't interrupt initial experience)
-      const hasSeenPrompt = localStorage.getItem('homelog-install-prompt-seen');
+      const hasSeenPrompt = localStorage.getItem('cypherlog-install-prompt-seen');
       if (!hasSeenPrompt) {
         setTimeout(() => {
           setShowInstallPrompt(true);
@@ -68,7 +68,7 @@ export function PWAManager() {
     window.addEventListener('appinstalled', () => {
       setDeferredPrompt(null);
       setShowInstallPrompt(false);
-      localStorage.setItem('homelog-install-prompt-seen', 'installed');
+      localStorage.setItem('cypherlog-install-prompt-seen', 'installed');
     });
 
     return () => {
@@ -99,13 +99,13 @@ export function PWAManager() {
     
     setDeferredPrompt(null);
     setShowInstallPrompt(false);
-    localStorage.setItem('homelog-install-prompt-seen', 'true');
+    localStorage.setItem('cypherlog-install-prompt-seen', 'true');
   }, [deferredPrompt]);
 
   // Dismiss install prompt
   const dismissInstallPrompt = useCallback(() => {
     setShowInstallPrompt(false);
-    localStorage.setItem('homelog-install-prompt-seen', 'true');
+    localStorage.setItem('cypherlog-install-prompt-seen', 'true');
   }, []);
 
   return (

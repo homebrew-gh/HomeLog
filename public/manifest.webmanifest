@@ -1,7 +1,7 @@
 {
-  "name": "Home Log",
-  "short_name": "Home Log",
-  "description": "Manage your home appliances, vehicles, and maintenance schedules with Nostr",
+  "name": "Cypher Log",
+  "short_name": "Cypher Log",
+  "description": "Securely manage your home appliances, vehicles, and maintenance schedules with Nostr",
   "id": "/",
   "start_url": "/",
   "scope": "/",

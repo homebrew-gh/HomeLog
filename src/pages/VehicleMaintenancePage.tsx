@@ -70,7 +70,7 @@ export function VehicleMaintenancePage() {
 
   // SEO
   useSeoMeta({
-    title: vehicle ? `${vehicle.name} - Maintenance History | Home Log` : 'Vehicle Maintenance | Home Log',
+    title: vehicle ? `${vehicle.name} - Maintenance History | Cypher Log` : 'Vehicle Maintenance | Cypher Log',
     description: vehicle ? `View and manage maintenance history for ${vehicle.name}` : 'View vehicle maintenance history',
   });
 

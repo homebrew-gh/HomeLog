@@ -53,7 +53,7 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                 <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
                   <Shield className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
-                    <strong>Recommended for sensitive data:</strong> While Home Log encrypts your private data with NIP-44, using a private relay adds an extra layer of security. Private relays restrict who can read and write data, ensuring your encrypted information isn't stored on public servers.
+                    <strong>Recommended for sensitive data:</strong> While Cypher Log encrypts your private data with NIP-44, using a private relay adds an extra layer of security. Private relays restrict who can read and write data, ensuring your encrypted information isn't stored on public servers.
                   </AlertDescription>
                 </Alert>
 
@@ -141,7 +141,7 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                 <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
                   <Lock className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
-                    <strong>Privacy Notice:</strong> Home Log stores sensitive data like receipts, warranty documents, and appliance manuals. To protect your privacy, file uploads are only allowed to servers you've marked as "Private". Public Blossom servers (like Primal's free tier) store files openly and should not be used for sensitive documents.
+                    <strong>Privacy Notice:</strong> Cypher Log stores sensitive data like receipts, warranty documents, and appliance manuals. To protect your privacy, file uploads are only allowed to servers you've marked as "Private". Public Blossom servers (like Primal's free tier) store files openly and should not be used for sensitive documents.
                   </AlertDescription>
                 </Alert>
 

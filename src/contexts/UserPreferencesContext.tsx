@@ -8,7 +8,7 @@ import { useAppContext } from '@/hooks/useAppContext';
 
 // NIP-78: Application-specific data
 const APP_DATA_KIND = 30078;
-const APP_IDENTIFIER = 'homelog/preferences';
+const APP_IDENTIFIER = 'cypherlog/preferences';
 
 export type TabId = 
   | 'home'
@@ -221,7 +221,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   
   // Local storage for immediate persistence
   const [localPreferences, setLocalPreferences] = useLocalStorage<UserPreferences>(
-    'homelog-user-preferences',
+    'cypherlog-user-preferences',
     DEFAULT_PREFERENCES
   );
 
@@ -358,7 +358,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
             content: JSON.stringify(prefsToSync),
             tags: [
               ['d', APP_IDENTIFIER],
-              ['alt', 'Home Log user preferences'],
+              ['alt', 'Cypher Log user preferences'],
             ],
           });
           console.log('Preferences saved to Nostr relay');

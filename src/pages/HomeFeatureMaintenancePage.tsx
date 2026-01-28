@@ -55,7 +55,7 @@ export function HomeFeatureMaintenancePage() {
 
   // SEO
   useSeoMeta({
-    title: featureName ? `${featureName} - Maintenance History | Home Log` : 'Home Feature Maintenance | Home Log',
+    title: featureName ? `${featureName} - Maintenance History | Cypher Log` : 'Home Feature Maintenance | Cypher Log',
     description: featureName ? `View and manage maintenance history for ${featureName}` : 'View home feature maintenance history',
   });
 

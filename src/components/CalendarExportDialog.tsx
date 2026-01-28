@@ -83,7 +83,7 @@ function formatCSVDate(date: Date): string {
 
 // Generate a unique ID for ICS events
 function generateUID(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}@homelog`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}@cypherlog`;
 }
 
 // Generate ICS content for a single event

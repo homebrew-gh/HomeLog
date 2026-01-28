@@ -1,4 +1,4 @@
-// Home Log Types
+// Cypher Log Types
 
 /**
  * Appliance - "My Stuff" Data Type

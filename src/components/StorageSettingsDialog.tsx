@@ -36,7 +36,7 @@ export function StorageSettingsDialog({ isOpen, onClose }: StorageSettingsDialog
   
   // Store the user's preference for persistent storage
   const [persistentStorageEnabled, setPersistentStorageEnabled] = useLocalStorage<boolean>(
-    'homelog:persistent-storage-preference',
+    'cypherlog:persistent-storage-preference',
     false
   );
   

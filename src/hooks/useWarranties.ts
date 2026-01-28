@@ -283,7 +283,7 @@ export function useWarrantyActions() {
     // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', useEncryption ? 'Encrypted Home Log warranty data' : `Warranty: ${data.name}`],
+      ['alt', useEncryption ? 'Encrypted Cypher Log warranty data' : `Warranty: ${data.name}`],
     ];
 
     let content = '';
@@ -357,7 +357,7 @@ export function useWarrantyActions() {
     // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', useEncryption ? 'Encrypted Home Log warranty data' : `Warranty: ${data.name}`],
+      ['alt', useEncryption ? 'Encrypted Cypher Log warranty data' : `Warranty: ${data.name}`],
     ];
 
     let content = '';

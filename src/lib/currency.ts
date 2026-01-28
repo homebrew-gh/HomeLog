@@ -1,4 +1,4 @@
-// Currency definitions and utilities for Home Log
+// Currency definitions and utilities for Cypher Log
 // Supports top 20 world currencies plus Bitcoin (base and satoshi)
 
 export interface Currency {

@@ -28,7 +28,7 @@ export function DisplaySettingsDialog({ isOpen, onClose }: DisplaySettingsDialog
         <DialogHeader>
           <DialogTitle>Display Settings</DialogTitle>
           <DialogDescription>
-            Customize the look and feel of your Home Log experience.
+            Customize the look and feel of your Cypher Log experience.
           </DialogDescription>
         </DialogHeader>
 

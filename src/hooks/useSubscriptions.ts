@@ -190,7 +190,7 @@ export function useSubscriptionActions() {
     // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', useEncryption ? 'Encrypted Home Log subscription data' : `Subscription: ${data.name}`],
+      ['alt', useEncryption ? 'Encrypted Cypher Log subscription data' : `Subscription: ${data.name}`],
     ];
 
     let content = '';
@@ -238,7 +238,7 @@ export function useSubscriptionActions() {
     // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', useEncryption ? 'Encrypted Home Log subscription data' : `Subscription: ${data.name}`],
+      ['alt', useEncryption ? 'Encrypted Cypher Log subscription data' : `Subscription: ${data.name}`],
     ];
 
     let content = '';

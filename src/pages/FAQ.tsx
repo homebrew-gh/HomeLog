@@ -129,7 +129,7 @@ const EVENT_KINDS = [
     category: 'Standard (Addressable)',
     icon: Settings,
     color: 'slate',
-    description: 'Stores your Home Log preferences including active tabs, view modes, custom rooms, vehicle types, and contractor service types. Synced across devices.',
+    description: 'Stores your Cypher Log preferences including active tabs, view modes, custom rooms, vehicle types, and contractor service types. Synced across devices.',
     dataStored: [
       'Active tabs configuration',
       'View mode preferences',
@@ -162,23 +162,23 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Is my data encrypted?',
-    answer: 'Yes! Home Log uses NIP-44 encryption for sensitive data like appliances, vehicles, and maintenance records. This means your data is encrypted with your private key before being sent to relays. Only you can decrypt and read your data, even though it\'s stored on public relays. You can verify this in Settings > Data Encryption using the "Trust but Verify" feature.',
+    answer: 'Yes! Cypher Log uses NIP-44 encryption for sensitive data like appliances, vehicles, and maintenance records. This means your data is encrypted with your private key before being sent to relays. Only you can decrypt and read your data, even though it\'s stored on public relays. You can verify this in Settings > Data Encryption using the "Trust but Verify" feature.',
   },
   {
     question: 'What are relays?',
-    answer: 'Relays are servers that store and distribute Nostr events (data). You can connect to multiple relays for redundancy. Public relays are open to everyone, while private relays restrict access. For maximum privacy, consider using a private relay for your Home Log data.',
+    answer: 'Relays are servers that store and distribute Nostr events (data). You can connect to multiple relays for redundancy. Public relays are open to everyone, while private relays restrict access. For maximum privacy, consider using a private relay for your Cypher Log data.',
   },
   {
-    question: 'Can I use Home Log on multiple devices?',
-    answer: 'Yes! Because your data is stored on Nostr relays (not locally), you can access your Home Log from any device. Just log in with the same Nostr identity (via browser extension, Amber on Android, or other signing methods).',
+    question: 'Can I use Cypher Log on multiple devices?',
+    answer: 'Yes! Because your data is stored on Nostr relays (not locally), you can access your Cypher Log from any device. Just log in with the same Nostr identity (via browser extension, Amber on Android, or other signing methods).',
   },
   {
     question: 'What happens if a relay goes offline?',
-    answer: 'If you\'re connected to multiple relays, your data will still be available from the other relays. This is why it\'s recommended to use at least 2-3 relays. Home Log shows connection status indicators (green/red) in the relay management settings.',
+    answer: 'If you\'re connected to multiple relays, your data will still be available from the other relays. This is why it\'s recommended to use at least 2-3 relays. Cypher Log shows connection status indicators (green/red) in the relay management settings.',
   },
   {
-    question: 'Can other Nostr apps read my Home Log data?',
-    answer: 'The custom event kinds (32627, 32628, 37003, 30229, 9413) are specific to Home Log and documented in our NIP specification. Other apps could theoretically read this data if they implement support for these kinds, but encrypted data can only be decrypted by you. Standard kinds like relay lists (10002) are interoperable with other Nostr clients.',
+    question: 'Can other Nostr apps read my Cypher Log data?',
+    answer: 'The custom event kinds (32627, 32628, 37003, 30229, 9413) are specific to Cypher Log and documented in our NIP specification. Other apps could theoretically read this data if they implement support for these kinds, but encrypted data can only be decrypted by you. Standard kinds like relay lists (10002) are interoperable with other Nostr clients.',
   },
   {
     question: 'How do I back up my data?',
@@ -188,8 +188,8 @@ const FAQ_ITEMS = [
 
 export function FAQ() {
   useSeoMeta({
-    title: 'FAQ - Home Log',
-    description: 'Frequently asked questions about Home Log and the Nostr event kinds it uses.',
+    title: 'FAQ - Cypher Log',
+    description: 'Frequently asked questions about Cypher Log and the Nostr event kinds it uses.',
   });
 
   const getColorClasses = (color: string) => {
@@ -233,7 +233,7 @@ export function FAQ() {
             </Link>
             <div className="flex items-center gap-2">
               <Home className="h-6 w-6 text-sky-600 dark:text-sky-400" />
-              <span className="font-bold text-xl text-sky-700 dark:text-sky-300">Home Log</span>
+              <span className="font-bold text-xl text-sky-700 dark:text-sky-300">Cypher Log</span>
             </div>
           </div>
           <ThemeToggle />
@@ -251,7 +251,7 @@ export function FAQ() {
             Frequently Asked Questions
           </h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Learn about how Home Log works and what data it stores
+            Learn about how Cypher Log works and what data it stores
           </p>
         </div>
 
@@ -264,7 +264,7 @@ export function FAQ() {
             </h2>
           </div>
           <p className="text-slate-600 dark:text-slate-400 mb-6">
-            Home Log stores your data as Nostr events. Each type of data has a unique "kind" number. Here's what each kind stores:
+            Cypher Log stores your data as Nostr events. Each type of data has a unique "kind" number. Here's what each kind stores:
           </p>
 
           <div className="grid gap-4">
@@ -392,7 +392,7 @@ export function FAQ() {
               </Link>
               <span className="text-slate-300 dark:text-slate-600">•</span>
               <Link to="/" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
-                Back to Home Log
+                Back to Cypher Log
               </Link>
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400">

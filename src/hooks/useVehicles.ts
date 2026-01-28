@@ -202,7 +202,7 @@ export function useVehicleActions() {
     // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', useEncryption ? 'Encrypted Home Log vehicle data' : `Vehicle: ${data.name}`],
+      ['alt', useEncryption ? 'Encrypted Cypher Log vehicle data' : `Vehicle: ${data.name}`],
     ];
 
     let content = '';
@@ -266,7 +266,7 @@ export function useVehicleActions() {
     // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', useEncryption ? 'Encrypted Home Log vehicle data' : `Vehicle: ${data.name}`],
+      ['alt', useEncryption ? 'Encrypted Cypher Log vehicle data' : `Vehicle: ${data.name}`],
     ];
 
     let content = '';

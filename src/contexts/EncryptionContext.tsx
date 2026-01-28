@@ -174,22 +174,22 @@ const EncryptionContext = createContext<EncryptionContextType>(defaultContextVal
 
 export function EncryptionProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useLocalStorage<EncryptionSettings>(
-    'homelog-encryption-settings',
+    'cypherlog-encryption-settings',
     DEFAULT_ENCRYPTION_SETTINGS
   );
 
   const [categoryRelayConfig, setCategoryRelayConfig] = useLocalStorage<CategoryRelayConfig>(
-    'homelog-category-relay-config',
+    'cypherlog-category-relay-config',
     DEFAULT_CATEGORY_RELAY_CONFIG
   );
 
   const [privateRelays, setPrivateRelays] = useLocalStorage<PrivateRelayList>(
-    'homelog-private-relays',
+    'cypherlog-private-relays',
     []
   );
 
   const [cachingRelay, setCachingRelayStorage] = useLocalStorage<CachingRelayUrl>(
-    'homelog-caching-relay',
+    'cypherlog-caching-relay',
     null
   );
 

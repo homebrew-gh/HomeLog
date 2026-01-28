@@ -202,7 +202,7 @@ export function useApplianceActions() {
     // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', useEncryption ? 'Encrypted Home Log appliance data' : `Home appliance: ${data.model}`],
+      ['alt', useEncryption ? 'Encrypted Cypher Log appliance data' : `Home appliance: ${data.model}`],
     ];
 
     let content = '';
@@ -256,7 +256,7 @@ export function useApplianceActions() {
     // Base tags (always included)
     const tags: string[][] = [
       ['d', id],
-      ['alt', useEncryption ? 'Encrypted Home Log appliance data' : `Home appliance: ${data.model}`],
+      ['alt', useEncryption ? 'Encrypted Cypher Log appliance data' : `Home appliance: ${data.model}`],
     ];
 
     let content = '';

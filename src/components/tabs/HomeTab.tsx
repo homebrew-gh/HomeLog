@@ -49,7 +49,7 @@ import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calcula
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useHomeLogFriends } from '@/hooks/useHomeLogFriends';
+import { useCypherLogFriends } from '@/hooks/useCypherLogFriends';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -139,7 +139,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const showWarrantiesLoading = isLoadingWarranties || (isDataSyncing && warranties.length === 0 && !syncCategories.warranties?.synced);
   
   // Discover friends using HomeLog
-  const { friends: homeLogFriends, isLoading: isLoadingFriends } = useHomeLogFriends();
+  const { friends: cypherLogFriends, isLoading: isLoadingFriends } = useCypherLogFriends();
   
   // Get next 3 warranties about to expire sorted by expiration date
   const nextExpiringWarranties = useMemo(() => {
@@ -210,10 +210,10 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const LONG_PRESS_MOVE_THRESHOLD = 10; // px movement allowed during long press
   
   // Widget order state - stored separately from tab order
-  const [widgetOrder, setWidgetOrder] = useLocalStorage<WidgetId[]>('homelog-widget-order', []);
+  const [widgetOrder, setWidgetOrder] = useLocalStorage<WidgetId[]>('cypherlog-widget-order', []);
   
   // Hidden widgets state - widgets user has chosen to hide
-  const [hiddenWidgets, setHiddenWidgets] = useLocalStorage<WidgetId[]>('homelog-hidden-widgets', []);
+  const [hiddenWidgets, setHiddenWidgets] = useLocalStorage<WidgetId[]>('cypherlog-hidden-widgets', []);
   
   // Generate random animation parameters for each widget (persist across renders)
   // This creates the iOS-style "fake randomness" effect
@@ -1452,7 +1452,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       {/* Friends using HomeLog */}
       {hasActiveTabs && (
         <FriendsUsingHomeLog 
-          friends={homeLogFriends} 
+          friends={cypherLogFriends} 
           isLoading={isLoadingFriends} 
         />
       )}
