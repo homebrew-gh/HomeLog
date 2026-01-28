@@ -474,9 +474,11 @@ function WarrantyCard({ warranty, linkedItemName, onClick }: WarrantyCardProps) 
       className={`group relative flex flex-col p-4 rounded-xl border-2 bg-gradient-to-br from-card to-muted/30 hover:shadow-md transition-all duration-200 text-left ${
         expired 
           ? 'border-destructive/30 opacity-75' 
-          : expiringSoon 
-            ? 'border-amber-300 dark:border-amber-700' 
-            : 'border-border hover:border-primary/50'
+          : warranty.isLifetime
+            ? 'border-blue-300 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-600'
+            : expiringSoon 
+              ? 'border-amber-300 dark:border-amber-700' 
+              : 'border-border hover:border-primary/50'
       }`}
     >
       {/* Icon & Status */}
@@ -484,22 +486,31 @@ function WarrantyCard({ warranty, linkedItemName, onClick }: WarrantyCardProps) 
         <div className={`p-2 rounded-lg transition-colors ${
           expired 
             ? 'bg-destructive/10' 
-            : expiringSoon 
-              ? 'bg-amber-100 dark:bg-amber-900/30' 
-              : 'bg-primary/10 group-hover:bg-primary/20'
+            : warranty.isLifetime
+              ? 'bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50'
+              : expiringSoon 
+                ? 'bg-amber-100 dark:bg-amber-900/30' 
+                : 'bg-primary/10 group-hover:bg-primary/20'
         }`}>
           <WarrantyIcon className={`h-5 w-5 ${
             expired 
               ? 'text-destructive' 
-              : expiringSoon 
-                ? 'text-amber-600 dark:text-amber-400' 
-                : 'text-primary'
+              : warranty.isLifetime
+                ? 'text-blue-600 dark:text-blue-400'
+                : expiringSoon 
+                  ? 'text-amber-600 dark:text-amber-400' 
+                  : 'text-primary'
           }`} />
         </div>
         {expired ? (
           <Badge variant="destructive" className="text-xs">
             <AlertTriangle className="h-3 w-3 mr-1" />
             Expired
+          </Badge>
+        ) : warranty.isLifetime ? (
+          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Lifetime
           </Badge>
         ) : expiringSoon ? (
           <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
@@ -554,9 +565,11 @@ function WarrantyCard({ warranty, linkedItemName, onClick }: WarrantyCardProps) 
       <p className={`text-xs flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700 ${
         expired 
           ? 'text-destructive' 
-          : expiringSoon 
-            ? 'text-amber-600 dark:text-amber-400' 
-            : 'text-muted-foreground'
+          : warranty.isLifetime
+            ? 'text-blue-600 dark:text-blue-400'
+            : expiringSoon 
+              ? 'text-amber-600 dark:text-amber-400' 
+              : 'text-muted-foreground'
       }`}>
         <Calendar className="h-3 w-3" />
         <span>{timeRemaining}</span>

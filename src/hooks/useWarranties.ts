@@ -50,6 +50,9 @@ function parseWarrantyPlaintext(event: NostrEvent): Warranty | null {
     warrantyStartDate: getTagValue(event, 'warranty_start_date'),
     warrantyEndDate: getTagValue(event, 'warranty_end_date'),
     warrantyLength: getTagValue(event, 'warranty_length'),
+    warrantyLengthValue: getTagValue(event, 'warranty_length_value') ? parseInt(getTagValue(event, 'warranty_length_value')!, 10) : undefined,
+    warrantyLengthUnit: getTagValue(event, 'warranty_length_unit') as 'weeks' | 'months' | 'years' | undefined,
+    isLifetime: getTagValue(event, 'is_lifetime') === 'true',
     linkedType: getTagValue(event, 'linked_type') as WarrantyLinkedType | undefined,
     linkedItemId: getTagValue(event, 'linked_item_id'),
     linkedItemName: getTagValue(event, 'linked_item_name'),
@@ -299,6 +302,9 @@ export function useWarrantyActions() {
       if (data.warrantyStartDate) tags.push(['warranty_start_date', data.warrantyStartDate]);
       if (data.warrantyEndDate) tags.push(['warranty_end_date', data.warrantyEndDate]);
       if (data.warrantyLength) tags.push(['warranty_length', data.warrantyLength]);
+      if (data.warrantyLengthValue !== undefined) tags.push(['warranty_length_value', String(data.warrantyLengthValue)]);
+      if (data.warrantyLengthUnit) tags.push(['warranty_length_unit', data.warrantyLengthUnit]);
+      if (data.isLifetime) tags.push(['is_lifetime', 'true']);
       if (data.linkedType) tags.push(['linked_type', data.linkedType]);
       if (data.linkedItemId) tags.push(['linked_item_id', data.linkedItemId]);
       if (data.linkedItemName) tags.push(['linked_item_name', data.linkedItemName]);
@@ -370,6 +376,9 @@ export function useWarrantyActions() {
       if (data.warrantyStartDate) tags.push(['warranty_start_date', data.warrantyStartDate]);
       if (data.warrantyEndDate) tags.push(['warranty_end_date', data.warrantyEndDate]);
       if (data.warrantyLength) tags.push(['warranty_length', data.warrantyLength]);
+      if (data.warrantyLengthValue !== undefined) tags.push(['warranty_length_value', String(data.warrantyLengthValue)]);
+      if (data.warrantyLengthUnit) tags.push(['warranty_length_unit', data.warrantyLengthUnit]);
+      if (data.isLifetime) tags.push(['is_lifetime', 'true']);
       if (data.linkedType) tags.push(['linked_type', data.linkedType]);
       if (data.linkedItemId) tags.push(['linked_item_id', data.linkedItemId]);
       if (data.linkedItemName) tags.push(['linked_item_name', data.linkedItemName]);
@@ -484,6 +493,9 @@ export function parseWarrantyEndDate(warranty: Warranty): Date | null {
 
 // Helper to check if warranty is expired
 export function isWarrantyExpired(warranty: Warranty): boolean {
+  // Lifetime warranties never expire
+  if (warranty.isLifetime) return false;
+  
   const endDate = parseWarrantyEndDate(warranty);
   if (!endDate) return false;
   return endDate < new Date();
@@ -491,6 +503,9 @@ export function isWarrantyExpired(warranty: Warranty): boolean {
 
 // Helper to check if warranty is expiring soon (within 30 days by default)
 export function isWarrantyExpiringSoon(warranty: Warranty, days: number = 30): boolean {
+  // Lifetime warranties never expire
+  if (warranty.isLifetime) return false;
+  
   const endDate = parseWarrantyEndDate(warranty);
   if (!endDate) return false;
   
@@ -503,6 +518,9 @@ export function isWarrantyExpiringSoon(warranty: Warranty, days: number = 30): b
 
 // Helper to format remaining warranty time
 export function formatWarrantyTimeRemaining(warranty: Warranty): string {
+  // Check for lifetime warranty first
+  if (warranty.isLifetime) return 'Lifetime Warranty';
+  
   const endDate = parseWarrantyEndDate(warranty);
   if (!endDate) return 'No expiration date';
   

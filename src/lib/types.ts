@@ -138,6 +138,14 @@ export const FREQUENCY_UNITS = [
   { value: 'years', label: 'Years' },
 ] as const;
 
+export const WARRANTY_LENGTH_UNITS = [
+  { value: 'weeks', label: 'Weeks' },
+  { value: 'months', label: 'Months' },
+  { value: 'years', label: 'Years' },
+] as const;
+
+export type WarrantyLengthUnit = typeof WARRANTY_LENGTH_UNITS[number]['value'];
+
 export const FUEL_TYPES = [
   { value: 'gasoline', label: 'Gasoline' },
   { value: 'diesel', label: 'Diesel' },
@@ -306,8 +314,11 @@ export interface Warranty {
   purchasePrice?: string;
   // Warranty duration
   warrantyStartDate?: string; // MM/DD/YYYY format - defaults to purchase date
-  warrantyEndDate?: string; // MM/DD/YYYY format
-  warrantyLength?: string; // e.g., "1 year", "2 years"
+  warrantyEndDate?: string; // MM/DD/YYYY format - calculated from purchaseDate + warrantyLength
+  warrantyLength?: string; // Legacy field (deprecated)
+  warrantyLengthValue?: number; // Numeric value for warranty length
+  warrantyLengthUnit?: 'weeks' | 'months' | 'years'; // Unit for warranty length
+  isLifetime?: boolean; // Whether this is a lifetime warranty
   // Link to other items
   linkedType?: WarrantyLinkedType; // Type of linked item
   linkedItemId?: string; // ID of linked appliance, vehicle, etc.

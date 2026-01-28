@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { format } from 'date-fns';
-import { Plus, X, AlertTriangle, Building, Package, Car, Home, Tag, Upload, FileText, Image, AlertCircle, Trash2, MoreVertical } from 'lucide-react';
+import { format, parse, addWeeks, addMonths, addYears, isValid } from 'date-fns';
+import { Plus, X, AlertTriangle, Building, Package, Car, Home, Tag, Upload, FileText, Image, AlertCircle, Trash2, MoreVertical, Infinity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,11 +23,53 @@ import { useCompanies } from '@/hooks/useCompanies';
 import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
-import type { Warranty, WarrantyLinkedType, WarrantyDocument } from '@/lib/types';
+import { WARRANTY_LENGTH_UNITS, type Warranty, type WarrantyLinkedType, type WarrantyDocument, type WarrantyLengthUnit } from '@/lib/types';
 
 // Get today's date in MM/DD/YYYY format
 function getTodayFormatted(): string {
   return format(new Date(), 'MM/dd/yyyy');
+}
+
+// Parse MM/DD/YYYY to Date object
+function parseDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  const parsed = parse(dateStr, 'MM/dd/yyyy', new Date());
+  if (!isValid(parsed)) {
+    // Try flexible format
+    const parsedFlex = parse(dateStr, 'M/d/yyyy', new Date());
+    if (isValid(parsedFlex)) return parsedFlex;
+    return null;
+  }
+  return parsed;
+}
+
+// Calculate warranty end date from purchase date and warranty length
+function calculateWarrantyEndDate(
+  purchaseDate: string,
+  lengthValue: number | undefined,
+  lengthUnit: WarrantyLengthUnit | undefined
+): string | undefined {
+  if (!purchaseDate || !lengthValue || !lengthUnit) return undefined;
+  
+  const startDate = parseDate(purchaseDate);
+  if (!startDate) return undefined;
+  
+  let endDate: Date;
+  switch (lengthUnit) {
+    case 'weeks':
+      endDate = addWeeks(startDate, lengthValue);
+      break;
+    case 'months':
+      endDate = addMonths(startDate, lengthValue);
+      break;
+    case 'years':
+      endDate = addYears(startDate, lengthValue);
+      break;
+    default:
+      return undefined;
+  }
+  
+  return format(endDate, 'MM/dd/yyyy');
 }
 
 interface WarrantyDialogProps {
@@ -73,8 +115,9 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
     purchaseDate: '',
     purchasePrice: '',
     warrantyStartDate: '',
-    warrantyEndDate: '',
-    warrantyLength: '',
+    warrantyLengthValue: '' as string,
+    warrantyLengthUnit: 'years' as WarrantyLengthUnit,
+    isLifetime: false,
     linkedType: '' as WarrantyLinkedType | '',
     linkedItemId: '',
     linkedItemName: '',
@@ -107,8 +150,9 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
           purchaseDate: warranty.purchaseDate || '',
           purchasePrice: warranty.purchasePrice || '',
           warrantyStartDate: warranty.warrantyStartDate || '',
-          warrantyEndDate: warranty.warrantyEndDate || '',
-          warrantyLength: warranty.warrantyLength || '',
+          warrantyLengthValue: warranty.warrantyLengthValue?.toString() || '',
+          warrantyLengthUnit: warranty.warrantyLengthUnit || 'years',
+          isLifetime: warranty.isLifetime || false,
           linkedType: warranty.linkedType || '',
           linkedItemId: warranty.linkedItemId || '',
           linkedItemName: warranty.linkedItemName || '',
@@ -139,8 +183,9 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
           purchaseDate: '',
           purchasePrice: '',
           warrantyStartDate: '',
-          warrantyEndDate: '',
-          warrantyLength: '',
+          warrantyLengthValue: '',
+          warrantyLengthUnit: 'years',
+          isLifetime: false,
           linkedType: '',
           linkedItemId: '',
           linkedItemName: '',
@@ -473,6 +518,15 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
       // Use the linked item name as warranty name if no custom name provided
       const warrantyName = formData.name.trim() || selectedLinkedItemName || '';
       
+      // Parse warranty length
+      const lengthValue = formData.warrantyLengthValue ? parseInt(formData.warrantyLengthValue, 10) : undefined;
+      const lengthUnit = formData.warrantyLengthUnit;
+      
+      // Calculate end date from purchase date + warranty length (unless lifetime)
+      const calculatedEndDate = formData.isLifetime
+        ? undefined
+        : calculateWarrantyEndDate(formData.purchaseDate, lengthValue, lengthUnit);
+      
       const submitData = {
         name: warrantyName,
         warrantyType: formData.warrantyType,
@@ -480,8 +534,10 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
         purchaseDate: formData.purchaseDate.trim() || undefined,
         purchasePrice: formData.purchasePrice.trim() || undefined,
         warrantyStartDate: formData.warrantyStartDate.trim() || formData.purchaseDate.trim() || undefined,
-        warrantyEndDate: formData.warrantyEndDate.trim() || undefined,
-        warrantyLength: formData.warrantyLength.trim() || undefined,
+        warrantyEndDate: calculatedEndDate,
+        warrantyLengthValue: lengthValue,
+        warrantyLengthUnit: lengthValue ? lengthUnit : undefined,
+        isLifetime: formData.isLifetime || undefined,
         linkedType: formData.linkedType || undefined,
         linkedItemId: formData.linkedItemId || undefined,
         linkedItemName: formData.linkedItemName.trim() || undefined,
@@ -846,23 +902,74 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
             />
           </div>
 
-          {/* Warranty End Date */}
-          <DateInput
-            id="warrantyEndDate"
-            label="Warranty End Date"
-            value={formData.warrantyEndDate}
-            onChange={(value) => setFormData(prev => ({ ...prev, warrantyEndDate: value }))}
-          />
-
           {/* Warranty Length */}
-          <div className="space-y-2">
-            <Label htmlFor="warrantyLength">Warranty Length</Label>
-            <Input
-              id="warrantyLength"
-              value={formData.warrantyLength}
-              onChange={(e) => setFormData(prev => ({ ...prev, warrantyLength: e.target.value }))}
-              placeholder="e.g., 1 year, 2 years, Lifetime"
-            />
+          <div className="space-y-3">
+            <Label>Warranty Length</Label>
+            <div className="flex gap-2">
+              <Input
+                id="warrantyLengthValue"
+                type="number"
+                min="1"
+                value={formData.warrantyLengthValue}
+                onChange={(e) => setFormData(prev => ({ ...prev, warrantyLengthValue: e.target.value }))}
+                placeholder="e.g., 2"
+                disabled={formData.isLifetime}
+                className={`w-24 ${formData.isLifetime ? 'opacity-50' : ''}`}
+              />
+              <Select
+                value={formData.warrantyLengthUnit}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, warrantyLengthUnit: value as WarrantyLengthUnit }))}
+                disabled={formData.isLifetime}
+              >
+                <SelectTrigger className={`flex-1 ${formData.isLifetime ? 'opacity-50' : ''}`}>
+                  <SelectValue placeholder="Select unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WARRANTY_LENGTH_UNITS.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isLifetime"
+                checked={formData.isLifetime}
+                onCheckedChange={(checked) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    isLifetime: checked === true,
+                    warrantyLengthValue: checked ? '' : prev.warrantyLengthValue,
+                  }));
+                }}
+              />
+              <Label
+                htmlFor="isLifetime"
+                className="text-sm font-normal cursor-pointer flex items-center gap-1.5"
+              >
+                <Infinity className="h-4 w-4" />
+                Lifetime Warranty
+              </Label>
+            </div>
+            {/* Calculated End Date Preview */}
+            {!formData.isLifetime && formData.purchaseDate && formData.warrantyLengthValue && (
+              <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded-md">
+                <span className="font-medium">Warranty expires: </span>
+                {calculateWarrantyEndDate(
+                  formData.purchaseDate,
+                  parseInt(formData.warrantyLengthValue, 10),
+                  formData.warrantyLengthUnit
+                ) || 'Unable to calculate'}
+              </div>
+            )}
+            {formData.isLifetime && (
+              <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 p-2 rounded-md flex items-center gap-1.5">
+                <Infinity className="h-4 w-4" />
+                This warranty never expires
+              </div>
+            )}
           </div>
 
           {/* Company/Manufacturer */}
