@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
-  <!-- Black background for Apple touch icon (required for visibility) -->
+  <!-- Black background for Apple touch icon -->
   <rect width="180" height="180" rx="24" fill="#000000"/>
   
   <!-- Glow filter -->
@@ -13,7 +13,8 @@
     </filter>
   </defs>
   
-  <g filter="url(#glow-apple)">
+  <!-- Scale 1.5x from center -->
+  <g filter="url(#glow-apple)" transform="translate(90, 90) scale(1.5) translate(-90, -90)">
     <!-- Lock shackle (arc) -->
     <path d="M56 73 L56 51 Q56 17 90 17 Q124 17 124 51 L124 73" 
           fill="none" stroke="white" stroke-width="11" stroke-linecap="round"/>

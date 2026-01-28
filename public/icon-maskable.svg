@@ -2,8 +2,8 @@
   <!-- Black background required for maskable icons -->
   <rect width="512" height="512" fill="#000000"/>
   
-  <!-- Content positioned in safe zone (center 80% area) -->
-  <g transform="translate(256, 256) scale(0.7) translate(-256, -256)">
+  <!-- Content scaled 1.5x and positioned in safe zone -->
+  <g transform="translate(256, 256) scale(1.05) translate(-256, -256)">
     <!-- Glow filter -->
     <defs>
       <filter id="glow-mask" x="-50%" y="-50%" width="200%" height="200%">

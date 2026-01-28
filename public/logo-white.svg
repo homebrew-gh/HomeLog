@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Transparent background - white logo only -->
+  <!-- Transparent background - white logo only, scaled 1.5x -->
   <!-- Use this version on dark backgrounds -->
   
   <!-- Glow filter -->
@@ -13,7 +13,8 @@
     </filter>
   </defs>
   
-  <g filter="url(#glow)">
+  <!-- Scale 1.5x from center -->
+  <g filter="url(#glow)" transform="translate(256, 256) scale(1.5) translate(-256, -256)">
     <!-- Lock shackle (arc) -->
     <path d="M160 208 L160 144 Q160 48 256 48 Q352 48 352 144 L352 208" 
           fill="none" stroke="white" stroke-width="32" stroke-linecap="round"/>
