@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DateInput } from '@/components/ui/date-input';
 import { VehicleMaintenanceWizard } from '@/components/VehicleMaintenanceWizard';
 import { useVehicleActions } from '@/hooks/useVehicles';
 import { useVehicleTypes } from '@/hooks/useVehicleTypes';
@@ -18,15 +19,6 @@ import { useSubscriptionActions } from '@/hooks/useSubscriptions';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import { FUEL_TYPES, BILLING_FREQUENCIES, type Vehicle, type BillingFrequency } from '@/lib/types';
-
-// Get today's date in MM/DD/YYYY format
-function getTodayFormatted(): string {
-  const today = new Date();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  const year = today.getFullYear();
-  return `${month}/${day}/${year}`;
-}
 
 interface VehicleDialogProps {
   isOpen: boolean;
@@ -79,7 +71,6 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddType, setShowAddType] = useState(false);
   const [newType, setNewType] = useState('');
-  const [useTodayDate, setUseTodayDate] = useState(false);
   const [showWarranty, setShowWarranty] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   
@@ -200,7 +191,6 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
       }
       setShowAddType(false);
       setNewType('');
-      setUseTodayDate(false);
     }
   }, [isOpen, vehicle]);
 
@@ -718,55 +708,24 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
 
               {/* Registration Expiry */}
               {visibleFields.includes('registration') && (
-                <div className="space-y-2">
-                  <Label htmlFor="registrationExpiry">Registration Expiry (MM/DD/YYYY)</Label>
-                  <Input
-                    id="registrationExpiry"
-                    value={formData.registrationExpiry}
-                    onChange={(e) => setFormData(prev => ({ ...prev, registrationExpiry: e.target.value }))}
-                    placeholder="MM/DD/YYYY"
-                  />
-                </div>
+                <DateInput
+                  id="registrationExpiry"
+                  label="Registration Expiry"
+                  value={formData.registrationExpiry}
+                  onChange={(value) => setFormData(prev => ({ ...prev, registrationExpiry: value }))}
+                />
               )}
             </>
           )}
 
           {/* Purchase Date */}
-          <div className="space-y-2">
-            <Label htmlFor="purchaseDate">Purchase Date (MM/DD/YYYY)</Label>
-            <Input
-              id="purchaseDate"
-              value={formData.purchaseDate}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, purchaseDate: e.target.value }));
-                if (e.target.value) {
-                  setUseTodayDate(false);
-                }
-              }}
-              placeholder="MM/DD/YYYY"
-              disabled={useTodayDate}
-              className={useTodayDate ? 'opacity-50' : ''}
-            />
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="useTodayDate"
-                checked={useTodayDate}
-                onCheckedChange={(checked) => {
-                  const isChecked = checked === true;
-                  setUseTodayDate(isChecked);
-                  if (isChecked) {
-                    setFormData(prev => ({ ...prev, purchaseDate: getTodayFormatted() }));
-                  }
-                }}
-              />
-              <Label
-                htmlFor="useTodayDate"
-                className="text-sm font-normal cursor-pointer"
-              >
-                Today ({getTodayFormatted()})
-              </Label>
-            </div>
-          </div>
+          <DateInput
+            id="purchaseDate"
+            label="Purchase Date"
+            value={formData.purchaseDate}
+            onChange={(value) => setFormData(prev => ({ ...prev, purchaseDate: value }))}
+            showTodayCheckbox
+          />
 
           {/* Purchase Price */}
           <div className="space-y-2">
@@ -787,15 +746,12 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
               <span className="font-medium">Warranty Information</span>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-4 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="warrantyExpiry">Warranty Expiry (MM/DD/YYYY)</Label>
-                <Input
-                  id="warrantyExpiry"
-                  value={formData.warrantyExpiry}
-                  onChange={(e) => setFormData(prev => ({ ...prev, warrantyExpiry: e.target.value }))}
-                  placeholder="MM/DD/YYYY"
-                />
-              </div>
+              <DateInput
+                id="warrantyExpiry"
+                label="Warranty Expiry"
+                value={formData.warrantyExpiry}
+                onChange={(value) => setFormData(prev => ({ ...prev, warrantyExpiry: value }))}
+              />
               <div className="space-y-2">
                 <Label>Warranty Document</Label>
                 <div className="flex gap-2 items-center">

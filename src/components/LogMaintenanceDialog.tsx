@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Car, Gauge, Wrench, Plus, X, Package, Building2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { Car, Gauge, Wrench, Plus, X, Package, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateInput } from '@/components/ui/date-input';
 import { useVehicles, useVehicleActions } from '@/hooks/useVehicles';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useMaintenanceActions } from '@/hooks/useMaintenance';
@@ -19,17 +21,9 @@ interface LogMaintenanceDialogProps {
   preselectedVehicleId?: string;
 }
 
-// Get today's date in YYYY-MM-DD format for the date input
-function getTodayISO(): string {
-  const today = new Date();
-  return today.toISOString().split('T')[0];
-}
-
-// Convert YYYY-MM-DD to MM/DD/YYYY
-function isoToDisplay(isoDate: string): string {
-  if (!isoDate) return '';
-  const [year, month, day] = isoDate.split('-');
-  return `${month}/${day}/${year}`;
+// Get today's date in MM/DD/YYYY format
+function getTodayFormatted(): string {
+  return format(new Date(), 'MM/dd/yyyy');
 }
 
 export function LogMaintenanceDialog({ isOpen, onClose, preselectedVehicleId }: LogMaintenanceDialogProps) {
@@ -46,7 +40,7 @@ export function LogMaintenanceDialog({ isOpen, onClose, preselectedVehicleId }: 
     description: '',
     companyId: '',
     mileage: '',
-    completedDate: getTodayISO(),
+    completedDate: getTodayFormatted(),
   });
 
   // Parts state
@@ -65,7 +59,7 @@ export function LogMaintenanceDialog({ isOpen, onClose, preselectedVehicleId }: 
         description: '',
         companyId: '',
         mileage: '',
-        completedDate: getTodayISO(),
+        completedDate: getTodayFormatted(),
       });
       setParts([]);
       setShowAddPart(false);
@@ -135,10 +129,9 @@ export function LogMaintenanceDialog({ isOpen, onClose, preselectedVehicleId }: 
       });
 
       // Create the completion record with parts
-      const displayDate = isoToDisplay(formData.completedDate);
       await createCompletion(
         maintenanceId,
-        displayDate,
+        formData.completedDate, // Already in MM/DD/YYYY format
         formData.mileage.trim() || undefined,
         undefined, // notes
         parts.length > 0 ? parts : undefined
@@ -383,19 +376,13 @@ export function LogMaintenanceDialog({ isOpen, onClose, preselectedVehicleId }: 
           </div>
 
           {/* Date */}
-          <div className="space-y-2">
-            <Label htmlFor="completedDate" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Date Performed *
-            </Label>
-            <Input
-              id="completedDate"
-              type="date"
-              value={formData.completedDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, completedDate: e.target.value }))}
-              max={getTodayISO()}
-            />
-          </div>
+          <DateInput
+            id="completedDate"
+            label="Date Performed *"
+            value={formData.completedDate}
+            onChange={(value) => setFormData(prev => ({ ...prev, completedDate: value }))}
+            showTodayCheckbox
+          />
         </div>
 
         {/* Action Buttons */}

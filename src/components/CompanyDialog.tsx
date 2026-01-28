@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Star, Calendar, FileUp } from 'lucide-react';
+import { format } from 'date-fns';
+import { Plus, Upload, X, FileText, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Star, FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DateInput } from '@/components/ui/date-input';
 import { useCompanyActions } from '@/hooks/useCompanies';
 import { useCompanyTypes } from '@/hooks/useCompanyTypes';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
@@ -135,11 +137,7 @@ function decodeQuotedPrintable(str: string): string {
 
 // Get today's date in MM/DD/YYYY format
 function getTodayFormatted(): string {
-  const today = new Date();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  const year = today.getFullYear();
-  return `${month}/${day}/${year}`;
+  return format(new Date(), 'MM/dd/yyyy');
 }
 
 interface CompanyDialogProps {
@@ -641,16 +639,14 @@ export function CompanyDialog({ isOpen, onClose, company, initialData }: Company
             {/* New Invoice Input */}
             <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-dashed">
               <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label htmlFor="invoiceDate" className="text-xs">Date</Label>
-                  <Input
-                    id="invoiceDate"
-                    value={newInvoice.date}
-                    onChange={(e) => setNewInvoice(prev => ({ ...prev, date: e.target.value }))}
-                    placeholder="MM/DD/YYYY"
-                    className="h-8 text-sm"
-                  />
-                </div>
+                <DateInput
+                  id="invoiceDate"
+                  label="Date"
+                  value={newInvoice.date}
+                  onChange={(value) => setNewInvoice(prev => ({ ...prev, date: value }))}
+                  inputClassName="h-8 text-sm"
+                  className="space-y-1"
+                />
                 <div className="space-y-1">
                   <Label htmlFor="invoiceAmount" className="text-xs">Amount (optional)</Label>
                   <Input

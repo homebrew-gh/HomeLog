@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Info, Home, Car, Plus, TreePine, CheckCircle2, Wrench, X, Package } from 'lucide-react';
+import { Info, Home, Car, Plus, TreePine, CheckCircle2, Wrench, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateInput } from '@/components/ui/date-input';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
 import { useCompanies } from '@/hooks/useCompanies';
@@ -640,34 +641,14 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           {/* Last Completed Date (only for new maintenance) */}
           {!isEditing && (
             <div className="space-y-2">
-              <Label htmlFor="lastCompletedDate" className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                Last Completed Date (optional)
-              </Label>
-              <Input
+                <span className="text-sm font-medium">Last Completed Date (optional)</span>
+              </div>
+              <DateInput
                 id="lastCompletedDate"
-                type="date"
-                value={formData.lastCompletedDate ? 
-                  // Convert MM/DD/YYYY to YYYY-MM-DD for date input
-                  (() => {
-                    const parts = formData.lastCompletedDate.split('/');
-                    if (parts.length === 3) {
-                      return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-                    }
-                    return formData.lastCompletedDate;
-                  })() : ''
-                }
-                onChange={(e) => {
-                  // Convert YYYY-MM-DD to MM/DD/YYYY
-                  const value = e.target.value;
-                  if (value) {
-                    const [year, month, day] = value.split('-');
-                    setFormData(prev => ({ ...prev, lastCompletedDate: `${month}/${day}/${year}` }));
-                  } else {
-                    setFormData(prev => ({ ...prev, lastCompletedDate: '' }));
-                  }
-                }}
-                max={new Date().toISOString().split('T')[0]} // Can't be in the future
+                value={formData.lastCompletedDate}
+                onChange={(value) => setFormData(prev => ({ ...prev, lastCompletedDate: value }))}
               />
               <p className="text-xs text-muted-foreground">
                 When was this task last completed? This will be used to calculate the next due date.

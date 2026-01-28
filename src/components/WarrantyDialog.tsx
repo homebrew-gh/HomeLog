@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { format } from 'date-fns';
 import { Plus, X, AlertTriangle, Building, Package, Car, Home, Tag, Upload, FileText, Image, AlertCircle, Trash2, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DateInput } from '@/components/ui/date-input';
 import { useWarrantyActions } from '@/hooks/useWarranties';
 import { useWarrantyTypes } from '@/hooks/useWarrantyTypes';
 import { useAppliances } from '@/hooks/useAppliances';
@@ -25,11 +27,7 @@ import type { Warranty, WarrantyLinkedType, WarrantyDocument } from '@/lib/types
 
 // Get today's date in MM/DD/YYYY format
 function getTodayFormatted(): string {
-  const today = new Date();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  const year = today.getFullYear();
-  return `${month}/${day}/${year}`;
+  return format(new Date(), 'MM/dd/yyyy');
 }
 
 interface WarrantyDialogProps {
@@ -829,15 +827,13 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
           </div>
 
           {/* Purchase Date */}
-          <div className="space-y-2">
-            <Label htmlFor="purchaseDate">Purchase Date (MM/DD/YYYY)</Label>
-            <Input
-              id="purchaseDate"
-              value={formData.purchaseDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, purchaseDate: e.target.value }))}
-              placeholder="MM/DD/YYYY"
-            />
-          </div>
+          <DateInput
+            id="purchaseDate"
+            label="Purchase Date"
+            value={formData.purchaseDate}
+            onChange={(value) => setFormData(prev => ({ ...prev, purchaseDate: value }))}
+            showTodayCheckbox
+          />
 
           {/* Purchase Price */}
           <div className="space-y-2">
@@ -851,15 +847,12 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
           </div>
 
           {/* Warranty End Date */}
-          <div className="space-y-2">
-            <Label htmlFor="warrantyEndDate">Warranty End Date (MM/DD/YYYY)</Label>
-            <Input
-              id="warrantyEndDate"
-              value={formData.warrantyEndDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, warrantyEndDate: e.target.value }))}
-              placeholder="MM/DD/YYYY"
-            />
-          </div>
+          <DateInput
+            id="warrantyEndDate"
+            label="Warranty End Date"
+            value={formData.warrantyEndDate}
+            onChange={(value) => setFormData(prev => ({ ...prev, warrantyEndDate: value }))}
+          />
 
           {/* Warranty Length */}
           <div className="space-y-2">
@@ -980,15 +973,13 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
 
               {formData.isRegistered && (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="registrationDate">Registration Date (MM/DD/YYYY)</Label>
-                    <Input
-                      id="registrationDate"
-                      value={formData.registrationDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, registrationDate: e.target.value }))}
-                      placeholder="MM/DD/YYYY"
-                    />
-                  </div>
+                  <DateInput
+                    id="registrationDate"
+                    label="Registration Date"
+                    value={formData.registrationDate}
+                    onChange={(value) => setFormData(prev => ({ ...prev, registrationDate: value }))}
+                    showTodayCheckbox
+                  />
 
                   <div className="space-y-2">
                     <Label htmlFor="registrationNumber">Registration/Confirmation Number</Label>
@@ -1049,15 +1040,12 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="extendedWarrantyEndDate">Extended Warranty End Date (MM/DD/YYYY)</Label>
-                    <Input
-                      id="extendedWarrantyEndDate"
-                      value={formData.extendedWarrantyEndDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, extendedWarrantyEndDate: e.target.value }))}
-                      placeholder="MM/DD/YYYY"
-                    />
-                  </div>
+                  <DateInput
+                    id="extendedWarrantyEndDate"
+                    label="Extended Warranty End Date"
+                    value={formData.extendedWarrantyEndDate}
+                    onChange={(value) => setFormData(prev => ({ ...prev, extendedWarrantyEndDate: value }))}
+                  />
 
                   <div className="space-y-2">
                     <Label htmlFor="extendedWarrantyCost">Extended Warranty Cost</Label>

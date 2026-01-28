@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check, Car, Gauge, TreePine, ClipboardList, Plus, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check, Car, Gauge, TreePine, ClipboardList, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { DateInput } from '@/components/ui/date-input';
 import { useApplianceById } from '@/hooks/useAppliances';
 import { useVehicleById, useVehicleActions } from '@/hooks/useVehicles';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
@@ -23,11 +24,7 @@ interface MaintenanceDetailDialogProps {
 
 // Get today's date in MM/DD/YYYY format
 function getTodayFormatted(): string {
-  const today = new Date();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  const year = today.getFullYear();
-  return `${month}/${day}/${year}`;
+  return format(new Date(), 'MM/dd/yyyy');
 }
 
 export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }: MaintenanceDetailDialogProps) {
@@ -47,7 +44,6 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
   const [showCompletionForm, setShowCompletionForm] = useState(false);
   const [completionDate, setCompletionDate] = useState('');
   const [completionMileage, setCompletionMileage] = useState('');
-  const [useToday, setUseToday] = useState(false);
   const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
 
   // Parts state for completion
@@ -61,7 +57,6 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
       setShowCompletionForm(false);
       setCompletionDate('');
       setCompletionMileage('');
-      setUseToday(false);
       setCompletionParts([]);
       setShowAddPart(false);
       setNewPart({ name: '', partNumber: '', cost: '' });
@@ -122,10 +117,7 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
   };
 
   const handleSubmitCompletion = async () => {
-    // Determine which date to use
-    const dateToUse = useToday ? getTodayFormatted() : completionDate;
-
-    if (!dateToUse.trim()) {
+    if (!completionDate.trim()) {
       toast({
         title: 'Date required',
         description: 'Please enter a completion date or select "Today".',
@@ -134,9 +126,9 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
       return;
     }
 
-    // Validate date format MM/DD/YYYY
-    const dateRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{4}$/;
-    if (!dateRegex.test(dateToUse)) {
+    // Validate date format MM/DD/YYYY (flexible - allows M/D/YYYY as well)
+    const dateRegex = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12]\d|3[01])\/\d{4}$/;
+    if (!dateRegex.test(completionDate)) {
       toast({
         title: 'Invalid date format',
         description: 'Please enter the date in MM/DD/YYYY format.',
@@ -153,7 +145,7 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
       // Create the completion with parts
       await createCompletion(
         maintenance.id, 
-        dateToUse, 
+        completionDate, 
         mileageValue,
         undefined, // notes
         completionParts.length > 0 ? completionParts : undefined
@@ -176,12 +168,11 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
       const mileageInfo = mileageValue ? ` at ${Number(mileageValue).toLocaleString()} miles` : '';
       toast({
         title: 'Maintenance completed',
-        description: `Marked as completed on ${dateToUse}${mileageInfo}.`,
+        description: `Marked as completed on ${completionDate}${mileageInfo}.`,
       });
       setShowCompletionForm(false);
       setCompletionDate('');
       setCompletionMileage('');
-      setUseToday(false);
       setCompletionParts([]);
       setShowAddPart(false);
       setNewPart({ name: '', partNumber: '', cost: '' });
@@ -193,20 +184,6 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
       });
     } finally {
       setIsSubmittingCompletion(false);
-    }
-  };
-
-  const handleTodayChange = (checked: boolean) => {
-    setUseToday(checked);
-    if (checked) {
-      setCompletionDate(''); // Clear manual input when "Today" is selected
-    }
-  };
-
-  const handleDateInputChange = (value: string) => {
-    setCompletionDate(value);
-    if (value) {
-      setUseToday(false); // Uncheck "Today" when manually entering a date
     }
   };
 
@@ -453,34 +430,14 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
                   Record Completion
                 </p>
 
-                <div className="space-y-2">
-                  <Label htmlFor="completionDate" className="text-sm">
-                    Completion Date (MM/DD/YYYY)
-                  </Label>
-                  <Input
-                    id="completionDate"
-                    value={completionDate}
-                    onChange={(e) => handleDateInputChange(e.target.value)}
-                    placeholder="MM/DD/YYYY"
-                    disabled={useToday || isSubmittingCompletion}
-                    className={useToday ? 'opacity-50' : ''}
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="useToday"
-                    checked={useToday}
-                    onCheckedChange={handleTodayChange}
-                    disabled={isSubmittingCompletion}
-                  />
-                  <Label
-                    htmlFor="useToday"
-                    className="text-sm font-normal cursor-pointer"
-                  >
-                    Today ({getTodayFormatted()})
-                  </Label>
-                </div>
+                <DateInput
+                  id="completionDate"
+                  label="Completion Date"
+                  value={completionDate}
+                  onChange={setCompletionDate}
+                  showTodayCheckbox
+                  disabled={isSubmittingCompletion}
+                />
 
                 {/* Mileage input for vehicle maintenance */}
                 {isVehicleMaintenance && (
