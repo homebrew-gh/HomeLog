@@ -8,12 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { LogMaintenanceDialog } from '@/components/LogMaintenanceDialog';
+import { LogHomeMaintenanceDialog } from '@/components/LogHomeMaintenanceDialog';
 import { CalendarExportDialog } from '@/components/CalendarExportDialog';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
+import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import type { MaintenanceSchedule, Appliance, Vehicle, MaintenanceCompletion } from '@/lib/types';
@@ -302,52 +305,16 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
         </Card>
       ) : (
         <>
-          {/* Home Maintenance Section */}
+          {/* Home Maintenance Section - New Layout */}
           {activeTab === 'home' && (
-            <Card 
+            <HomeMaintenanceSection
               ref={homeMaintenanceRef}
-              className="bg-card border-border"
-            >
-              <div className="p-4 pb-3 border-b flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-primary/10">
-                    <Home className="h-4 w-4 text-primary" />
-                  </div>
-                  <span className="text-lg font-semibold text-foreground">
-                    {showArchived ? 'Archived Home Maintenance' : 'Home Maintenance'}
-                  </span>
-                </div>
-                {!showArchived && (
-                  <Button
-                    onClick={() => handleAddMaintenance('appliance')}
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Recurring
-                  </Button>
-                )}
-              </div>
-              <CardContent className="pt-4">
-                {applianceMaintenance.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-6">
-                    {showArchived ? 'No archived home maintenance.' : 'No home maintenance schedules yet.'}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {applianceMaintenance.map((maint) => (
-                      <MaintenanceItem
-                        key={maint.id}
-                        maintenance={maint}
-                        appliance={appliances.find(a => a.id === maint.applianceId)}
-                        completions={completions.filter(c => c.maintenanceId === maint.id)}
-                        onClick={() => setViewingMaintenance(maint)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              appliances={appliances}
+              homeMaintenance={applianceMaintenance}
+              completions={completions}
+              showArchived={showArchived}
+              onViewMaintenance={setViewingMaintenance}
+            />
           )}
 
           {/* Vehicle Maintenance Section - New Layout */}
@@ -731,6 +698,748 @@ function VehicleMaintenanceItem({
         </div>
       )}
     </div>
+  );
+}
+
+// Home Maintenance Section Component with new two-column layout
+interface HomeMaintenanceSectionProps {
+  appliances: Appliance[];
+  homeMaintenance: MaintenanceSchedule[];
+  completions: MaintenanceCompletion[];
+  showArchived: boolean;
+  onViewMaintenance: (maint: MaintenanceSchedule) => void;
+}
+
+const HomeMaintenanceSection = forwardRef<HTMLDivElement, HomeMaintenanceSectionProps>(
+  ({ appliances, homeMaintenance, completions, showArchived, onViewMaintenance }, ref) => {
+    const navigate = useNavigate();
+    const { allHomeFeatures } = useCustomHomeFeatures();
+    const [addMaintenanceDialogOpen, setAddMaintenanceDialogOpen] = useState(false);
+    const [logDialogOpen, setLogDialogOpen] = useState(false);
+    const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
+    const [selectedApplianceId, setSelectedApplianceId] = useState<string>('');
+    const [selectedHomeFeature, setSelectedHomeFeature] = useState<string>('');
+    
+    // Toggle between Home Features and Appliances (My Stuff)
+    const [rightPanelView, setRightPanelView] = useState<'features' | 'appliances'>('features');
+
+    // Calculate upcoming maintenance (within 3 months) sorted chronologically
+    const upcomingMaintenance = useMemo(() => {
+      const threeMonthsFromNow = new Date();
+      threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+      
+      const items: {
+        maintenance: MaintenanceSchedule;
+        appliance: Appliance | undefined;
+        nextDue: Date;
+        overdue: boolean;
+        dueSoon: boolean;
+      }[] = [];
+      
+      for (const maint of homeMaintenance) {
+        if (maint.isLogOnly || maint.isArchived) continue;
+        
+        const appliance = appliances.find(a => a.id === maint.applianceId);
+        const purchaseDate = appliance?.purchaseDate || '';
+        const maintCompletions = completions.filter(c => c.maintenanceId === maint.id);
+        const lastCompletion = maintCompletions[0];
+        
+        // For home feature-only maintenance, use today as baseline if no purchase date
+        const effectiveDate = purchaseDate || (lastCompletion?.completedDate ? '' : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }));
+        
+        const nextDue = calculateNextDueDate(effectiveDate, maint.frequency, maint.frequencyUnit, lastCompletion?.completedDate);
+        if (!nextDue) continue;
+        
+        // Include if overdue or within 3 months
+        if (nextDue <= threeMonthsFromNow) {
+          items.push({
+            maintenance: maint,
+            appliance,
+            nextDue,
+            overdue: isOverdue(effectiveDate, maint.frequency, maint.frequencyUnit, lastCompletion?.completedDate),
+            dueSoon: isDueSoon(effectiveDate, maint.frequency, maint.frequencyUnit, lastCompletion?.completedDate),
+          });
+        }
+      }
+      
+      // Sort by date (soonest first)
+      return items.sort((a, b) => a.nextDue.getTime() - b.nextDue.getTime());
+    }, [homeMaintenance, appliances, completions]);
+
+    // Get recently completed maintenance (last 5)
+    const recentlyCompleted = useMemo(() => {
+      const homeMaintenanceIds = new Set(homeMaintenance.map(m => m.id));
+      const homeCompletions = completions
+        .filter(c => homeMaintenanceIds.has(c.maintenanceId))
+        .sort((a, b) => {
+          const parseDate = (dateStr: string) => {
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return 0;
+            return new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1])).getTime();
+          };
+          return parseDate(b.completedDate) - parseDate(a.completedDate);
+        })
+        .slice(0, 5);
+      
+      return homeCompletions.map(completion => {
+        const maint = homeMaintenance.find(m => m.id === completion.maintenanceId);
+        const appliance = maint?.applianceId ? appliances.find(a => a.id === maint.applianceId) : undefined;
+        return { completion, maintenance: maint, appliance };
+      });
+    }, [homeMaintenance, appliances, completions]);
+
+    // Get home features that have maintenance tasks
+    const trackedHomeFeatures = useMemo(() => {
+      const features = new Set<string>();
+      homeMaintenance.filter(m => !m.isArchived && m.homeFeature && !m.applianceId).forEach(m => {
+        if (m.homeFeature) features.add(m.homeFeature);
+      });
+      return Array.from(features).sort();
+    }, [homeMaintenance]);
+
+    // Get appliances that have maintenance tasks
+    const trackedAppliances = useMemo(() => {
+      const trackedIds = new Set(homeMaintenance.filter(m => !m.isArchived && m.applianceId).map(m => m.applianceId));
+      return appliances.filter(a => !a.isArchived && trackedIds.has(a.id));
+    }, [homeMaintenance, appliances]);
+
+    // Get all active appliances (for the Add button)
+    const activeAppliances = appliances.filter(a => !a.isArchived);
+
+    if (showArchived) {
+      // Show archived maintenance in a simple list
+      const archivedMaintenance = homeMaintenance.filter(m => m.isArchived);
+      return (
+        <Card ref={ref} className="bg-card border-border">
+          <div className="p-4 pb-3 border-b flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-muted">
+              <Archive className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <span className="text-lg font-semibold text-foreground">Archived Home Maintenance</span>
+          </div>
+          <CardContent className="pt-4">
+            {archivedMaintenance.length === 0 ? (
+              <p className="text-center text-muted-foreground py-6">No archived home maintenance.</p>
+            ) : (
+              <div className="space-y-2">
+                {archivedMaintenance.map((maint) => (
+                  <MaintenanceItem
+                    key={maint.id}
+                    maintenance={maint}
+                    appliance={appliances.find(a => a.id === maint.applianceId)}
+                    completions={completions.filter(c => c.maintenanceId === maint.id)}
+                    onClick={() => onViewMaintenance(maint)}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div ref={ref} className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <Home className="h-5 w-5 text-primary" />
+            </div>
+            <span className="text-lg font-semibold text-foreground">Home Maintenance</span>
+          </div>
+          <Button
+            onClick={() => setAddMaintenanceDialogOpen(true)}
+            size="sm"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add
+          </Button>
+        </div>
+
+        {/* Two-column layout */}
+        <div className="grid lg:grid-cols-2 gap-4">
+          {/* Left Column - Upcoming & Completed Maintenance */}
+          <div className="space-y-4">
+            {/* Upcoming Maintenance */}
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-amber-500" />
+                  Upcoming Maintenance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {upcomingMaintenance.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    No maintenance due within 3 months
+                  </p>
+                ) : (
+                  <ScrollArea className="h-[180px]">
+                    <div className="space-y-2 pr-4">
+                      {upcomingMaintenance.map(({ maintenance: maint, appliance, nextDue, overdue, dueSoon }) => (
+                        <button
+                          key={maint.id}
+                          onClick={() => onViewMaintenance(maint)}
+                          className={`w-full p-3 rounded-lg text-left transition-colors ${
+                            overdue
+                              ? 'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50'
+                              : dueSoon
+                                ? 'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50'
+                                : 'bg-muted/50 hover:bg-muted'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{maint.description}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {appliance?.model || maint.homeFeature || 'Unknown'}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              {overdue ? (
+                                <Badge variant="destructive" className="text-xs">Overdue</Badge>
+                              ) : dueSoon ? (
+                                <Badge className="bg-amber-100 text-amber-700 text-xs">Due Soon</Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">{formatDueDate(nextDue)}</span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Completed Maintenance */}
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  Completed Maintenance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {recentlyCompleted.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    No completed maintenance yet
+                  </p>
+                ) : (
+                  <ScrollArea className="h-[180px]">
+                    <div className="space-y-2 pr-4">
+                      {recentlyCompleted.map(({ completion, maintenance: maint, appliance }) => (
+                        <div
+                          key={completion.id}
+                          className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate text-green-800 dark:text-green-200">
+                                {maint?.description || 'Unknown'}
+                              </p>
+                              <p className="text-xs text-green-600 dark:text-green-400 truncate">
+                                {appliance?.model || maint?.homeFeature || 'Unknown'}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="text-xs text-green-700 dark:text-green-300">{completion.completedDate}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Home Features & Appliances List */}
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  {rightPanelView === 'features' ? (
+                    <>
+                      <TreePine className="h-4 w-4 text-green-600" />
+                      Home Features
+                    </>
+                  ) : (
+                    <>
+                      <Package className="h-4 w-4 text-primary" />
+                      My Stuff
+                    </>
+                  )}
+                </CardTitle>
+                <ToggleGroup 
+                  type="single" 
+                  value={rightPanelView} 
+                  onValueChange={(value) => value && setRightPanelView(value as 'features' | 'appliances')}
+                  className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5"
+                >
+                  <ToggleGroupItem 
+                    value="features" 
+                    aria-label="Home Features"
+                    className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5 text-xs"
+                  >
+                    <TreePine className="h-3.5 w-3.5" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="appliances" 
+                    aria-label="My Stuff"
+                    className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-2.5 py-1.5 text-xs"
+                  >
+                    <Package className="h-3.5 w-3.5" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {rightPanelView === 'features' ? (
+                // Home Features List
+                trackedHomeFeatures.length === 0 ? (
+                  <div className="text-center py-8">
+                    <TreePine className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground mb-3">No home features with maintenance</p>
+                    <p className="text-xs text-muted-foreground">Add maintenance for a home feature like Chimney, Gutters, or Pool</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-2 pr-4">
+                      {trackedHomeFeatures.map(feature => {
+                        const featureTasks = homeMaintenance.filter(m => m.homeFeature === feature && !m.applianceId && !m.isArchived);
+                        const overdueCount = featureTasks.filter(m => {
+                          if (m.isLogOnly) return false;
+                          const mCompletions = completions.filter(c => c.maintenanceId === m.id);
+                          const lastCompletion = mCompletions[0];
+                          const effectiveDate = lastCompletion?.completedDate ? '' : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+                          return isOverdue(effectiveDate, m.frequency, m.frequencyUnit, lastCompletion?.completedDate);
+                        }).length;
+                        
+                        return (
+                          <Link
+                            key={feature}
+                            to={`/home-feature/${encodeURIComponent(feature)}/maintenance`}
+                            className="block p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-green-500/10 shrink-0">
+                                <TreePine className="h-5 w-5 text-green-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{feature}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{featureTasks.length} task{featureTasks.length !== 1 ? 's' : ''}</span>
+                                </div>
+                              </div>
+                              {overdueCount > 0 && (
+                                <Badge variant="destructive" className="shrink-0">
+                                  {overdueCount} overdue
+                                </Badge>
+                              )}
+                              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )
+              ) : (
+                // Appliances (My Stuff) List
+                trackedAppliances.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground mb-3">No appliances with maintenance</p>
+                    <p className="text-xs text-muted-foreground">Add maintenance for items from My Stuff</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-2 pr-4">
+                      {trackedAppliances.map(appliance => {
+                        const applianceTasks = homeMaintenance.filter(m => m.applianceId === appliance.id && !m.isArchived);
+                        const overdueCount = applianceTasks.filter(m => {
+                          if (m.isLogOnly) return false;
+                          const mCompletions = completions.filter(c => c.maintenanceId === m.id);
+                          const lastCompletion = mCompletions[0];
+                          return isOverdue(appliance.purchaseDate || '', m.frequency, m.frequencyUnit, lastCompletion?.completedDate);
+                        }).length;
+                        
+                        return (
+                          <Link
+                            key={appliance.id}
+                            to={`/appliance/${appliance.id}/maintenance`}
+                            className="block p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                                <Package className="h-5 w-5 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{appliance.model}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{applianceTasks.length} task{applianceTasks.length !== 1 ? 's' : ''}</span>
+                                  {appliance.room && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="flex items-center gap-1">
+                                        <Home className="h-3 w-3" />
+                                        {appliance.room}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              {overdueCount > 0 && (
+                                <Badge variant="destructive" className="shrink-0">
+                                  {overdueCount} overdue
+                                </Badge>
+                              )}
+                              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Add Home Maintenance Dialog */}
+        <AddHomeMaintenanceDialog
+          isOpen={addMaintenanceDialogOpen}
+          onClose={() => setAddMaintenanceDialogOpen(false)}
+          appliances={activeAppliances}
+          homeFeatures={allHomeFeatures}
+          onLogTask={(applianceId, homeFeature) => {
+            setSelectedApplianceId(applianceId || '');
+            setSelectedHomeFeature(homeFeature || '');
+            setLogDialogOpen(true);
+          }}
+          onAddRecurring={(applianceId, homeFeature) => {
+            setSelectedApplianceId(applianceId || '');
+            setSelectedHomeFeature(homeFeature || '');
+            setRecurringDialogOpen(true);
+          }}
+        />
+
+        {/* Log Maintenance Dialog */}
+        <LogHomeMaintenanceDialog
+          isOpen={logDialogOpen}
+          onClose={() => {
+            setLogDialogOpen(false);
+            setSelectedApplianceId('');
+            setSelectedHomeFeature('');
+          }}
+          preselectedApplianceId={selectedApplianceId}
+          preselectedHomeFeature={selectedHomeFeature}
+        />
+
+        {/* Recurring Maintenance Dialog */}
+        <MaintenanceDialog
+          isOpen={recurringDialogOpen}
+          onClose={() => {
+            setRecurringDialogOpen(false);
+            setSelectedApplianceId('');
+            setSelectedHomeFeature('');
+          }}
+          mode="appliance"
+          preselectedApplianceId={selectedApplianceId}
+        />
+      </div>
+    );
+  }
+);
+
+HomeMaintenanceSection.displayName = 'HomeMaintenanceSection';
+
+// Add Home Maintenance Dialog - allows selecting appliance/home feature and choosing log vs recurring
+function AddHomeMaintenanceDialog({
+  isOpen,
+  onClose,
+  appliances,
+  homeFeatures,
+  onLogTask,
+  onAddRecurring,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  appliances: Appliance[];
+  homeFeatures: string[];
+  onLogTask: (applianceId?: string, homeFeature?: string) => void;
+  onAddRecurring: (applianceId?: string, homeFeature?: string) => void;
+}) {
+  const [selectionType, setSelectionType] = useState<'appliance' | 'feature'>('appliance');
+  const [selectedApplianceId, setSelectedApplianceId] = useState<string>('');
+  const [selectedHomeFeature, setSelectedHomeFeature] = useState<string>('');
+  const [step, setStep] = useState<'selection' | 'type'>('selection');
+
+  // Reset when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectionType('appliance');
+      setSelectedApplianceId('');
+      setSelectedHomeFeature('');
+      setStep('selection');
+    }
+  }, [isOpen]);
+
+  const handleContinue = () => {
+    if ((selectionType === 'appliance' && selectedApplianceId) || (selectionType === 'feature' && selectedHomeFeature)) {
+      setStep('type');
+    }
+  };
+
+  const handleBack = () => {
+    setStep('selection');
+  };
+
+  const handleLogTask = () => {
+    onLogTask(
+      selectionType === 'appliance' ? selectedApplianceId : undefined,
+      selectionType === 'feature' ? selectedHomeFeature : undefined
+    );
+    onClose();
+  };
+
+  const handleAddRecurring = () => {
+    onAddRecurring(
+      selectionType === 'appliance' ? selectedApplianceId : undefined,
+      selectionType === 'feature' ? selectedHomeFeature : undefined
+    );
+    onClose();
+  };
+
+  const selectedAppliance = appliances.find(a => a.id === selectedApplianceId);
+  const canContinue = (selectionType === 'appliance' && selectedApplianceId) || (selectionType === 'feature' && selectedHomeFeature);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5 text-primary" />
+            Add Home Maintenance
+          </DialogTitle>
+        </DialogHeader>
+        
+        {step === 'selection' ? (
+          <>
+            <div className="space-y-4 py-4">
+              {/* Selection Type Toggle */}
+              <div className="flex items-center justify-center">
+                <ToggleGroup 
+                  type="single" 
+                  value={selectionType} 
+                  onValueChange={(value) => {
+                    if (value) {
+                      setSelectionType(value as 'appliance' | 'feature');
+                      setSelectedApplianceId('');
+                      setSelectedHomeFeature('');
+                    }
+                  }}
+                  className="bg-slate-100 dark:bg-slate-800 rounded-lg p-1"
+                >
+                  <ToggleGroupItem 
+                    value="appliance" 
+                    aria-label="Appliance"
+                    className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-4 py-2"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    My Stuff
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="feature" 
+                    aria-label="Home Feature"
+                    className="data-[state=on]:bg-white dark:data-[state=on]:bg-slate-700 data-[state=on]:shadow-sm rounded-md px-4 py-2"
+                  >
+                    <TreePine className="h-4 w-4 mr-2" />
+                    Home Feature
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
+              {selectionType === 'appliance' ? (
+                // Appliance Selection
+                appliances.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground">No appliances available. Add one in My Stuff first.</p>
+                  </div>
+                ) : (
+                  <ScrollArea className={appliances.length > 4 ? "h-[240px]" : ""}>
+                    <div className="space-y-2 pr-4">
+                      {appliances.map(appliance => {
+                        const isSelected = selectedApplianceId === appliance.id;
+                        
+                        return (
+                          <button
+                            key={appliance.id}
+                            onClick={() => setSelectedApplianceId(appliance.id)}
+                            className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                              isSelected
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:bg-muted/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg shrink-0 ${isSelected ? 'bg-primary/20' : 'bg-muted'}`}>
+                                <Package className={`h-5 w-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{appliance.model}</p>
+                                <p className="text-xs text-muted-foreground">{appliance.room || 'No room'}</p>
+                              </div>
+                              {isSelected && (
+                                <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )
+              ) : (
+                // Home Feature Selection
+                homeFeatures.length === 0 ? (
+                  <div className="text-center py-6">
+                    <TreePine className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground">No home features available.</p>
+                  </div>
+                ) : (
+                  <ScrollArea className={homeFeatures.length > 6 ? "h-[240px]" : ""}>
+                    <div className="space-y-2 pr-4">
+                      {homeFeatures.map(feature => {
+                        const isSelected = selectedHomeFeature === feature;
+                        
+                        return (
+                          <button
+                            key={feature}
+                            onClick={() => setSelectedHomeFeature(feature)}
+                            className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                              isSelected
+                                ? 'border-green-500 bg-green-50 dark:bg-green-950/30'
+                                : 'border-border hover:bg-muted/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg shrink-0 ${isSelected ? 'bg-green-500/20' : 'bg-muted'}`}>
+                                <TreePine className={`h-5 w-5 ${isSelected ? 'text-green-600' : 'text-muted-foreground'}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{feature}</p>
+                              </div>
+                              {isSelected && (
+                                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )
+              )}
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleContinue} 
+                disabled={!canContinue}
+                className="gap-2"
+              >
+                Continue
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-4 py-4">
+              {/* Selected item display */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+                <div className={`p-2 rounded-lg shrink-0 ${selectionType === 'feature' ? 'bg-green-500/20' : 'bg-primary/20'}`}>
+                  {selectionType === 'feature' ? (
+                    <TreePine className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <Package className="h-5 w-5 text-primary" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">
+                    {selectionType === 'feature' ? selectedHomeFeature : selectedAppliance?.model}
+                  </p>
+                  {selectionType === 'appliance' && selectedAppliance?.room && (
+                    <p className="text-xs text-muted-foreground">{selectedAppliance.room}</p>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                What would you like to do?
+              </p>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={handleLogTask}
+                  className="w-full p-4 rounded-lg border border-border hover:bg-muted/50 text-left transition-colors group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 shrink-0 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
+                      <ClipboardList className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Log a Maintenance Task</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Record a one-time maintenance task that was completed.
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={handleAddRecurring}
+                  className="w-full p-4 rounded-lg border border-border hover:bg-muted/50 text-left transition-colors group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 shrink-0 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                      <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Setup Recurring Maintenance</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Create a recurring maintenance schedule with reminders.
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex justify-between gap-2">
+              <Button variant="outline" onClick={handleBack}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
