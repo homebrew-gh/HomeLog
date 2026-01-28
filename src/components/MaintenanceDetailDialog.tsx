@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check, Car, Gauge, TreePine, ClipboardList, Plus, X } from 'lucide-react';
+import { Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check, Car, Gauge, TreePine, ClipboardList, Plus, X, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -557,7 +557,7 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
                 <div className="flex gap-2">
                   <Button
                     onClick={handleSubmitCompletion}
-                    disabled={isSubmittingCompletion || (!completionDate && !useToday)}
+                    disabled={isSubmittingCompletion || !completionDate}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
                     {isSubmittingCompletion ? 'Saving...' : 'Confirm'}
@@ -568,7 +568,6 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
                       setShowCompletionForm(false);
                       setCompletionDate('');
                       setCompletionMileage('');
-                      setUseToday(false);
                       setCompletionParts([]);
                       setShowAddPart(false);
                       setNewPart({ name: '', partNumber: '', cost: '' });
