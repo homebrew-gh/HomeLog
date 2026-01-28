@@ -217,7 +217,7 @@ const Index = () => {
                 onClick={() => setActiveTab('home')}
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
-                <img src="/icon.svg" alt="Home Log" className="h-10 w-10 text-foreground" style={{ filter: 'var(--logo-filter, none)' }} />
+                <img src="/logo.png" alt="Home Log" className="h-10 w-10" />
                 <span className="font-bold text-xl text-theme-heading">Home Log</span>
               </button>
             </div>
@@ -252,8 +252,8 @@ const Index = () => {
           // Not logged in - Welcome screen
           <div className="max-w-2xl mx-auto text-center py-16">
             <div className="mb-8">
-              <div className="inline-flex items-center justify-center w-40 h-40 rounded-3xl mb-6 overflow-hidden shadow-2xl bg-card">
-                <img src="/icon.svg" alt="Home Log" className="h-32 w-32" style={{ filter: 'var(--logo-filter, none)' }} />
+              <div className="inline-flex items-center justify-center w-40 h-40 rounded-3xl mb-6 overflow-hidden shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                <img src="/logo.png" alt="Home Log" className="h-36 w-36 object-contain" />
               </div>
               <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-4">
                 Welcome to Home Log
