@@ -251,7 +251,8 @@ export function usePetActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['pets'] });
+    // Use refetchQueries to ensure immediate data refresh after creating a pet
+    await queryClient.refetchQueries({ queryKey: ['pets', user.pubkey] });
 
     return id;
   };
@@ -314,7 +315,8 @@ export function usePetActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['pets'] });
+    // Use refetchQueries to ensure immediate data refresh after updating a pet
+    await queryClient.refetchQueries({ queryKey: ['pets', user.pubkey] });
   };
 
   const archivePet = async (id: string, isArchived: boolean) => {
@@ -350,7 +352,7 @@ export function usePetActions() {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // Force refetch to get updated data including the deletion event
-    await queryClient.refetchQueries({ queryKey: ['pets'] });
+    await queryClient.refetchQueries({ queryKey: ['pets', user.pubkey] });
   };
 
   return { createPet, updatePet, deletePet, archivePet };
