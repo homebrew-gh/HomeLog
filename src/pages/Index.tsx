@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive } from 'lucide-react';
+import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -18,6 +18,7 @@ import { EncryptionSettingsDialog } from '@/components/EncryptionSettingsDialog'
 import { StorageSettingsDialog } from '@/components/StorageSettingsDialog';
 import { DisplaySettingsDialog } from '@/components/DisplaySettingsDialog';
 import { CurrencySettingsDialog } from '@/components/CurrencySettingsDialog';
+import { ProfileSettingsDialog } from '@/components/ProfileSettingsDialog';
 import { DonateSection } from '@/components/DonateSection';
 import { TabNavigation } from '@/components/TabNavigation';
 import { AddTabDialog } from '@/components/AddTabDialog';
@@ -82,6 +83,7 @@ const Index = () => {
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const [currencySettingsOpen, setCurrencySettingsOpen] = useState(false);
+  const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
   const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
   
   // Global search state
@@ -159,6 +161,12 @@ const Index = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>Account</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setProfileSettingsOpen(true)}>
+                      <User className="h-4 w-4 mr-2" />
+                      Profile Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuLabel>Settings</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => setRoomManagementOpen(true)}>
                       <Settings className="h-4 w-4 mr-2" />
@@ -421,6 +429,11 @@ const Index = () => {
       <CurrencySettingsDialog
         isOpen={currencySettingsOpen}
         onClose={() => setCurrencySettingsOpen(false)}
+      />
+
+      <ProfileSettingsDialog
+        isOpen={profileSettingsOpen}
+        onClose={() => setProfileSettingsOpen(false)}
       />
 
       {/* Global Search */}
