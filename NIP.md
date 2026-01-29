@@ -454,3 +454,90 @@ For appliances and vehicles, `linked_asset_id` is required. For home features, o
 ### Security Warning
 
 The notes field should NOT be used to store login credentials, passwords, or other sensitive authentication information. Users should use a dedicated password manager for storing such data securely.
+
+---
+
+## Kind 38033: Pet/Animal
+
+An addressable event representing a pet or animal.
+
+### Format
+
+```json
+{
+  "kind": 38033,
+  "content": "",
+  "tags": [
+    ["d", "<unique-identifier>"],
+    ["alt", "Pet: <name>"],
+    ["name", "<pet name>"],
+    ["pet_type", "<type>"],
+    ["species", "<species/breed type>"],
+    ["breed", "<breed>"],
+    ["birth_date", "<MM/DD/YYYY>"],
+    ["adoption_date", "<MM/DD/YYYY>"],
+    ["weight", "<weight>"],
+    ["color", "<color>"],
+    ["sex", "<male|female|unknown>"],
+    ["is_neutered", "true"],
+    ["microchip_id", "<microchip number>"],
+    ["license_number", "<license number>"],
+    ["vet_clinic", "<vet clinic name>"],
+    ["vet_phone", "<phone number>"],
+    ["allergies", "<allergies>"],
+    ["medications", "<medications>"],
+    ["medical_conditions", "<conditions>"],
+    ["last_vet_visit", "<MM/DD/YYYY>"],
+    ["photo_url", "<url>"],
+    ["document_url", "<url>"],
+    ["notes", "<notes>"]
+  ]
+}
+```
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `d` | Yes | Unique identifier (UUID) for the pet |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `name` | Yes | Pet's name |
+| `pet_type` | Yes | Type of pet (see Pet Types below) |
+| `species` | No | Species or breed type (e.g., "Golden Retriever") |
+| `breed` | No | Breed information |
+| `birth_date` | No | Birth date in MM/DD/YYYY format |
+| `adoption_date` | No | Adoption date in MM/DD/YYYY format |
+| `weight` | No | Weight (e.g., "45 lbs") |
+| `color` | No | Coloring/markings |
+| `sex` | No | Sex: `male`, `female`, or `unknown` |
+| `is_neutered` | No | If "true", the pet is spayed/neutered |
+| `microchip_id` | No | Microchip identification number |
+| `license_number` | No | Pet license number |
+| `vet_clinic` | No | Name of veterinary clinic |
+| `vet_phone` | No | Veterinary clinic phone number |
+| `allergies` | No | Known allergies |
+| `medications` | No | Current medications |
+| `medical_conditions` | No | Ongoing medical conditions |
+| `last_vet_visit` | No | Date of last veterinary visit in MM/DD/YYYY format |
+| `photo_url` | No | URL to pet's photo |
+| `document_url` | No | URL to additional documents (can have multiple) |
+| `notes` | No | Additional notes |
+
+### Pet Types
+
+Standard pet types include:
+- Dog
+- Cat
+- Bird
+- Fish
+- Reptile
+- Small Mammal
+- Horse
+- Livestock
+- Other
+
+Custom pet types can also be used.
+
+### Privacy Considerations
+
+Pet records may contain sensitive personal information (vet details, microchip IDs). Users should consider enabling encryption for this data category when using the application.
