@@ -344,7 +344,8 @@ export function useWarrantyActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['warranties'] });
+    // Refetch to ensure immediate data refresh after creating a warranty
+    await queryClient.refetchQueries({ queryKey: ['warranties', user.pubkey] });
 
     return id;
   };
@@ -418,7 +419,8 @@ export function useWarrantyActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['warranties'] });
+    // Refetch to ensure immediate data refresh after updating a warranty
+    await queryClient.refetchQueries({ queryKey: ['warranties', user.pubkey] });
   };
 
   const archiveWarranty = async (id: string, isArchived: boolean) => {

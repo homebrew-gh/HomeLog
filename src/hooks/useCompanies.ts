@@ -247,7 +247,8 @@ export function useCompanyActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['companies'] });
+    // Refetch to ensure immediate data refresh after creating a company
+    await queryClient.refetchQueries({ queryKey: ['companies', user.pubkey] });
 
     return id;
   };
@@ -307,7 +308,8 @@ export function useCompanyActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['companies'] });
+    // Refetch to ensure immediate data refresh after updating a company
+    await queryClient.refetchQueries({ queryKey: ['companies', user.pubkey] });
   };
 
   const deleteCompany = async (id: string) => {

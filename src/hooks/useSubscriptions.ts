@@ -225,7 +225,8 @@ export function useSubscriptionActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    // Refetch to ensure immediate data refresh after creating a subscription
+    await queryClient.refetchQueries({ queryKey: ['subscriptions', user.pubkey] });
 
     return id;
   };
@@ -273,7 +274,8 @@ export function useSubscriptionActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    // Refetch to ensure immediate data refresh after updating a subscription
+    await queryClient.refetchQueries({ queryKey: ['subscriptions', user.pubkey] });
   };
 
   const archiveSubscription = async (id: string, isArchived: boolean) => {

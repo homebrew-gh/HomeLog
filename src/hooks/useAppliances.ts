@@ -242,8 +242,8 @@ export function useApplianceActions() {
       await cacheEvents([event]);
     }
 
-    // Invalidate the query to refresh the list
-    await queryClient.invalidateQueries({ queryKey: ['appliances'] });
+    // Refetch to ensure immediate data refresh after creating an appliance
+    await queryClient.refetchQueries({ queryKey: ['appliances', user.pubkey] });
 
     return id;
   };
@@ -296,7 +296,8 @@ export function useApplianceActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['appliances'] });
+    // Refetch to ensure immediate data refresh after updating an appliance
+    await queryClient.refetchQueries({ queryKey: ['appliances', user.pubkey] });
   };
 
   const archiveAppliance = async (id: string, isArchived: boolean) => {

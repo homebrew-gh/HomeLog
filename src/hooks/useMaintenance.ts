@@ -324,7 +324,8 @@ export function useMaintenanceActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+    // Refetch to ensure immediate data refresh after creating maintenance
+    await queryClient.refetchQueries({ queryKey: ['maintenance', user.pubkey] });
 
     return id;
   };
@@ -394,7 +395,8 @@ export function useMaintenanceActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+    // Refetch to ensure immediate data refresh after updating maintenance
+    await queryClient.refetchQueries({ queryKey: ['maintenance', user.pubkey] });
   };
 
   const archiveMaintenance = async (id: string, isArchived: boolean) => {

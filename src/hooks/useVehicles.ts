@@ -253,7 +253,8 @@ export function useVehicleActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+    // Refetch to ensure immediate data refresh after creating a vehicle
+    await queryClient.refetchQueries({ queryKey: ['vehicles', user.pubkey] });
 
     return id;
   };
@@ -317,7 +318,8 @@ export function useVehicleActions() {
       await cacheEvents([event]);
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+    // Refetch to ensure immediate data refresh after updating a vehicle
+    await queryClient.refetchQueries({ queryKey: ['vehicles', user.pubkey] });
   };
 
   const archiveVehicle = async (id: string, isArchived: boolean) => {
