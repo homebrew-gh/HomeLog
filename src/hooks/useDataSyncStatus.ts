@@ -11,6 +11,7 @@ import {
   SUBSCRIPTION_KIND,
   WARRANTY_KIND,
   MAINTENANCE_COMPLETION_KIND,
+  PET_KIND,
 } from '@/lib/types';
 import { cacheEvents, getCachedEvents } from '@/lib/eventCache';
 
@@ -26,6 +27,7 @@ interface CacheCheckResult {
   subscriptions: number;
   warranties: number;
   completions: number;
+  pets: number;
   hasAny: boolean;
 }
 
@@ -66,7 +68,7 @@ export function useDataSyncStatus() {
     const checkCache = async () => {
       console.log('[DataSync] Checking IndexedDB cache for pubkey:', user.pubkey);
       
-      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedSubscriptions, cachedWarranties, cachedCompletions] = await Promise.all([
+      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedSubscriptions, cachedWarranties, cachedCompletions, cachedPets] = await Promise.all([
         getCachedEvents([APPLIANCE_KIND], user.pubkey),
         getCachedEvents([VEHICLE_KIND], user.pubkey),
         getCachedEvents([MAINTENANCE_KIND], user.pubkey),
@@ -74,6 +76,7 @@ export function useDataSyncStatus() {
         getCachedEvents([SUBSCRIPTION_KIND], user.pubkey),
         getCachedEvents([WARRANTY_KIND], user.pubkey),
         getCachedEvents([MAINTENANCE_COMPLETION_KIND], user.pubkey),
+        getCachedEvents([PET_KIND], user.pubkey),
       ]);
       
       const result: CacheCheckResult = {
@@ -84,13 +87,15 @@ export function useDataSyncStatus() {
         subscriptions: cachedSubscriptions.length,
         warranties: cachedWarranties.length,
         completions: cachedCompletions.length,
+        pets: cachedPets.length,
         hasAny: cachedAppliances.length > 0 ||
           cachedVehicles.length > 0 ||
           cachedMaintenance.length > 0 ||
           cachedCompanies.length > 0 ||
           cachedSubscriptions.length > 0 ||
           cachedWarranties.length > 0 ||
-          cachedCompletions.length > 0,
+          cachedCompletions.length > 0 ||
+          cachedPets.length > 0,
       };
       
       console.log('[DataSync] Cache check result:', result);
@@ -119,6 +124,7 @@ export function useDataSyncStatus() {
             subscriptions: { synced: false, count: 0 },
             warranties: { synced: false, count: 0 },
             completions: { synced: false, count: 0 },
+            pets: { synced: false, count: 0 },
           }
         };
       }
@@ -147,6 +153,7 @@ export function useDataSyncStatus() {
             { kinds: [SUBSCRIPTION_KIND], authors: [user.pubkey] },
             { kinds: [WARRANTY_KIND], authors: [user.pubkey] },
             { kinds: [MAINTENANCE_COMPLETION_KIND], authors: [user.pubkey] },
+            { kinds: [PET_KIND], authors: [user.pubkey] },
             { kinds: [5], authors: [user.pubkey] }, // Deletion events
           ],
           { signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) }
@@ -161,6 +168,7 @@ export function useDataSyncStatus() {
           subscriptions: events.filter(e => e.kind === SUBSCRIPTION_KIND).length,
           warranties: events.filter(e => e.kind === WARRANTY_KIND).length,
           completions: events.filter(e => e.kind === MAINTENANCE_COMPLETION_KIND).length,
+          pets: events.filter(e => e.kind === PET_KIND).length,
           deletions: events.filter(e => e.kind === 5).length,
         });
 
@@ -181,6 +189,7 @@ export function useDataSyncStatus() {
             queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
             queryClient.invalidateQueries({ queryKey: ['warranties'] });
             queryClient.invalidateQueries({ queryKey: ['maintenance-completions'] });
+            queryClient.invalidateQueries({ queryKey: ['pets'] });
           }
         }
 
@@ -192,6 +201,7 @@ export function useDataSyncStatus() {
         const subscriptionCount = events.filter(e => e.kind === SUBSCRIPTION_KIND).length;
         const warrantyCount = events.filter(e => e.kind === WARRANTY_KIND).length;
         const completionCount = events.filter(e => e.kind === MAINTENANCE_COMPLETION_KIND).length;
+        const petCount = events.filter(e => e.kind === PET_KIND).length;
 
         return {
           synced: true,
@@ -204,6 +214,7 @@ export function useDataSyncStatus() {
             subscriptions: { synced: true, count: subscriptionCount },
             warranties: { synced: true, count: warrantyCount },
             completions: { synced: true, count: completionCount },
+            pets: { synced: true, count: petCount },
           }
         };
       } catch (error) {
@@ -221,6 +232,7 @@ export function useDataSyncStatus() {
               subscriptions: { synced: true, count: cacheResult.subscriptions },
               warranties: { synced: true, count: cacheResult.warranties },
               completions: { synced: true, count: cacheResult.completions },
+              pets: { synced: true, count: cacheResult.pets },
             }
           };
         }
@@ -237,6 +249,7 @@ export function useDataSyncStatus() {
             subscriptions: { synced: true, count: 0 },
             warranties: { synced: true, count: 0 },
             completions: { synced: true, count: 0 },
+            pets: { synced: true, count: 0 },
           }
         };
       }
@@ -264,6 +277,7 @@ export function useDataSyncStatus() {
       subscriptions: { synced: false, count: 0 },
       warranties: { synced: false, count: 0 },
       completions: { synced: false, count: 0 },
+      pets: { synced: false, count: 0 },
     },
   };
 }

@@ -224,6 +224,21 @@ export const DEFAULT_WARRANTY_TYPES = [
 
 export type DefaultWarrantyType = typeof DEFAULT_WARRANTY_TYPES[number];
 
+// Pet/Animal Types
+export const DEFAULT_PET_TYPES = [
+  'Dog',
+  'Cat',
+  'Bird',
+  'Fish',
+  'Reptile',
+  'Small Mammal',
+  'Horse',
+  'Livestock',
+  'Other',
+] as const;
+
+export type DefaultPetType = typeof DEFAULT_PET_TYPES[number];
+
 // Billing Frequencies for subscriptions
 export const BILLING_FREQUENCIES = [
   { value: 'weekly', label: 'Weekly' },
@@ -299,6 +314,40 @@ export const MAINTENANCE_KIND = 30229;
 export const MAINTENANCE_COMPLETION_KIND = 9413;
 export const SUBSCRIPTION_KIND = 37004;
 export const WARRANTY_KIND = 35043;
+export const PET_KIND = 38033;
+
+export interface Pet {
+  id: string;
+  petType: string;
+  name: string;
+  species?: string; // e.g., "Golden Retriever", "Siamese Cat"
+  breed?: string;
+  birthDate?: string; // MM/DD/YYYY format
+  adoptionDate?: string; // MM/DD/YYYY format
+  weight?: string; // e.g., "45 lbs"
+  color?: string;
+  sex?: 'male' | 'female' | 'unknown';
+  isNeutered?: boolean;
+  microchipId?: string;
+  licenseNumber?: string;
+  // Veterinary info
+  vetClinic?: string;
+  vetPhone?: string;
+  // Medical info
+  allergies?: string;
+  medications?: string;
+  medicalConditions?: string;
+  lastVetVisit?: string; // MM/DD/YYYY format
+  // Documents
+  photoUrl?: string;
+  documentsUrls?: string[];
+  // General
+  notes?: string;
+  isArchived?: boolean;
+  // Metadata
+  pubkey: string;
+  createdAt: number;
+}
 
 // Linked item types (shared between Warranty and Subscription)
 export type LinkedAssetType = 'appliance' | 'vehicle' | 'home_feature';
