@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { nip19 } from 'nostr-tools';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useToast } from '@/hooks/useToast';
@@ -17,18 +18,43 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload, Copy, Check } from 'lucide-react';
 import { NSchema as n, type NostrMetadata } from '@nostrify/nostrify';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUploadFile } from '@/hooks/useUploadFile';
 
 export const EditProfileForm: React.FC = () => {
   const queryClient = useQueryClient();
+  const [copiedNpub, setCopiedNpub] = React.useState(false);
 
   const { user, metadata } = useCurrentUser();
   const { mutateAsync: publishEvent, isPending } = useNostrPublish();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
   const { toast } = useToast();
+
+  // Convert hex pubkey to npub
+  const npub = user?.pubkey ? nip19.npubEncode(user.pubkey) : null;
+
+  // Copy npub to clipboard
+  const copyNpubToClipboard = async () => {
+    if (!npub) return;
+    
+    try {
+      await navigator.clipboard.writeText(npub);
+      setCopiedNpub(true);
+      toast({
+        title: 'Copied!',
+        description: 'Your npub has been copied to the clipboard.',
+      });
+      setTimeout(() => setCopiedNpub(false), 2000);
+    } catch {
+      toast({
+        title: 'Failed to copy',
+        description: 'Please try selecting and copying manually.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Initialize the form with default values
   const form = useForm<NostrMetadata>({
@@ -127,6 +153,41 @@ export const EditProfileForm: React.FC = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Public Key (npub) Section */}
+        {npub && (
+          <div className="rounded-lg border p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium leading-none">
+                Public Key (npub)
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={copyNpubToClipboard}
+                className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              >
+                {copiedNpub ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                <span className="ml-2">{copiedNpub ? 'Copied!' : 'Copy'}</span>
+              </Button>
+            </div>
+            <div 
+              className="font-mono text-sm bg-muted p-3 rounded-md break-all select-all cursor-pointer"
+              onClick={copyNpubToClipboard}
+              title="Click to copy"
+            >
+              {npub}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Your unique Nostr public key. Share this with others so they can find you.
+            </p>
+          </div>
+        )}
+
         <FormField
           control={form.control}
           name="name"
