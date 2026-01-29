@@ -6,13 +6,13 @@
   :root,
   .theme-blue {
     /* Muted Neon Cyan - Cyberpunk Light Theme (Default) */
-    --background: 195 25% 95%;
+    --background: 195 15% 92%;
     --foreground: 200 40% 12%;
 
-    --card: 195 20% 98%;
+    --card: 195 10% 90%;
     --card-foreground: 200 40% 12%;
 
-    --popover: 195 20% 98%;
+    --popover: 195 10% 90%;
     --popover-foreground: 200 40% 12%;
 
     --primary: 185 85% 40%;
@@ -107,13 +107,13 @@
 
   /* Muted Neon Amber - Cyberpunk Orange Theme */
   .theme-orange {
-    --background: 35 25% 95%;
+    --background: 35 15% 92%;
     --foreground: 30 40% 12%;
 
-    --card: 35 20% 98%;
+    --card: 35 10% 90%;
     --card-foreground: 30 40% 12%;
 
-    --popover: 35 20% 98%;
+    --popover: 35 10% 90%;
     --popover-foreground: 30 40% 12%;
 
     --primary: 35 90% 45%;
@@ -198,13 +198,13 @@
 
   /* Muted Neon Emerald - Cyberpunk Green Theme */
   .theme-green {
-    --background: 155 25% 95%;
+    --background: 155 15% 92%;
     --foreground: 160 40% 12%;
 
-    --card: 155 20% 98%;
+    --card: 155 10% 90%;
     --card-foreground: 160 40% 12%;
 
-    --popover: 155 20% 98%;
+    --popover: 155 10% 90%;
     --popover-foreground: 160 40% 12%;
 
     --primary: 155 85% 38%;
@@ -289,13 +289,13 @@
 
   /* Muted Neon Rose - Cyberpunk Red Theme */
   .theme-red {
-    --background: 345 25% 95%;
+    --background: 345 15% 92%;
     --foreground: 350 40% 12%;
 
-    --card: 345 20% 98%;
+    --card: 345 10% 90%;
     --card-foreground: 350 40% 12%;
 
-    --popover: 345 20% 98%;
+    --popover: 345 10% 90%;
     --popover-foreground: 350 40% 12%;
 
     --primary: 345 85% 55%;
@@ -380,13 +380,13 @@
 
   /* Muted Neon Magenta - Cyberpunk Pink Theme */
   .theme-pink {
-    --background: 295 25% 95%;
+    --background: 295 15% 92%;
     --foreground: 290 40% 12%;
 
-    --card: 295 20% 98%;
+    --card: 295 10% 90%;
     --card-foreground: 290 40% 12%;
 
-    --popover: 295 20% 98%;
+    --popover: 295 10% 90%;
     --popover-foreground: 290 40% 12%;
 
     --primary: 295 80% 55%;
@@ -471,13 +471,13 @@
 
   /* Muted Neon Violet - Cyberpunk Purple Theme */
   .theme-purple {
-    --background: 265 25% 95%;
+    --background: 265 15% 92%;
     --foreground: 260 40% 12%;
 
-    --card: 265 20% 98%;
+    --card: 265 10% 90%;
     --card-foreground: 260 40% 12%;
 
-    --popover: 265 20% 98%;
+    --popover: 265 10% 90%;
     --popover-foreground: 260 40% 12%;
 
     --primary: 265 80% 55%;
