@@ -17,9 +17,9 @@ import { useSubscriptions, useSubscriptionActions } from '@/hooks/useSubscriptio
 import { useWarranties, useWarrantyActions } from '@/hooks/useWarranties';
 import { useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
 import { toast } from '@/hooks/useToast';
-import type { Vehicle, Appliance } from '@/lib/types';
+import type { Vehicle, Appliance, Pet } from '@/lib/types';
 
-type AssetType = 'vehicle' | 'appliance';
+type AssetType = 'vehicle' | 'appliance' | 'pet';
 
 interface LinkedItem {
   tabName: string;
@@ -32,7 +32,7 @@ interface ArchiveConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
   assetType: AssetType;
-  asset: Vehicle | Appliance;
+  asset: Vehicle | Appliance | Pet;
   onConfirm: () => Promise<void>;
 }
 
@@ -126,7 +126,11 @@ export function ArchiveConfirmDialog({
   };
 
   const hasLinkedItems = linkedItems.length > 0;
-  const assetName = assetType === 'vehicle' ? (asset as Vehicle).name : (asset as Appliance).model;
+  const assetName = assetType === 'vehicle' 
+    ? (asset as Vehicle).name 
+    : assetType === 'pet' 
+      ? (asset as Pet).name 
+      : (asset as Appliance).model;
 
   const handleConfirm = async () => {
     setIsProcessing(true);
@@ -170,8 +174,9 @@ export function ArchiveConfirmDialog({
       // Archive the main asset
       await onConfirm();
 
+      const assetLabel = assetType === 'vehicle' ? 'Vehicle' : assetType === 'pet' ? 'Pet' : 'Appliance';
       toast({
-        title: `${assetType === 'vehicle' ? 'Vehicle' : 'Appliance'} archived`,
+        title: `${assetLabel} archived`,
         description: hasLinkedItems 
           ? 'The item and linked records have been processed.'
           : 'The item has been archived.',
@@ -196,7 +201,7 @@ export function ArchiveConfirmDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Archive className="h-5 w-5 text-amber-500" />
-            Archive {assetType === 'vehicle' ? 'Vehicle' : 'Appliance'}
+            Archive {assetType === 'vehicle' ? 'Vehicle' : assetType === 'pet' ? 'Pet' : 'Appliance'}
           </DialogTitle>
           <DialogDescription>
             Archive "{assetName}" and manage linked records.
