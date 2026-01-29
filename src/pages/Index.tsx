@@ -38,6 +38,7 @@ import {
   WarrantiesTab,
   CompaniesTab,
   ProjectsTab,
+  PetsTab,
 } from '@/components/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
@@ -130,6 +131,8 @@ const Index = () => {
         return <CompaniesTab scrollTarget={scrollTarget} />;
       case 'projects':
         return <ProjectsTab />;
+      case 'pets':
+        return <PetsTab scrollTarget={scrollTarget} />;
       default:
         return (
           <HomeTab 

@@ -4,6 +4,7 @@ import { useVehicles } from './useVehicles';
 import { useCompanies } from './useCompanies';
 import { useSubscriptions } from './useSubscriptions';
 import { useWarranties } from './useWarranties';
+import { usePets } from './usePets';
 import type { TabId } from '@/contexts/TabPreferencesContext';
 
 export interface TabDataInfo {
@@ -23,6 +24,7 @@ export function useTabData(tabId: TabId): TabDataInfo {
   const { data: companies = [] } = useCompanies();
   const { data: subscriptions = [] } = useSubscriptions();
   const { data: warranties = [] } = useWarranties();
+  const { data: pets = [] } = usePets();
 
   switch (tabId) {
     case 'appliances':
@@ -82,6 +84,14 @@ export function useTabData(tabId: TabId): TabDataInfo {
         itemNamePlural: 'projects',
       };
 
+    case 'pets':
+      return {
+        hasData: pets.length > 0,
+        count: pets.length,
+        itemName: 'pet',
+        itemNamePlural: 'pets',
+      };
+
     default:
       return {
         hasData: false,
@@ -102,6 +112,7 @@ export function useAllTabsData(tabIds: TabId[]): Record<TabId, TabDataInfo> {
   const { data: companies = [] } = useCompanies();
   const { data: subscriptions = [] } = useSubscriptions();
   const { data: warranties = [] } = useWarranties();
+  const { data: pets = [] } = usePets();
 
   const result: Record<string, TabDataInfo> = {};
 
@@ -158,6 +169,15 @@ export function useAllTabsData(tabIds: TabId[]): Record<TabId, TabDataInfo> {
           count: warranties.length,
           itemName: 'warranty',
           itemNamePlural: 'warranties',
+        };
+        break;
+
+      case 'pets':
+        result[tabId] = {
+          hasData: pets.length > 0,
+          count: pets.length,
+          itemName: 'pet',
+          itemNamePlural: 'pets',
         };
         break;
 

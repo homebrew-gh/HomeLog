@@ -9,6 +9,7 @@ import {
   Shield, 
   Users, 
   FolderKanban,
+  PawPrint,
   X,
   Pencil,
   Check,
@@ -37,6 +38,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Shield,
   Users,
   FolderKanban,
+  PawPrint,
   Plus,
 };
 

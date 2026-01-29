@@ -18,7 +18,8 @@ export type TabId =
   | 'subscriptions'
   | 'warranties'
   | 'companies'
-  | 'projects';
+  | 'projects'
+  | 'pets';
 
 export interface TabDefinition {
   id: TabId;
@@ -35,6 +36,7 @@ export const AVAILABLE_TABS: TabDefinition[] = [
   { id: 'warranties', label: 'Warranties', icon: 'Shield', description: 'Store warranty information and expiration dates' },
   { id: 'companies', label: 'Companies/Services', icon: 'Users', description: 'Keep contact info for service providers' },
   { id: 'projects', label: 'Projects', icon: 'FolderKanban', description: 'Plan and track home improvement projects' },
+  { id: 'pets', label: 'Pets & Animals', icon: 'PawPrint', description: 'Track your pets and their care information' },
 ];
 
 export interface BlossomServer {

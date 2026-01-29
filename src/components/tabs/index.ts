@@ -6,3 +6,4 @@ export { SubscriptionsTab } from './SubscriptionsTab';
 export { WarrantiesTab } from './WarrantiesTab';
 export { CompaniesTab } from './CompaniesTab';
 export { ProjectsTab } from './ProjectsTab';
+export { PetsTab } from './PetsTab';
