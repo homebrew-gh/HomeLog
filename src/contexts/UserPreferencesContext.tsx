@@ -321,6 +321,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     if (isFetched && !hasSyncedFromRemote && user?.pubkey) {
       if (remotePreferences) {
         console.log('[UserPreferences] Syncing preferences from Nostr relay');
+        console.log('[UserPreferences] Active tabs from relay:', remotePreferences.activeTabs);
         setLocalPreferences(remotePreferences);
       }
       setHasSyncedFromRemote(true);

@@ -64,6 +64,8 @@ export function useDataSyncStatus() {
     
     // Check cache instantly (IndexedDB is very fast)
     const checkCache = async () => {
+      console.log('[DataSync] Checking IndexedDB cache for pubkey:', user.pubkey);
+      
       const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedSubscriptions, cachedWarranties, cachedCompletions] = await Promise.all([
         getCachedEvents([APPLIANCE_KIND], user.pubkey),
         getCachedEvents([VEHICLE_KIND], user.pubkey),
@@ -91,6 +93,7 @@ export function useDataSyncStatus() {
           cachedCompletions.length > 0,
       };
       
+      console.log('[DataSync] Cache check result:', result);
       setCacheResult(result);
       setCacheChecked(true);
     };
@@ -131,6 +134,9 @@ export function useDataSyncStatus() {
       const timeoutMs = hasAnyCachedData ? 20000 : NEW_USER_FAST_TIMEOUT_MS;
 
       try {
+        console.log('[DataSync] Starting relay query for pubkey:', user.pubkey);
+        console.log('[DataSync] Timeout:', timeoutMs, 'ms, Has cached data:', hasAnyCachedData);
+        
         // Fetch all data types in one query for efficiency
         const events = await nostr.query(
           [
@@ -145,6 +151,18 @@ export function useDataSyncStatus() {
           ],
           { signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) }
         );
+
+        console.log('[DataSync] Query complete. Events found:', events.length);
+        console.log('[DataSync] Events by kind:', {
+          appliances: events.filter(e => e.kind === APPLIANCE_KIND).length,
+          vehicles: events.filter(e => e.kind === VEHICLE_KIND).length,
+          maintenance: events.filter(e => e.kind === MAINTENANCE_KIND).length,
+          companies: events.filter(e => e.kind === COMPANY_KIND).length,
+          subscriptions: events.filter(e => e.kind === SUBSCRIPTION_KIND).length,
+          warranties: events.filter(e => e.kind === WARRANTY_KIND).length,
+          completions: events.filter(e => e.kind === MAINTENANCE_COMPLETION_KIND).length,
+          deletions: events.filter(e => e.kind === 5).length,
+        });
 
         // Cache all events for other hooks to use
         if (events.length > 0) {
@@ -188,7 +206,8 @@ export function useDataSyncStatus() {
             completions: { synced: true, count: completionCount },
           }
         };
-      } catch {
+      } catch (error) {
+        console.error('[DataSync] Relay query failed:', error);
         // If sync fails but we have cached data, consider it "synced" with cache
         if (hasAnyCachedData && cacheResult) {
           return {
@@ -223,7 +242,7 @@ export function useDataSyncStatus() {
       }
     },
     enabled: !!user?.pubkey && cacheChecked, // Only run after cache check completes
-    staleTime: Infinity, // Once synced, don't refetch
+    staleTime: 30000, // Re-fetch after 30 seconds to catch relay changes
     gcTime: Infinity, // Keep in memory for the session
     refetchOnWindowFocus: false,
     retry: 1,
