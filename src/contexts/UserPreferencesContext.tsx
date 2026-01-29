@@ -335,16 +335,30 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   }, [user?.pubkey, config.relayMetadata.updatedAt]);
 
   // Apply remote preferences when fetched (but don't change activeTab - always start on home)
+  // Only apply remote preferences if local storage is empty/default (no tabs configured)
+  // This prevents overwriting local changes that haven't been synced to Nostr yet
   useEffect(() => {
     if (isFetched && !hasSyncedFromRemote && user?.pubkey) {
       if (remotePreferences) {
-        console.log('[UserPreferences] Syncing preferences from Nostr relay');
-        console.log('[UserPreferences] Active tabs from relay:', remotePreferences.activeTabs);
-        setLocalPreferences(remotePreferences);
+        const hasLocalTabs = localPreferences.activeTabs && localPreferences.activeTabs.length > 0;
+        const hasRemoteTabs = remotePreferences.activeTabs && remotePreferences.activeTabs.length > 0;
+        
+        if (!hasLocalTabs && hasRemoteTabs) {
+          // No local tabs but remote has tabs - this is a new browser/device, sync from remote
+          console.log('[UserPreferences] Syncing preferences from Nostr relay (new browser/device)');
+          console.log('[UserPreferences] Active tabs from relay:', remotePreferences.activeTabs);
+          setLocalPreferences(remotePreferences);
+        } else if (hasLocalTabs) {
+          // Local storage has tabs - don't overwrite with potentially stale remote data
+          // The local changes will be synced to Nostr when saveToNostr runs
+          console.log('[UserPreferences] Local preferences exist, not overwriting with remote');
+          console.log('[UserPreferences] Local tabs:', localPreferences.activeTabs);
+          console.log('[UserPreferences] Remote tabs:', remotePreferences.activeTabs);
+        }
       }
       setHasSyncedFromRemote(true);
     }
-  }, [isFetched, hasSyncedFromRemote, remotePreferences, setLocalPreferences, user?.pubkey]);
+  }, [isFetched, hasSyncedFromRemote, remotePreferences, setLocalPreferences, user?.pubkey, localPreferences.activeTabs]);
 
   // Save preferences to Nostr (debounced)
   const saveToNostr = useCallback(

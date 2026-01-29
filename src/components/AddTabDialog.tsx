@@ -7,6 +7,7 @@ import {
   Shield, 
   Users, 
   FolderKanban,
+  PawPrint,
   Check
 } from 'lucide-react';
 import {
@@ -29,6 +30,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Shield,
   Users,
   FolderKanban,
+  PawPrint,
 };
 
 interface AddTabDialogProps {
