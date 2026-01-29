@@ -208,6 +208,12 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const widgetRefs = useRef<Map<WidgetId, HTMLDivElement>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
   
+  // Hysteresis state to prevent flickering when cursor is between columns
+  const lastDropIndexRef = useRef<number | null>(null);
+  const lastDropTimeRef = useRef<number>(0);
+  const DROP_INDEX_HYSTERESIS_THRESHOLD = 50; // Minimum distance (px) to switch drop zones
+  const DROP_INDEX_DEBOUNCE_MS = 100; // Minimum time between drop index changes
+  
   // Long press state for touch drag (allows scrolling with quick swipes)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -589,10 +595,12 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     
     // Find the best drop position based on cursor location
     const draggedIndex = activeWidgets.indexOf(draggedWidget);
-    let bestDropIndex: number | null = null;
-    let bestDistance = Infinity;
     
-    // Check each widget to find the closest drop zone
+    // Find the widget whose bounding box contains the cursor
+    // This provides more stable behavior than just checking Y position
+    let hoveredWidgetIndex: number | null = null;
+    let hoveredRect: DOMRect | null = null;
+    
     activeWidgets.forEach((widgetId, index) => {
       if (widgetId === draggedWidget) return;
       
@@ -600,25 +608,58 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       if (!element) return;
       
       const rect = element.getBoundingClientRect();
-      const midY = rect.top + rect.height / 2;
       
-      // Check if cursor is above the midpoint of this card
-      if (clientY < midY) {
-        const distance = Math.abs(clientY - rect.top);
-        if (distance < bestDistance) {
-          bestDistance = distance;
-          // If dragging from above, insert at this index; if from below, same index
-          bestDropIndex = index;
-        }
-      } else {
-        const distance = Math.abs(clientY - rect.bottom);
-        if (distance < bestDistance) {
-          bestDistance = distance;
-          // Insert after this card
-          bestDropIndex = index + 1;
+      // Check if cursor is within the horizontal bounds of this widget
+      // This helps when there are two columns - we only consider widgets in the same column
+      if (clientX >= rect.left && clientX <= rect.right) {
+        // Check if cursor overlaps vertically with this widget
+        if (clientY >= rect.top - 20 && clientY <= rect.bottom + 20) {
+          hoveredWidgetIndex = index;
+          hoveredRect = rect;
         }
       }
     });
+    
+    let bestDropIndex: number | null = null;
+    
+    if (hoveredWidgetIndex !== null && hoveredRect !== null) {
+      const midY = hoveredRect.top + hoveredRect.height / 2;
+      // Determine if we should insert before or after the hovered widget
+      if (clientY < midY) {
+        bestDropIndex = hoveredWidgetIndex;
+      } else {
+        bestDropIndex = hoveredWidgetIndex + 1;
+      }
+    } else {
+      // Fallback: find the closest widget by combined distance
+      let bestDistance = Infinity;
+      
+      activeWidgets.forEach((widgetId, index) => {
+        if (widgetId === draggedWidget) return;
+        
+        const element = widgetRefs.current.get(widgetId);
+        if (!element) return;
+        
+        const rect = element.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        // Use combined distance (weighted towards Y for vertical list feel)
+        const distX = Math.abs(clientX - centerX);
+        const distY = Math.abs(clientY - centerY);
+        const distance = distY + distX * 0.3; // Weight X less than Y
+        
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          const midY = rect.top + rect.height / 2;
+          if (clientY < midY) {
+            bestDropIndex = index;
+          } else {
+            bestDropIndex = index + 1;
+          }
+        }
+      });
+    }
     
     // Adjust drop index if we're dragging from before the drop point
     if (bestDropIndex !== null && draggedIndex < bestDropIndex) {
@@ -630,7 +671,25 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       bestDropIndex = null;
     }
     
-    setDropIndex(bestDropIndex);
+    // Apply hysteresis to prevent flickering
+    // Only change the drop index if:
+    // 1. This is a new drag (no previous index), or
+    // 2. Enough time has passed since last change, or
+    // 3. The change is to/from null (starting/ending a valid drop zone)
+    const now = Date.now();
+    const timeSinceLastChange = now - lastDropTimeRef.current;
+    const previousIndex = lastDropIndexRef.current;
+    
+    const shouldUpdate = 
+      previousIndex === null || // No previous index
+      bestDropIndex === null || // Moving to invalid zone
+      previousIndex !== bestDropIndex && timeSinceLastChange > DROP_INDEX_DEBOUNCE_MS; // Debounce check
+    
+    if (shouldUpdate && bestDropIndex !== previousIndex) {
+      lastDropIndexRef.current = bestDropIndex;
+      lastDropTimeRef.current = now;
+      setDropIndex(bestDropIndex);
+    }
   }, [draggedWidget, activeWidgets]);
 
   // Shared drag end logic for both mouse and touch
@@ -663,6 +722,10 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     setDropIndex(null);
     setDragPosition(null);
     setDraggedWidgetSize(null);
+    
+    // Reset hysteresis tracking
+    lastDropIndexRef.current = null;
+    lastDropTimeRef.current = 0;
   }, [draggedWidget, dropIndex, activeWidgets, setWidgetOrder]);
 
   // Mouse-based drag and drop handlers
