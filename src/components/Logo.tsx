@@ -4,17 +4,17 @@ interface LogoProps {
 }
 
 /**
- * Logo component using SVG that adapts to theme colors.
- * Uses CSS filters to colorize the dark gray SVG to match the current theme.
- * - Light mode: Dark version with theme-tinted appearance
- * - Dark mode: Inverted to light with neon glow effect
+ * Logo component with cyberpunk neon styling.
+ * Uses a single image that works on both light and dark backgrounds.
+ * - Light mode: Slightly reduced brightness to blend with light backgrounds
+ * - Dark mode: Full neon glow effect
  */
 export function Logo({ className = 'h-10 w-10', alt = 'Cypher Log' }: LogoProps) {
   return (
     <img 
-      src="/logo-dark.svg" 
+      src="/logo-cyber.png" 
       alt={alt} 
-      className={`${className} transition-all duration-200 dark:invert dark:brightness-110 dark:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]`}
+      className={`${className} transition-all duration-200 brightness-75 dark:brightness-100 dark:drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)]`}
     />
   );
 }
