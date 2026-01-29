@@ -109,6 +109,12 @@ export interface UserPreferences {
   customWarrantyTypes: string[];
   // Hidden default warranty types
   hiddenDefaultWarrantyTypes: string[];
+  // Custom pet types
+  customPetTypes: string[];
+  // Hidden default pet types
+  hiddenDefaultPetTypes: string[];
+  // Pets view mode
+  petsViewMode: 'list' | 'card';
   // Blossom media servers
   blossomServers: BlossomServer[];
   // Version for future migrations
@@ -139,6 +145,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   hiddenDefaultHomeFeatures: [],
   customWarrantyTypes: [],
   hiddenDefaultWarrantyTypes: [],
+  customPetTypes: [],
+  hiddenDefaultPetTypes: [],
+  petsViewMode: 'card',
   blossomServers: DEFAULT_BLOSSOM_SERVERS,
   version: 1,
 };
@@ -193,6 +202,13 @@ interface UserPreferencesContextType {
   removeCustomWarrantyType: (type: string) => void;
   hideDefaultWarrantyType: (type: string) => void;
   restoreDefaultWarrantyType: (type: string) => void;
+  // Pet type actions
+  addCustomPetType: (type: string) => void;
+  removeCustomPetType: (type: string) => void;
+  hideDefaultPetType: (type: string) => void;
+  restoreDefaultPetType: (type: string) => void;
+  // Pet view mode
+  setPetsViewMode: (mode: 'list' | 'card') => void;
   // Blossom server actions
   addBlossomServer: (url: string, isPrivate?: boolean) => void;
   removeBlossomServer: (url: string) => void;
@@ -765,6 +781,54 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  // Pet type actions
+  const addCustomPetType = useCallback((type: string) => {
+    updatePreferences((prev) => {
+      const currentCustomTypes = prev.customPetTypes || [];
+      const currentHiddenTypes = prev.hiddenDefaultPetTypes || [];
+      if (currentCustomTypes.includes(type)) return prev;
+      return {
+        ...prev,
+        customPetTypes: [...currentCustomTypes, type],
+        // If adding a type that was a hidden default, remove it from hidden
+        hiddenDefaultPetTypes: currentHiddenTypes.filter(t => t !== type),
+      };
+    });
+  }, [updatePreferences]);
+
+  const removeCustomPetType = useCallback((type: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      customPetTypes: (prev.customPetTypes || []).filter(t => t !== type),
+    }));
+  }, [updatePreferences]);
+
+  const hideDefaultPetType = useCallback((type: string) => {
+    updatePreferences((prev) => {
+      const currentHiddenTypes = prev.hiddenDefaultPetTypes || [];
+      if (currentHiddenTypes.includes(type)) return prev;
+      return {
+        ...prev,
+        hiddenDefaultPetTypes: [...currentHiddenTypes, type],
+      };
+    });
+  }, [updatePreferences]);
+
+  const restoreDefaultPetType = useCallback((type: string) => {
+    updatePreferences((prev) => ({
+      ...prev,
+      hiddenDefaultPetTypes: (prev.hiddenDefaultPetTypes || []).filter(t => t !== type),
+    }));
+  }, [updatePreferences]);
+
+  // Pet view mode
+  const setPetsViewMode = useCallback((mode: 'list' | 'card') => {
+    updatePreferences((prev) => ({
+      ...prev,
+      petsViewMode: mode,
+    }));
+  }, [updatePreferences]);
+
   // Blossom server actions
   const normalizeBlossomUrl = (url: string): string => {
     let normalized = url.trim();
@@ -908,6 +972,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     hiddenDefaultHomeFeatures: localPreferences.hiddenDefaultHomeFeatures || [],
     customWarrantyTypes: localPreferences.customWarrantyTypes || [],
     hiddenDefaultWarrantyTypes: localPreferences.hiddenDefaultWarrantyTypes || [],
+    customPetTypes: localPreferences.customPetTypes || [],
+    hiddenDefaultPetTypes: localPreferences.hiddenDefaultPetTypes || [],
+    petsViewMode: localPreferences.petsViewMode || 'card',
     blossomServers: normalizedBlossomServers,
     version: localPreferences.version || 1,
   };
@@ -968,6 +1035,11 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         removeCustomWarrantyType,
         hideDefaultWarrantyType,
         restoreDefaultWarrantyType,
+        addCustomPetType,
+        removeCustomPetType,
+        hideDefaultPetType,
+        restoreDefaultPetType,
+        setPetsViewMode,
         addBlossomServer,
         removeBlossomServer,
         toggleBlossomServer,
