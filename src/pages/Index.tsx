@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive } from 'lucide-react';
+import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -14,6 +14,7 @@ import { VehicleTypeManagementDialog } from '@/components/VehicleTypeManagementD
 import { SubscriptionTypeManagementDialog } from '@/components/SubscriptionTypeManagementDialog';
 import { HomeFeatureManagementDialog } from '@/components/HomeFeatureManagementDialog';
 import { WarrantyTypeManagementDialog } from '@/components/WarrantyTypeManagementDialog';
+import { PetTypeManagementDialog } from '@/components/PetTypeManagementDialog';
 import { EncryptionSettingsDialog } from '@/components/EncryptionSettingsDialog';
 import { StorageSettingsDialog } from '@/components/StorageSettingsDialog';
 import { DisplaySettingsDialog } from '@/components/DisplaySettingsDialog';
@@ -78,6 +79,7 @@ const Index = () => {
   const [subscriptionTypeManagementOpen, setSubscriptionTypeManagementOpen] = useState(false);
   const [homeFeatureManagementOpen, setHomeFeatureManagementOpen] = useState(false);
   const [warrantyTypeManagementOpen, setWarrantyTypeManagementOpen] = useState(false);
+  const [petTypeManagementOpen, setPetTypeManagementOpen] = useState(false);
   const [encryptionSettingsOpen, setEncryptionSettingsOpen] = useState(false);
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
@@ -179,6 +181,10 @@ const Index = () => {
                     <DropdownMenuItem onClick={() => setWarrantyTypeManagementOpen(true)}>
                       <Shield className="h-4 w-4 mr-2" />
                       Warranty Types
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPetTypeManagementOpen(true)}>
+                      <PawPrint className="h-4 w-4 mr-2" />
+                      Pet Types
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Privacy & Security</DropdownMenuLabel>
@@ -411,6 +417,11 @@ const Index = () => {
       <WarrantyTypeManagementDialog
         isOpen={warrantyTypeManagementOpen}
         onClose={() => setWarrantyTypeManagementOpen(false)}
+      />
+
+      <PetTypeManagementDialog
+        isOpen={petTypeManagementOpen}
+        onClose={() => setPetTypeManagementOpen(false)}
       />
 
       <DisplaySettingsDialog
