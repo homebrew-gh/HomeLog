@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, Upload, X, Copy, Check } from 'lucide-react';
+import { nip19 } from 'nostr-tools';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,8 +35,33 @@ export function EditProfileDialog({ isOpen, onClose }: EditProfileDialogProps) {
   const [name, setName] = useState('');
   const [about, setAbout] = useState('');
   const [picture, setPicture] = useState('');
+  const [copiedNpub, setCopiedNpub] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Convert hex pubkey to npub
+  const npub = user?.pubkey ? nip19.npubEncode(user.pubkey) : null;
+
+  // Copy npub to clipboard
+  const copyNpubToClipboard = async () => {
+    if (!npub) return;
+    
+    try {
+      await navigator.clipboard.writeText(npub);
+      setCopiedNpub(true);
+      toast({
+        title: 'Copied!',
+        description: 'Your npub has been copied to the clipboard.',
+      });
+      setTimeout(() => setCopiedNpub(false), 2000);
+    } catch {
+      toast({
+        title: 'Failed to copy',
+        description: 'Please try selecting and copying manually.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Reset form when dialog opens or metadata changes
   useEffect(() => {
@@ -213,6 +239,39 @@ export function EditProfileDialog({ isOpen, onClose }: EditProfileDialogProps) {
               className="resize-none"
             />
           </div>
+
+          {/* Public Key (npub) Section */}
+          {npub && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Public Key (npub)</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={copyNpubToClipboard}
+                  className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                >
+                  {copiedNpub ? (
+                    <Check className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                  <span className="ml-1.5 text-xs">{copiedNpub ? 'Copied!' : 'Copy'}</span>
+                </Button>
+              </div>
+              <div 
+                className="font-mono text-xs bg-muted p-2.5 rounded-md break-all select-all cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                onClick={copyNpubToClipboard}
+                title="Click to copy"
+              >
+                {npub}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Share this with others so they can find you on Nostr.
+              </p>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
