@@ -17,6 +17,7 @@ import {
   Shield, 
   Users, 
   FolderKanban,
+  PawPrint,
   AlertTriangle,
   Clock,
   ArrowRight,
@@ -55,6 +56,7 @@ import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
 import { useCurrency } from '@/hooks/useCurrency';
 import { genUserName } from '@/lib/genUserName';
 import { parseCurrencyAmount, formatCurrency, convertCurrency } from '@/lib/currency';
+import { usePets } from '@/hooks/usePets';
 import type { MaintenanceSchedule, Warranty } from '@/lib/types';
 
 const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
@@ -66,6 +68,7 @@ const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
   warranties: Shield,
   companies: Users,
   projects: FolderKanban,
+  pets: PawPrint,
 };
 
 // Widget types for dashboard - each active tab can have one or more widgets
@@ -77,7 +80,8 @@ type WidgetId =
   | 'vehicle-maintenance'
   | 'subscriptions'
   | 'warranties'
-  | 'projects';
+  | 'projects'
+  | 'pets';
 
 // Widget configuration - defines size and which tab it belongs to
 interface WidgetConfig {
@@ -98,6 +102,7 @@ const WIDGET_CONFIGS: WidgetConfig[] = [
   { id: 'subscriptions', tabId: 'subscriptions', label: 'Subscriptions', icon: CreditCard, colSpan: 1 },
   { id: 'warranties', tabId: 'warranties', label: 'Warranties', icon: Shield, colSpan: 1 },
   { id: 'projects', tabId: 'projects', label: 'Projects', icon: FolderKanban, colSpan: 1 },
+  { id: 'pets', tabId: 'pets', label: 'Pets & Animals', icon: PawPrint, colSpan: 1 },
 ];
 
 const getWidgetConfig = (widgetId: WidgetId): WidgetConfig | undefined => {
@@ -116,6 +121,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const { data: companies = [], isLoading: isLoadingCompanies } = useCompanies();
   const { data: subscriptions = [], isLoading: isLoadingSubscriptions } = useSubscriptions();
   const { data: warranties = [], isLoading: isLoadingWarranties } = useWarranties();
+  const { data: pets = [], isLoading: isLoadingPets } = usePets();
   const expiringWarranties = useExpiringWarranties(365); // Get warranties expiring within a year
   const { data: maintenance = [], isLoading: isLoadingMaintenance } = useMaintenance();
   const { data: completions = [] } = useMaintenanceCompletions();
@@ -137,6 +143,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const showSubscriptionsLoading = isLoadingSubscriptions || (isDataSyncing && subscriptions.length === 0 && !syncCategories.subscriptions.synced);
   const showMaintenanceLoading = isLoadingMaintenance || (isDataSyncing && maintenance.length === 0 && !syncCategories.maintenance.synced);
   const showWarrantiesLoading = isLoadingWarranties || (isDataSyncing && warranties.length === 0 && !syncCategories.warranties?.synced);
+  const showPetsLoading = isLoadingPets || (isDataSyncing && pets.length === 0 && !syncCategories.pets?.synced);
   
   // Discover friends using HomeLog
   const { friends: cypherLogFriends, isLoading: isLoadingFriends } = useCypherLogFriends();
@@ -219,7 +226,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   // This creates the iOS-style "fake randomness" effect
   const [animationParams] = useState<Map<WidgetId, { delay: number; duration: number }>>(() => {
     const params = new Map<WidgetId, { delay: number; duration: number }>();
-    const allWidgets: WidgetId[] = ['appliances', 'vehicles', 'companies', 'home-maintenance', 'vehicle-maintenance', 'subscriptions', 'warranties', 'projects'];
+    const allWidgets: WidgetId[] = ['appliances', 'vehicles', 'companies', 'home-maintenance', 'vehicle-maintenance', 'subscriptions', 'warranties', 'projects', 'pets'];
     allWidgets.forEach(widget => {
       // Random negative delay (-0.06s to -0.94s) to offset animation start
       // Random duration (0.275s to 0.41s) for slight speed variation (25% slower than original)
@@ -400,6 +407,22 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       return a.localeCompare(b);
     });
   }, [warranties]);
+
+  // Get unique pet types from pets (filter out archived)
+  const activePets = useMemo(() => pets.filter(p => !p.isArchived), [pets]);
+  const usedPetTypes = useMemo(() => {
+    const types = new Set<string>();
+    activePets.forEach(pet => {
+      if (pet.petType) {
+        types.add(pet.petType);
+      }
+    });
+    return Array.from(types).sort((a, b) => {
+      if (a === 'Uncategorized' || a === 'Other') return 1;
+      if (b === 'Uncategorized' || b === 'Other') return -1;
+      return a.localeCompare(b);
+    });
+  }, [activePets]);
 
   // Calculate total monthly cost estimate for subscriptions with currency conversion
   const { totalMonthlyCost, formattedTotalMonthlyCost } = useMemo(() => {
@@ -1327,6 +1350,53 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                               )}
                             </div>
                           )}
+                        </div>
+                      )}
+                    </WidgetCard>
+                  );
+
+                case 'pets':
+                  return (
+                    <WidgetCard
+                      title="Pets & Animals"
+                      icon={PawPrint}
+                      onClick={() => !isEditMode && onNavigateToTab('pets')}
+                      isLoading={showPetsLoading}
+                      clickable={!isEditMode}
+                    >
+                      {activePets.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No pets added yet</p>
+                      ) : usedPetTypes.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No pet types assigned yet</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {usedPetTypes.map(type => {
+                            const count = activePets.filter(p => p.petType === type).length;
+                            return (
+                              <button
+                                key={type}
+                                onClick={(e) => {
+                                  if (isEditMode) {
+                                    e.stopPropagation();
+                                    return;
+                                  }
+                                  e.stopPropagation();
+                                  onNavigateToTab('pets', `type-${type}`);
+                                }}
+                                disabled={isEditMode}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary transition-colors",
+                                  !isEditMode && "hover:bg-primary/20"
+                                )}
+                              >
+                                <PawPrint className="h-3.5 w-3.5" />
+                                {type}
+                                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-primary/20">
+                                  {count}
+                                </Badge>
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </WidgetCard>
