@@ -10,6 +10,7 @@ import { AssetDetailPage } from "./pages/AssetDetailPage";
 import { VehicleMaintenancePage } from "./pages/VehicleMaintenancePage";
 import { ApplianceMaintenancePage } from "./pages/ApplianceMaintenancePage";
 import { HomeFeatureMaintenancePage } from "./pages/HomeFeatureMaintenancePage";
+import { ProjectPage } from "./pages/ProjectPage";
 import NotFound from "./pages/NotFound";
 
 export function AppRouter() {
@@ -25,6 +26,7 @@ export function AppRouter() {
         <Route path="/vehicle/:vehicleId/maintenance" element={<VehicleMaintenancePage />} />
         <Route path="/appliance/:applianceId/maintenance" element={<ApplianceMaintenancePage />} />
         <Route path="/home-feature/:feature/maintenance" element={<HomeFeatureMaintenancePage />} />
+        <Route path="/project/:projectId" element={<ProjectPage />} />
         {/* NIP-19 route for npub1, note1, naddr1, nevent1, nprofile1 */}
         <Route path="/:nip19" element={<NIP19Page />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

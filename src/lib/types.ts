@@ -315,6 +315,7 @@ export const MAINTENANCE_COMPLETION_KIND = 9413;
 export const SUBSCRIPTION_KIND = 37004;
 export const WARRANTY_KIND = 35043;
 export const PET_KIND = 38033;
+export const PROJECT_KIND = 35389;
 
 export interface Pet {
   id: string;
@@ -360,6 +361,23 @@ export interface WarrantyDocument {
   url: string;
   name?: string;
   uploadedAt?: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  startDate: string; // MM/DD/YYYY format
+  // Status tracking
+  status?: 'planning' | 'in_progress' | 'on_hold' | 'completed';
+  // Future fields (to be implemented later)
+  budget?: string;
+  completionDate?: string; // MM/DD/YYYY format - when project was completed
+  notes?: string;
+  isArchived?: boolean;
+  // Metadata
+  pubkey: string;
+  createdAt: number;
 }
 
 export interface Warranty {

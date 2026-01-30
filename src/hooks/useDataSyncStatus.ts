@@ -12,6 +12,7 @@ import {
   WARRANTY_KIND,
   MAINTENANCE_COMPLETION_KIND,
   PET_KIND,
+  PROJECT_KIND,
 } from '@/lib/types';
 import { cacheEvents, getCachedEvents } from '@/lib/eventCache';
 
@@ -28,6 +29,7 @@ interface CacheCheckResult {
   warranties: number;
   completions: number;
   pets: number;
+  projects: number;
   hasAny: boolean;
 }
 

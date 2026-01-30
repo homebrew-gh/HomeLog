@@ -117,6 +117,8 @@ export interface UserPreferences {
   hiddenDefaultPetTypes: string[];
   // Pets view mode
   petsViewMode: 'list' | 'card';
+  // Projects view mode
+  projectsViewMode: 'list' | 'card';
   // Blossom media servers
   blossomServers: BlossomServer[];
   // Version for future migrations
@@ -150,6 +152,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   customPetTypes: [],
   hiddenDefaultPetTypes: [],
   petsViewMode: 'card',
+  projectsViewMode: 'card',
   blossomServers: DEFAULT_BLOSSOM_SERVERS,
   version: 1,
 };
@@ -211,6 +214,8 @@ interface UserPreferencesContextType {
   restoreDefaultPetType: (type: string) => void;
   // Pet view mode
   setPetsViewMode: (mode: 'list' | 'card') => void;
+  // Project view mode
+  setProjectsViewMode: (mode: 'list' | 'card') => void;
   // Blossom server actions
   addBlossomServer: (url: string, isPrivate?: boolean) => void;
   removeBlossomServer: (url: string) => void;
@@ -845,6 +850,14 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  // Project view mode
+  const setProjectsViewMode = useCallback((mode: 'list' | 'card') => {
+    updatePreferences((prev) => ({
+      ...prev,
+      projectsViewMode: mode,
+    }));
+  }, [updatePreferences]);
+
   // Blossom server actions
   const normalizeBlossomUrl = (url: string): string => {
     let normalized = url.trim();
@@ -991,6 +1004,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     customPetTypes: localPreferences.customPetTypes || [],
     hiddenDefaultPetTypes: localPreferences.hiddenDefaultPetTypes || [],
     petsViewMode: localPreferences.petsViewMode || 'card',
+    projectsViewMode: localPreferences.projectsViewMode || 'card',
     blossomServers: normalizedBlossomServers,
     version: localPreferences.version || 1,
   };
@@ -1056,6 +1070,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         hideDefaultPetType,
         restoreDefaultPetType,
         setPetsViewMode,
+        setProjectsViewMode,
         addBlossomServer,
         removeBlossomServer,
         toggleBlossomServer,

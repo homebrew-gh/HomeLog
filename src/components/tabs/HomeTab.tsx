@@ -57,7 +57,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { genUserName } from '@/lib/genUserName';
 import { parseCurrencyAmount, formatCurrency, convertCurrency } from '@/lib/currency';
 import { usePets } from '@/hooks/usePets';
-import type { MaintenanceSchedule, Warranty } from '@/lib/types';
+import { useProjects } from '@/hooks/useProjects';
+import type { MaintenanceSchedule, Warranty, Project } from '@/lib/types';
 
 const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
   home: Home,
@@ -122,6 +123,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const { data: subscriptions = [], isLoading: isLoadingSubscriptions } = useSubscriptions();
   const { data: warranties = [], isLoading: isLoadingWarranties } = useWarranties();
   const { data: pets = [], isLoading: isLoadingPets } = usePets();
+  const { data: projects = [], isLoading: isLoadingProjects } = useProjects();
   const expiringWarranties = useExpiringWarranties(365); // Get warranties expiring within a year
   const { data: maintenance = [], isLoading: isLoadingMaintenance } = useMaintenance();
   const { data: completions = [] } = useMaintenanceCompletions();
@@ -144,6 +146,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const showMaintenanceLoading = isLoadingMaintenance || (isDataSyncing && maintenance.length === 0 && !syncCategories.maintenance.synced);
   const showWarrantiesLoading = isLoadingWarranties || (isDataSyncing && warranties.length === 0 && !syncCategories.warranties?.synced);
   const showPetsLoading = isLoadingPets || (isDataSyncing && pets.length === 0 && !syncCategories.pets?.synced);
+  const showProjectsLoading = isLoadingProjects || (isDataSyncing && projects.length === 0 && !syncCategories.projects?.synced);
   
   // Discover friends using HomeLog
   const { friends: cypherLogFriends, isLoading: isLoadingFriends } = useCypherLogFriends();
@@ -429,6 +432,9 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       return a.localeCompare(b);
     });
   }, [activePets]);
+
+  // Get active (non-archived) projects
+  const activeProjects = useMemo(() => projects.filter(p => !p.isArchived), [projects]);
 
   // Calculate total monthly cost estimate for subscriptions with currency conversion
   const { totalMonthlyCost, formattedTotalMonthlyCost } = useMemo(() => {
@@ -1465,18 +1471,58 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                     </WidgetCard>
                   );
 
-                // Coming soon widgets
                 case 'projects':
                   return (
                     <WidgetCard
-                      title={config.label}
-                      icon={config.icon}
-                      onClick={() => !isEditMode && onNavigateToTab(config.tabId)}
+                      title="Projects"
+                      icon={FolderKanban}
+                      onClick={() => !isEditMode && onNavigateToTab('projects')}
+                      isLoading={showProjectsLoading}
                       clickable={!isEditMode}
                     >
-                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                        <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
-                      </div>
+                      {activeProjects.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No active projects</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {activeProjects.slice(0, 5).map(project => {
+                            const statusColors: Record<string, string> = {
+                              'in_progress': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                              'planning': 'bg-slate-100 text-slate-700 dark:bg-slate-700/30 dark:text-slate-400',
+                              'on_hold': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                              'completed': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                            };
+                            const statusText: Record<string, string> = {
+                              'in_progress': 'In Progress',
+                              'planning': 'Planning',
+                              'on_hold': 'On Hold',
+                              'completed': 'Completed',
+                            };
+                            const status = project.status || 'planning';
+                            
+                            return (
+                              <div
+                                key={project.id}
+                                className="flex items-center justify-between text-sm p-2 rounded-lg bg-slate-50 dark:bg-slate-700/30"
+                              >
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <FolderKanban className="h-4 w-4 text-primary shrink-0" />
+                                  <span className="font-medium text-slate-700 dark:text-slate-200 truncate">
+                                    {project.name}
+                                  </span>
+                                </div>
+                                <Badge className={cn("text-xs shrink-0 ml-2", statusColors[status])}>
+                                  {statusText[status]}
+                                </Badge>
+                              </div>
+                            );
+                          })}
+                          {activeProjects.length > 5 && (
+                            <p className="text-xs text-muted-foreground text-center">
+                              +{activeProjects.length - 5} more projects
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </WidgetCard>
                   );
                   
