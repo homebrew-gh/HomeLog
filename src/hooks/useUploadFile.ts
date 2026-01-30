@@ -12,6 +12,14 @@ export class NoPrivateServerError extends Error {
   }
 }
 
+/** Result of an upload attempt to a single server */
+interface UploadResult {
+  server: string;
+  success: boolean;
+  tags?: string[][];
+  error?: string;
+}
+
 /**
  * Check if a URL is a nostr.build URL (not their Blossom endpoint)
  * nostr.build has two APIs:
@@ -47,53 +55,72 @@ export function useUploadFile() {
 
       const servers = getPrivateBlossomServers();
       
-      console.log('Attempting upload to servers:', servers);
+      console.log('Uploading to ALL configured servers for redundancy:', servers);
 
       // Separate nostr.build native URLs from Blossom URLs
       const nostrBuildUrls = servers.filter(isNostrBuildNativeUrl);
       const blossomUrls = servers.filter(url => !isNostrBuildNativeUrl(url));
 
-      const uploadPromises: Promise<string[][]>[] = [];
+      const uploadPromises: Promise<UploadResult>[] = [];
 
-      // Try nostr.build native API for nostr.build URLs
+      // Upload to nostr.build using their native API
       if (nostrBuildUrls.length > 0) {
         console.log('Using NostrBuildUploader for:', nostrBuildUrls);
         const nostrBuildUploader = new NostrBuildUploader({
           signer: user.signer,
         });
-        uploadPromises.push(nostrBuildUploader.upload(file));
+        uploadPromises.push(
+          nostrBuildUploader.upload(file)
+            .then((tags) => ({ server: 'nostr.build', success: true, tags }))
+            .catch((error) => ({ server: 'nostr.build', success: false, error: error.message }))
+        );
       }
 
-      // Try Blossom protocol for other URLs
-      if (blossomUrls.length > 0) {
-        console.log('Using BlossomUploader for:', blossomUrls);
+      // Upload to each Blossom server individually for redundancy
+      for (const serverUrl of blossomUrls) {
+        console.log('Using BlossomUploader for:', serverUrl);
         const blossomUploader = new BlossomUploader({
-          servers: blossomUrls,
+          servers: [serverUrl],
           signer: user.signer,
         });
-        uploadPromises.push(blossomUploader.upload(file));
+        uploadPromises.push(
+          blossomUploader.upload(file)
+            .then((tags) => ({ server: serverUrl, success: true, tags }))
+            .catch((error) => ({ server: serverUrl, success: false, error: error.message }))
+        );
       }
 
       if (uploadPromises.length === 0) {
         throw new Error('No valid upload servers configured');
       }
 
-      // Try all uploaders, return first success
-      try {
-        const tags = await Promise.any(uploadPromises);
-        console.log('Upload successful, tags:', tags);
-        return tags;
-      } catch (error) {
-        console.error('All upload attempts failed:', error);
-        if (error instanceof AggregateError) {
-          // Log individual errors for debugging
-          error.errors.forEach((e, i) => {
-            console.error(`Upload attempt ${i + 1} failed:`, e);
-          });
-          throw new Error(`Upload failed: ${error.errors.map(e => e.message).join('; ')}`);
-        }
-        throw error;
+      // Wait for ALL uploads to complete (success or failure)
+      const results = await Promise.all(uploadPromises);
+      
+      // Log results for each server
+      const succeeded = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
+      
+      console.log(`Upload complete: ${succeeded.length}/${results.length} servers succeeded`);
+      succeeded.forEach(r => console.log(`  ✓ ${r.server}`));
+      failed.forEach(r => console.log(`  ✗ ${r.server}: ${r.error}`));
+
+      // Check if at least one upload succeeded
+      if (succeeded.length === 0) {
+        const errorMessages = failed.map(r => `${r.server}: ${r.error}`).join('; ');
+        throw new Error(`All uploads failed: ${errorMessages}`);
       }
+
+      // Warn if some servers failed but continue with successful upload
+      if (failed.length > 0) {
+        console.warn(`Warning: Upload failed on ${failed.length} server(s):`, 
+          failed.map(r => r.server).join(', '));
+      }
+
+      // Return tags from first successful upload (all should have same content hash)
+      const tags = succeeded[0].tags!;
+      console.log('Upload successful, tags:', tags);
+      return tags;
     },
   });
 }
