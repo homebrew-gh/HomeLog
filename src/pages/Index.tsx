@@ -48,41 +48,49 @@ import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
 import { useApplyColorTheme } from '@/hooks/useColorTheme';
 import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
 
-// House Key Recommendation Component - Collapsible tip shown on landing page
+// House Key Recommendation Component - Compact header version with popover
 const HouseKeyRecommendation = () => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="mt-6 max-w-md mx-auto">
+    <div className="relative">
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full group flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-primary/5 hover:bg-primary/10 border border-primary/20 hover:border-primary/30 transition-all duration-200"
+        onClick={() => setIsOpen(!isOpen)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 150)}
+        className="flex items-center gap-1.5 py-1.5 px-3 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/30 transition-all duration-200"
+        title="Learn about House Keys"
       >
-        <KeyRound className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium text-primary">
-          Tip: Create a House Key
+        <KeyRound className="h-3.5 w-3.5 text-primary" />
+        <span className="text-xs font-medium text-primary hidden sm:inline">
+          House Key
         </span>
-        <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">
-          Recommended
-        </span>
-        <ChevronDown className={`h-4 w-4 text-primary/60 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-3 w-3 text-primary/60 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       
-      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-48 opacity-100 mt-3' : 'max-h-0 opacity-0'}`}>
-        <div className="p-4 rounded-lg bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border border-primary/20">
+      {/* Popover */}
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 p-4 rounded-xl bg-card border border-border shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-primary" />
+            <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Users className="h-4 w-4 text-primary" />
             </div>
-            <div className="flex-1 text-left">
-              <p className="text-sm text-muted-foreground leading-relaxed">
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
+                House Key
+                <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">
+                  Recommended
+                </span>
+              </h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 Create a dedicated key for your household — separate from your social Nostr identity. 
                 Share it with family members for joint access, with built-in security isolation if your social key is ever compromised.
               </p>
             </div>
           </div>
+          {/* Arrow */}
+          <div className="absolute -top-2 right-6 w-4 h-4 bg-card border-l border-t border-border rotate-45" />
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -275,12 +283,15 @@ const Index = () => {
               </button>
             </div>
 
-            {/* Right - Search, Theme Toggle & Login */}
+            {/* Right - Search, Theme Toggle, House Key Tip & Login */}
             <div className="flex items-center gap-2">
               {user && !isInitialLoading && (
                 <SearchButton onClick={() => setSearchOpen(true)} />
               )}
               <ThemeToggle />
+              {!user && !isInitialLoading && (
+                <HouseKeyRecommendation />
+              )}
               <LoginArea className="max-w-48" />
             </div>
           </div>
@@ -362,9 +373,6 @@ const Index = () => {
             </div>
 
             <LoginArea className="justify-center" />
-
-            {/* House Key Recommendation - Collapsible */}
-            <HouseKeyRecommendation />
 
             <div className="mt-8 text-sm text-muted-foreground space-y-2">
               <p className="flex items-center justify-center gap-3 flex-wrap">
