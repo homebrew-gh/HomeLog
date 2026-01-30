@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserPreferences, DEFAULT_BLOSSOM_SERVERS, type BlossomServer } from '@/contexts/UserPreferencesContext';
 import { useToast } from '@/hooks/useToast';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { BlossomUploader } from '@nostrify/nostrify/uploaders';
+import { BlossomUploader, NostrBuildUploader } from '@nostrify/nostrify/uploaders';
 
 type ServerStatus = 'checking' | 'connected' | 'error' | 'unknown';
 
@@ -337,6 +337,23 @@ export function BlossomServerManager() {
     });
   };
 
+  /**
+   * Check if a URL is a nostr.build URL (not their Blossom endpoint)
+   * nostr.build has two APIs:
+   * - Native API: https://nostr.build/ or https://nostr.build/api/v2/upload/files
+   * - Blossom API: https://blossom.nostr.build/
+   */
+  const isNostrBuildNativeUrl = (url: string): boolean => {
+    try {
+      const parsed = new URL(url);
+      return parsed.hostname === 'nostr.build' || 
+             parsed.hostname === 'www.nostr.build' ||
+             parsed.hostname === 'media.nostr.build';
+    } catch {
+      return false;
+    }
+  };
+
   const handleTestUpload = async (serverUrl: string) => {
     if (!user) {
       toast({
@@ -356,12 +373,24 @@ export function BlossomServerManager() {
       const testFile = await generateTestImage();
       console.log(`[BlossomTest] Created test image (${testFile.size} bytes), uploading to ${serverUrl}...`);
       
-      const uploader = new BlossomUploader({
-        servers: [serverUrl],
-        signer: user.signer,
-      });
+      let tags: string[][];
+      
+      // Use the appropriate uploader based on the server
+      if (isNostrBuildNativeUrl(serverUrl)) {
+        console.log('[BlossomTest] Using NostrBuildUploader for nostr.build');
+        const uploader = new NostrBuildUploader({
+          signer: user.signer,
+        });
+        tags = await uploader.upload(testFile);
+      } else {
+        console.log('[BlossomTest] Using BlossomUploader');
+        const uploader = new BlossomUploader({
+          servers: [serverUrl],
+          signer: user.signer,
+        });
+        tags = await uploader.upload(testFile);
+      }
 
-      const tags = await uploader.upload(testFile);
       const uploadedUrl = tags[0]?.[1];
       
       console.log(`[BlossomTest] ✓ Success! File uploaded to: ${uploadedUrl}`);
@@ -385,12 +414,16 @@ export function BlossomServerManager() {
       
       // Provide more helpful error messages
       let userFriendlyMessage = errorMessage;
-      if (errorMessage.includes('Promise.any')) {
-        userFriendlyMessage = 'Server did not accept the upload. Check server configuration and authentication.';
+      if (errorMessage.includes('Promise.any') || errorMessage.includes('No Promise in Promise.any was resolved')) {
+        userFriendlyMessage = 'Server did not accept the upload. Check that your Nostr pubkey is authorized in the server config.';
       } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
         userFriendlyMessage = 'Could not connect to server. Check the URL and your network connection.';
-      } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
-        userFriendlyMessage = 'Authentication failed. Your Nostr key may not be authorized on this server.';
+      } else if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        userFriendlyMessage = 'Authentication failed (401). Your Nostr pubkey is not authorized on this server.';
+      } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+        userFriendlyMessage = 'Access forbidden (403). Your Nostr pubkey may not have upload permissions.';
+      } else if (errorMessage.includes('CORS') || errorMessage.includes('cross-origin')) {
+        userFriendlyMessage = 'CORS error. The server needs to allow requests from this domain.';
       }
       
       setTestResults(prev => ({
