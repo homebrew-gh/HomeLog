@@ -242,7 +242,7 @@ export function BlossomServerManager() {
   };
 
   // Test upload to a specific server
-  const handleTestUpload = useCallback(async (serverUrl: string) => {
+  const handleTestUpload = async (serverUrl: string) => {
     if (!user) {
       toast({
         title: 'Authentication required',
@@ -252,6 +252,7 @@ export function BlossomServerManager() {
       return;
     }
 
+    console.log(`[BlossomTest] Starting test upload to ${serverUrl}`);
     setIsTesting(prev => ({ ...prev, [serverUrl]: true }));
     
     try {
@@ -265,7 +266,7 @@ export function BlossomServerManager() {
       const byteArray = new Uint8Array(byteNumbers);
       const testFile = new File([byteArray], 'test-upload.png', { type: 'image/png' });
 
-      console.log(`[BlossomTest] Testing upload to ${serverUrl}`);
+      console.log(`[BlossomTest] Created test file, uploading to ${serverUrl}...`);
       
       const uploader = new BlossomUploader({
         servers: [serverUrl],
@@ -292,7 +293,7 @@ export function BlossomServerManager() {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[BlossomTest] ✗ Failed to upload to ${serverUrl}:`, errorMessage);
+      console.error(`[BlossomTest] ✗ Failed to upload to ${serverUrl}:`, errorMessage, error);
       
       setTestResults(prev => ({
         ...prev,
@@ -311,7 +312,7 @@ export function BlossomServerManager() {
     } finally {
       setIsTesting(prev => ({ ...prev, [serverUrl]: false }));
     }
-  }, [user, toast]);
+  };
 
   const enabledCount = servers.filter(s => s.enabled).length;
   const privateCount = servers.filter(s => s.enabled && s.isPrivate).length;
@@ -411,21 +412,26 @@ export function BlossomServerManager() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleTestUpload(server.url)}
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleTestUpload(server.url);
+                        }}
                         disabled={isTestingServer}
-                        className="size-5 shrink-0"
+                        className="h-7 px-2 text-xs shrink-0"
                       >
                         {isTestingServer ? (
-                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          <RefreshCw className="h-3 w-3 animate-spin mr-1" />
                         ) : (
-                          <Upload className="h-3 w-3" />
+                          <Upload className="h-3 w-3 mr-1" />
                         )}
+                        Test
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
-                      Test file upload
+                      Test file upload to this server
                     </TooltipContent>
                   </Tooltip>
                 )}
