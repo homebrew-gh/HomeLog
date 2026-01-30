@@ -168,6 +168,15 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
       return;
     }
 
+    if (!formData.room.trim()) {
+      toast({
+        title: 'Room required',
+        description: 'Please select a room for this item.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       if (isEditing && appliance) {
@@ -247,7 +256,7 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
 
           {/* Room Selection */}
           <div className="space-y-2">
-            <Label>Room</Label>
+            <Label>Room *</Label>
             {showAddRoom ? (
               <div className="flex gap-2">
                 <Input
