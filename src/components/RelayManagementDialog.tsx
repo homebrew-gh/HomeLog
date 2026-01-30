@@ -21,12 +21,12 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-xl max-h-[85dvh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Relay Configuration</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue={defaultTab} className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="relays" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
@@ -39,7 +39,7 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
           </TabsList>
 
           {/* Relays Tab */}
-          <TabsContent value="relays" className="space-y-4 mt-4">
+          <TabsContent value="relays" className="space-y-4 mt-4 flex-1 overflow-y-auto pr-1">
             {/* Private Relays Info - Collapsible */}
             <Collapsible open={isRelayInfoOpen} onOpenChange={setIsRelayInfoOpen}>
               <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 hover:bg-amber-100/50 dark:hover:bg-amber-900/30 transition-colors">
@@ -119,7 +119,7 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
           </TabsContent>
 
           {/* Media Servers Tab */}
-          <TabsContent value="media" className="space-y-4 mt-4">
+          <TabsContent value="media" className="space-y-4 mt-4 flex-1 overflow-y-auto pr-1">
             {/* Blossom Info - Collapsible */}
             <Collapsible open={isBlossomInfoOpen} onOpenChange={setIsBlossomInfoOpen}>
               <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 rounded-md border border-sky-200 dark:border-sky-800 bg-sky-50/50 dark:bg-sky-950/30 hover:bg-sky-100/50 dark:hover:bg-sky-900/30 transition-colors">

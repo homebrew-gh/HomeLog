@@ -242,6 +242,101 @@ export function BlossomServerManager() {
   };
 
   // Test upload to a specific server
+  /**
+   * Generate a branded test image using Canvas API
+   * Creates a 400x200 JPEG with "Connected to Cypher Log!" text
+   */
+  const generateTestImage = (): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 200;
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          reject(new Error('Could not create canvas context'));
+          return;
+        }
+
+        // Background gradient (sky blue theme)
+        const gradient = ctx.createLinearGradient(0, 0, 400, 200);
+        gradient.addColorStop(0, '#0ea5e9'); // sky-500
+        gradient.addColorStop(1, '#0284c7'); // sky-600
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 400, 200);
+
+        // Add decorative pattern (subtle grid)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 400; i += 20) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, 200);
+          ctx.stroke();
+        }
+        for (let i = 0; i < 200; i += 20) {
+          ctx.beginPath();
+          ctx.moveTo(0, i);
+          ctx.lineTo(400, i);
+          ctx.stroke();
+        }
+
+        // House icon (simple shape)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        // Roof
+        ctx.moveTo(200, 35);
+        ctx.lineTo(165, 65);
+        ctx.lineTo(235, 65);
+        ctx.closePath();
+        ctx.fill();
+        // House body
+        ctx.fillRect(172, 65, 56, 40);
+        // Door
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(192, 80, 16, 25);
+
+        // Main text
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 24px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Connected to', 200, 130);
+        
+        // "Cypher Log" text
+        ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
+        ctx.fillText('Cypher Log!', 200, 165);
+
+        // Checkmark badge
+        ctx.fillStyle = '#22c55e'; // green-500
+        ctx.beginPath();
+        ctx.arc(340, 40, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(330, 40);
+        ctx.lineTo(338, 48);
+        ctx.lineTo(352, 32);
+        ctx.stroke();
+
+        // Convert to blob and then File
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const file = new File([blob], `cypherlog-test-${timestamp}.jpg`, { type: 'image/jpeg' });
+            resolve(file);
+          } else {
+            reject(new Error('Failed to create image blob'));
+          }
+        }, 'image/jpeg', 0.9);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
   const handleTestUpload = async (serverUrl: string) => {
     if (!user) {
       toast({
@@ -256,17 +351,10 @@ export function BlossomServerManager() {
     setIsTesting(prev => ({ ...prev, [serverUrl]: true }));
     
     try {
-      // Create a tiny test file (1x1 transparent PNG)
-      const testImageData = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-      const byteCharacters = atob(testImageData);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const testFile = new File([byteArray], 'test-upload.png', { type: 'image/png' });
-
-      console.log(`[BlossomTest] Created test file, uploading to ${serverUrl}...`);
+      // Generate a branded test image
+      console.log('[BlossomTest] Generating test image...');
+      const testFile = await generateTestImage();
+      console.log(`[BlossomTest] Created test image (${testFile.size} bytes), uploading to ${serverUrl}...`);
       
       const uploader = new BlossomUploader({
         servers: [serverUrl],
@@ -289,24 +377,34 @@ export function BlossomServerManager() {
 
       toast({
         title: 'Upload test successful! ✓',
-        description: `File successfully uploaded to ${renderServerUrl(serverUrl)}. Check the console for the full URL.`,
+        description: `Test image uploaded to ${renderServerUrl(serverUrl)}`,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[BlossomTest] ✗ Failed to upload to ${serverUrl}:`, errorMessage, error);
+      
+      // Provide more helpful error messages
+      let userFriendlyMessage = errorMessage;
+      if (errorMessage.includes('Promise.any')) {
+        userFriendlyMessage = 'Server did not accept the upload. Check server configuration and authentication.';
+      } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+        userFriendlyMessage = 'Could not connect to server. Check the URL and your network connection.';
+      } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
+        userFriendlyMessage = 'Authentication failed. Your Nostr key may not be authorized on this server.';
+      }
       
       setTestResults(prev => ({
         ...prev,
         [serverUrl]: {
           url: serverUrl,
           success: false,
-          error: errorMessage,
+          error: userFriendlyMessage,
         },
       }));
 
       toast({
         title: 'Upload test failed',
-        description: errorMessage,
+        description: userFriendlyMessage,
         variant: 'destructive',
       });
     } finally {
@@ -512,18 +610,32 @@ export function BlossomServerManager() {
               {testResult && (
                 <Alert className={testResult.success ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/50' : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/50'}>
                   {testResult.success ? (
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-green-600 shrink-0" />
                   ) : (
-                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
                   )}
-                  <AlertDescription className="text-xs">
+                  <AlertDescription className="text-xs w-full">
                     {testResult.success ? (
-                      <>
+                      <div className="space-y-2">
                         <strong className="text-green-800 dark:text-green-200">Upload successful!</strong>
-                        <div className="mt-1 font-mono text-[10px] text-green-700 dark:text-green-300 truncate">
+                        {testResult.uploadedUrl && (
+                          <a 
+                            href={testResult.uploadedUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <img 
+                              src={testResult.uploadedUrl} 
+                              alt="Test upload result" 
+                              className="rounded-md border border-green-300 dark:border-green-700 max-h-24 w-auto"
+                            />
+                          </a>
+                        )}
+                        <div className="font-mono text-[10px] text-green-700 dark:text-green-300 break-all">
                           {testResult.uploadedUrl}
                         </div>
-                      </>
+                      </div>
                     ) : (
                       <>
                         <strong className="text-red-800 dark:text-red-200">Upload failed</strong>
