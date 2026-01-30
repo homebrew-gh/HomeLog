@@ -171,6 +171,10 @@ Cypher Log is designed to work with AI agents that can programmatically manage y
 
 Example use case: *"Read this appliance manual and add all the recommended maintenance tasks to my schedule."*
 
+#### MCP Server (Claude Desktop Integration)
+
+The `mcp-server/` directory contains a Model Context Protocol server that allows Claude Desktop and other MCP-compatible AI assistants to directly manage your Cypher Log data. See [mcp-server/README.md](./mcp-server/README.md) for setup instructions.
+
 ## Project Structure
 
 ```
