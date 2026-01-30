@@ -305,6 +305,8 @@ export interface Company {
   // Business details
   licenseNumber?: string;
   insuranceInfo?: string;
+  // Payment options
+  acceptsBitcoin?: boolean; // Whether the business accepts Bitcoin as payment
   // Service history
   invoices: Invoice[]; // Date-stamped invoices (uploaded PDFs/images)
   // Rating/Notes

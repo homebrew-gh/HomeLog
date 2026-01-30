@@ -15,7 +15,8 @@ import {
   Calendar,
   DollarSign,
   User,
-  CreditCard
+  CreditCard,
+  Bitcoin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -229,6 +230,31 @@ export function CompanyDetailDialog({ isOpen, onClose, company, onEdit, onDelete
                     </div>
                   </div>
                 )}
+              </>
+            )}
+
+            {/* Bitcoin Payment */}
+            {company.acceptsBitcoin && (
+              <>
+                <Separator />
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-r from-orange-500/10 to-orange-500/5">
+                  <Bitcoin className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Accepts Bitcoin</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This business accepts Bitcoin as payment.{' '}
+                      <a
+                        href={`https://btcmap.org/map?search=${encodeURIComponent([company.name, company.city, company.state].filter(Boolean).join(' '))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        View on BTCMap
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </p>
+                  </div>
+                </div>
               </>
             )}
 

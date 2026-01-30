@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Plus, Upload, X, FileText, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Star, FileUp } from 'lucide-react';
+import { Plus, Upload, X, FileText, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Star, FileUp, Bitcoin, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { DateInput } from '@/components/ui/date-input';
+import { Switch } from '@/components/ui/switch';
 import { useCompanyActions } from '@/hooks/useCompanies';
 import { useCompanyTypes } from '@/hooks/useCompanyTypes';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
@@ -173,6 +174,7 @@ export function CompanyDialog({ isOpen, onClose, company, initialData }: Company
     zipCode: '',
     licenseNumber: '',
     insuranceInfo: '',
+    acceptsBitcoin: false,
     invoices: [] as Invoice[],
     rating: undefined as number | undefined,
     notes: '',
@@ -206,6 +208,7 @@ export function CompanyDialog({ isOpen, onClose, company, initialData }: Company
           zipCode: company.zipCode || '',
           licenseNumber: company.licenseNumber || '',
           insuranceInfo: company.insuranceInfo || '',
+          acceptsBitcoin: company.acceptsBitcoin || false,
           invoices: company.invoices || [],
           rating: company.rating,
           notes: company.notes || '',
@@ -227,6 +230,7 @@ export function CompanyDialog({ isOpen, onClose, company, initialData }: Company
           zipCode: initialData.zipCode || '',
           licenseNumber: '',
           insuranceInfo: '',
+          acceptsBitcoin: false,
           invoices: [],
           rating: undefined,
           notes: initialData.notes || '',
@@ -248,6 +252,7 @@ export function CompanyDialog({ isOpen, onClose, company, initialData }: Company
           zipCode: '',
           licenseNumber: '',
           insuranceInfo: '',
+          acceptsBitcoin: false,
           invoices: [],
           rating: undefined,
           notes: '',
@@ -600,6 +605,45 @@ export function CompanyDialog({ isOpen, onClose, company, initialData }: Company
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Bitcoin Payment */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-orange-500/10 to-orange-500/5 border border-orange-500/20">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-orange-500/20">
+                <Bitcoin className="h-5 w-5 text-orange-500" />
+              </div>
+              <div>
+                <Label htmlFor="acceptsBitcoin" className="text-sm font-medium cursor-pointer">
+                  Accepts Bitcoin
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Mark if this business accepts Bitcoin payments
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="acceptsBitcoin"
+              checked={formData.acceptsBitcoin}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, acceptsBitcoin: checked }))}
+            />
+          </div>
+          
+          {/* BTCMap Link - shown when Bitcoin is accepted */}
+          {formData.acceptsBitcoin && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 text-sm">
+              <Bitcoin className="h-4 w-4 text-orange-500 shrink-0" />
+              <span className="text-muted-foreground">Help the community!</span>
+              <a
+                href="https://btcmap.org/add-location"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Add to BTCMap
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
 
           {/* Rating */}
           <div className="space-y-2">

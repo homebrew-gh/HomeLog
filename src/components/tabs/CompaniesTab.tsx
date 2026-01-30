@@ -25,7 +25,9 @@ import {
   FileUp,
   UserPlus,
   CreditCard,
-  FileText
+  FileText,
+  Bitcoin,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -463,6 +465,16 @@ interface CompanyCardProps {
   onClick: () => void;
 }
 
+// Generate BTCMap search URL for a company
+function getBtcMapSearchUrl(company: Company): string {
+  // Build search query from company name and location
+  const searchParts = [company.name];
+  if (company.city) searchParts.push(company.city);
+  if (company.state) searchParts.push(company.state);
+  const query = encodeURIComponent(searchParts.join(' '));
+  return `https://btcmap.org/map?search=${query}`;
+}
+
 function CompanyCard({ company, onClick }: CompanyCardProps) {
   const ServiceIcon = getServiceIcon(company.serviceType);
   const linkedSubscriptions = useSubscriptionsByCompanyId(company.id);
@@ -480,20 +492,28 @@ function CompanyCard({ company, onClick }: CompanyCardProps) {
           <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
             <ServiceIcon className="h-5 w-5 text-primary" />
           </div>
-          {company.rating && (
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={`h-3.5 w-3.5 ${
-                    star <= company.rating!
-                      ? 'fill-amber-400 text-amber-400'
-                      : 'text-slate-300 dark:text-slate-600'
-                  }`}
-                />
-              ))}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Bitcoin Badge */}
+            {company.acceptsBitcoin && (
+              <div className="p-1 rounded-md bg-orange-500/10" title="Accepts Bitcoin">
+                <Bitcoin className="h-4 w-4 text-orange-500" />
+              </div>
+            )}
+            {company.rating && (
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`h-3.5 w-3.5 ${
+                      star <= company.rating!
+                        ? 'fill-amber-400 text-amber-400'
+                        : 'text-slate-300 dark:text-slate-600'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Name */}
@@ -518,6 +538,21 @@ function CompanyCard({ company, onClick }: CompanyCardProps) {
 
         {/* Footer info */}
         <div className="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700 space-y-1">
+          {/* Bitcoin Accepted with BTCMap link */}
+          {company.acceptsBitcoin && (
+            <a
+              href={getBtcMapSearchUrl(company)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs text-orange-600 dark:text-orange-400 flex items-center gap-1 hover:underline"
+            >
+              <Bitcoin className="h-3 w-3" />
+              <span>Accepts Bitcoin</span>
+              <ExternalLink className="h-2.5 w-2.5 ml-0.5" />
+            </a>
+          )}
+
           {/* Active Subscription Badge */}
           {hasActiveSubscription && (
             <p className="text-xs text-primary flex items-center gap-1">

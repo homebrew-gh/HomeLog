@@ -57,6 +57,7 @@ function parseCompanyPlaintext(event: NostrEvent): Company | null {
     zipCode: getTagValue(event, 'zip_code'),
     licenseNumber: getTagValue(event, 'license_number'),
     insuranceInfo: getTagValue(event, 'insurance_info'),
+    acceptsBitcoin: getTagValue(event, 'accepts_bitcoin') === 'true',
     invoices: parseInvoiceTags(event),
     rating: ratingStr ? parseInt(ratingStr, 10) : undefined,
     notes: getTagValue(event, 'notes'),
@@ -223,6 +224,7 @@ export function useCompanyActions() {
       if (data.zipCode) tags.push(['zip_code', data.zipCode]);
       if (data.licenseNumber) tags.push(['license_number', data.licenseNumber]);
       if (data.insuranceInfo) tags.push(['insurance_info', data.insuranceInfo]);
+      if (data.acceptsBitcoin) tags.push(['accepts_bitcoin', 'true']);
       if (data.rating !== undefined) tags.push(['rating', String(data.rating)]);
       if (data.notes) tags.push(['notes', data.notes]);
 
@@ -284,6 +286,7 @@ export function useCompanyActions() {
       if (data.zipCode) tags.push(['zip_code', data.zipCode]);
       if (data.licenseNumber) tags.push(['license_number', data.licenseNumber]);
       if (data.insuranceInfo) tags.push(['insurance_info', data.insuranceInfo]);
+      if (data.acceptsBitcoin) tags.push(['accepts_bitcoin', 'true']);
       if (data.rating !== undefined) tags.push(['rating', String(data.rating)]);
       if (data.notes) tags.push(['notes', data.notes]);
 
