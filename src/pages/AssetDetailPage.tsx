@@ -33,6 +33,7 @@ import {
   MapPin,
   Star,
   ScrollText,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -87,17 +88,6 @@ function MaintenanceSection({
   companies: Company[];
 }) {
   const { data: completions = [] } = useMaintenanceCompletions();
-
-  if (maintenance.length === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="py-8 text-center">
-          <Wrench className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground">No maintenance schedules found.</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -191,17 +181,6 @@ function MaintenanceSection({
 
 // WarrantySection component
 function WarrantySection({ warranties }: { warranties: Warranty[] }) {
-  if (warranties.length === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="py-8 text-center">
-          <Shield className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground">No warranties found.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-4">
       {warranties.map((warranty) => {
@@ -303,17 +282,6 @@ function WarrantySection({ warranties }: { warranties: Warranty[] }) {
 function CompanySection({ companyIds, companies }: { companyIds: string[]; companies: Company[] }) {
   const linkedCompanies = companies.filter(c => companyIds.includes(c.id));
 
-  if (linkedCompanies.length === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="py-8 text-center">
-          <Building2 className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground">No linked companies or service providers.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-4">
       {linkedCompanies.map((company) => (
@@ -387,17 +355,6 @@ function CompanySection({ companyIds, companies }: { companyIds: string[]; compa
 
 // SubscriptionSection component
 function SubscriptionSection({ subscriptions }: { subscriptions: Subscription[] }) {
-  if (subscriptions.length === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="py-8 text-center">
-          <CreditCard className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground">No linked subscriptions.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-4">
       {subscriptions.map((subscription) => (
@@ -589,76 +546,84 @@ function ApplianceDetailContent({ id }: { id: string }) {
         </section>
 
         {/* Maintenance Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-primary" />
-                Maintenance Schedules
-              </CardTitle>
-              <CardDescription>
-                {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} for this appliance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
-            </CardContent>
-          </Card>
-        </section>
+        {maintenance.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5 text-primary" />
+                  Maintenance Schedules
+                </CardTitle>
+                <CardDescription>
+                  {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} for this appliance
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Warranties Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                Warranties
-              </CardTitle>
-              <CardDescription>
-                {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this appliance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <WarrantySection warranties={warranties} />
-            </CardContent>
-          </Card>
-        </section>
+        {warranties.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Warranties
+                </CardTitle>
+                <CardDescription>
+                  {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this appliance
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <WarrantySection warranties={warranties} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Companies Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                Service Providers
-              </CardTitle>
-              <CardDescription>
-                {uniqueCompanyIds.length} compan{uniqueCompanyIds.length !== 1 ? 'ies' : 'y'} linked through maintenance or warranties
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CompanySection companyIds={uniqueCompanyIds} companies={companies} />
-            </CardContent>
-          </Card>
-        </section>
+        {uniqueCompanyIds.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Service Providers
+                </CardTitle>
+                <CardDescription>
+                  {uniqueCompanyIds.length} compan{uniqueCompanyIds.length !== 1 ? 'ies' : 'y'} linked through maintenance or warranties
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CompanySection companyIds={uniqueCompanyIds} companies={companies} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Subscriptions Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Related Subscriptions
-              </CardTitle>
-              <CardDescription>
-                {linkedSubscriptions.length} subscription{linkedSubscriptions.length !== 1 ? 's' : ''} from linked companies
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SubscriptionSection subscriptions={linkedSubscriptions} />
-            </CardContent>
-          </Card>
-        </section>
+        {linkedSubscriptions.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Related Subscriptions
+                </CardTitle>
+                <CardDescription>
+                  {linkedSubscriptions.length} subscription{linkedSubscriptions.length !== 1 ? 's' : ''} from linked companies
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SubscriptionSection subscriptions={linkedSubscriptions} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
       </main>
     </div>
   );
@@ -938,76 +903,84 @@ function VehicleDetailContent({ id }: { id: string }) {
         )}
 
         {/* Maintenance Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-primary" />
-                Maintenance Schedules
-              </CardTitle>
-              <CardDescription>
-                {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} for this vehicle
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
-            </CardContent>
-          </Card>
-        </section>
+        {maintenance.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5 text-primary" />
+                  Maintenance Schedules
+                </CardTitle>
+                <CardDescription>
+                  {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} for this vehicle
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Warranties Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                Warranties
-              </CardTitle>
-              <CardDescription>
-                {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this vehicle
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <WarrantySection warranties={warranties} />
-            </CardContent>
-          </Card>
-        </section>
+        {warranties.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Warranties
+                </CardTitle>
+                <CardDescription>
+                  {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this vehicle
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <WarrantySection warranties={warranties} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Companies Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                Service Providers
-              </CardTitle>
-              <CardDescription>
-                {uniqueCompanyIds.length} compan{uniqueCompanyIds.length !== 1 ? 'ies' : 'y'} linked through maintenance or warranties
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CompanySection companyIds={uniqueCompanyIds} companies={companies} />
-            </CardContent>
-          </Card>
-        </section>
+        {uniqueCompanyIds.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Service Providers
+                </CardTitle>
+                <CardDescription>
+                  {uniqueCompanyIds.length} compan{uniqueCompanyIds.length !== 1 ? 'ies' : 'y'} linked through maintenance or warranties
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CompanySection companyIds={uniqueCompanyIds} companies={companies} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Subscriptions Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Related Subscriptions
-              </CardTitle>
-              <CardDescription>
-                {linkedSubscriptions.length} subscription{linkedSubscriptions.length !== 1 ? 's' : ''} from linked companies
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SubscriptionSection subscriptions={linkedSubscriptions} />
-            </CardContent>
-          </Card>
-        </section>
+        {linkedSubscriptions.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Related Subscriptions
+                </CardTitle>
+                <CardDescription>
+                  {linkedSubscriptions.length} subscription{linkedSubscriptions.length !== 1 ? 's' : ''} from linked companies
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SubscriptionSection subscriptions={linkedSubscriptions} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
       </main>
     </div>
   );
@@ -1094,76 +1067,84 @@ function HomeFeatureDetailContent({ featureName }: { featureName: string }) {
         </section>
 
         {/* Maintenance Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-primary" />
-                Maintenance Schedules
-              </CardTitle>
-              <CardDescription>
-                {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} for this home feature
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
-            </CardContent>
-          </Card>
-        </section>
+        {maintenance.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5 text-primary" />
+                  Maintenance Schedules
+                </CardTitle>
+                <CardDescription>
+                  {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} for this home feature
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Warranties Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                Warranties
-              </CardTitle>
-              <CardDescription>
-                {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this home feature
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <WarrantySection warranties={warranties} />
-            </CardContent>
-          </Card>
-        </section>
+        {warranties.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Warranties
+                </CardTitle>
+                <CardDescription>
+                  {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this home feature
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <WarrantySection warranties={warranties} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Companies Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                Service Providers
-              </CardTitle>
-              <CardDescription>
-                {uniqueCompanyIds.length} compan{uniqueCompanyIds.length !== 1 ? 'ies' : 'y'} linked through maintenance or warranties
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CompanySection companyIds={uniqueCompanyIds} companies={companies} />
-            </CardContent>
-          </Card>
-        </section>
+        {uniqueCompanyIds.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Service Providers
+                </CardTitle>
+                <CardDescription>
+                  {uniqueCompanyIds.length} compan{uniqueCompanyIds.length !== 1 ? 'ies' : 'y'} linked through maintenance or warranties
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CompanySection companyIds={uniqueCompanyIds} companies={companies} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Subscriptions Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Related Subscriptions
-              </CardTitle>
-              <CardDescription>
-                {linkedSubscriptions.length} subscription{linkedSubscriptions.length !== 1 ? 's' : ''} linked to this home feature
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SubscriptionSection subscriptions={linkedSubscriptions} />
-            </CardContent>
-          </Card>
-        </section>
+        {linkedSubscriptions.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Related Subscriptions
+                </CardTitle>
+                <CardDescription>
+                  {linkedSubscriptions.length} subscription{linkedSubscriptions.length !== 1 ? 's' : ''} linked to this home feature
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SubscriptionSection subscriptions={linkedSubscriptions} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
       </main>
     </div>
   );
@@ -1501,58 +1482,64 @@ function CompanyDetailContent({ id }: { id: string }) {
         )}
 
         {/* Maintenance Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-primary" />
-                Maintenance Schedules
-              </CardTitle>
-              <CardDescription>
-                {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} assigned to this company
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
-            </CardContent>
-          </Card>
-        </section>
+        {maintenance.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5 text-primary" />
+                  Maintenance Schedules
+                </CardTitle>
+                <CardDescription>
+                  {maintenance.length} maintenance schedule{maintenance.length !== 1 ? 's' : ''} assigned to this company
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MaintenanceSection maintenance={maintenance} startDate={startDate} companies={companies} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Warranties Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                Warranties
-              </CardTitle>
-              <CardDescription>
-                {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this company
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <WarrantySection warranties={warranties} />
-            </CardContent>
-          </Card>
-        </section>
+        {warranties.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Warranties
+                </CardTitle>
+                <CardDescription>
+                  {warranties.length} warrant{warranties.length !== 1 ? 'ies' : 'y'} linked to this company
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <WarrantySection warranties={warranties} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Subscriptions Section */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Subscriptions
-              </CardTitle>
-              <CardDescription>
-                {subscriptions.length} subscription{subscriptions.length !== 1 ? 's' : ''} with this company
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SubscriptionSection subscriptions={subscriptions} />
-            </CardContent>
-          </Card>
-        </section>
+        {subscriptions.length > 0 && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Subscriptions
+                </CardTitle>
+                <CardDescription>
+                  {subscriptions.length} subscription{subscriptions.length !== 1 ? 's' : ''} with this company
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SubscriptionSection subscriptions={subscriptions} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
       </main>
     </div>
   );
