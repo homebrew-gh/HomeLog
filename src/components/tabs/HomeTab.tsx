@@ -778,6 +778,10 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       if (touchStartPosRef.current && pendingDragWidgetRef.current) {
         setIsLongPressing(false);
         startDrag(touchStartPosRef.current.x, touchStartPosRef.current.y, pendingDragWidgetRef.current);
+        // Trigger haptic feedback if available
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
       }
       longPressTimerRef.current = null;
     }, LONG_PRESS_DURATION);
@@ -786,6 +790,15 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     
     // Don't prevent default here - allow scrolling until long press is confirmed
   }, [isEditMode, startDrag]);
+
+  // Prevent context menu on touch devices when in edit mode
+  // This stops the browser's native "save image / share" menu from appearing on long press
+  const handleContextMenu = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (isEditMode) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, [isEditMode]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     const touch = e.touches[0];
@@ -863,6 +876,24 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       }
     };
   }, []);
+
+  // Prevent context menu globally when in edit mode (prevents iOS "save image" dialog)
+  useEffect(() => {
+    if (!isEditMode) return;
+    
+    const preventContextMenu = (e: Event) => {
+      // Only prevent when we're in edit mode and interacting with the widget area
+      if (containerRef.current?.contains(e.target as Node)) {
+        e.preventDefault();
+      }
+    };
+    
+    document.addEventListener('contextmenu', preventContextMenu);
+    
+    return () => {
+      document.removeEventListener('contextmenu', preventContextMenu);
+    };
+  }, [isEditMode]);
 
   // Hide a widget
   const hideWidget = useCallback((widgetId: WidgetId) => {
@@ -1552,12 +1583,19 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
                     isEditMode && !isDragging && "cursor-grab",
                     // Only use touch-none when actively dragging to allow scrolling otherwise
                     draggedWidget && "touch-none",
+                    // Prevent iOS callout menu when in edit mode
+                    isEditMode && "select-none",
                     // Visual feedback when this widget is being long-pressed
                     isLongPressing && pendingDragWidgetRef.current === widgetId && "scale-[1.02] shadow-lg"
                   )}
-                  style={isEditMode && !isDragging ? getAnimationStyle(widgetId) : undefined}
+                  style={{
+                    ...(isEditMode && !isDragging ? getAnimationStyle(widgetId) : {}),
+                    // Prevent iOS callout menu (save image, share, etc.) when in edit mode
+                    ...(isEditMode ? { WebkitTouchCallout: 'none', WebkitUserSelect: 'none' } : {}),
+                  }}
                   onMouseDown={(e) => handleMouseDown(e, widgetId)}
                   onTouchStart={(e) => handleTouchStart(e, widgetId)}
+                  onContextMenu={handleContextMenu}
                 >
                 {/* Edit mode overlay with hide button and drag handle */}
                 {isEditMode && (
