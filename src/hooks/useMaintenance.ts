@@ -69,6 +69,7 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
   if (!isLogOnly && frequencyUnit && !validUnits.includes(frequencyUnit)) return null;
 
   const mileageInterval = getTagValue(event, 'mileage_interval');
+  const intervalType = getTagValue(event, 'interval_type');
 
   // Parse parts
   const parts = parsePartTags(event);
@@ -85,6 +86,7 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
     frequency: frequency ? parseInt(frequency, 10) : undefined,
     frequencyUnit: frequencyUnit as MaintenanceSchedule['frequencyUnit'],
     mileageInterval: mileageInterval ? parseInt(mileageInterval, 10) : undefined,
+    intervalType: (intervalType === 'hours' ? 'hours' : 'miles') as MaintenanceSchedule['intervalType'],
     isLogOnly,
     isArchived: getTagValue(event, 'is_archived') === 'true',
     pubkey: event.pubkey,
@@ -311,7 +313,10 @@ export function useMaintenanceActions() {
       }
     }
     
-    if (data.mileageInterval) tags.push(['mileage_interval', data.mileageInterval.toString()]);
+    if (data.mileageInterval) {
+      tags.push(['mileage_interval', data.mileageInterval.toString()]);
+      if (data.intervalType) tags.push(['interval_type', data.intervalType]);
+    }
     if (data.isArchived) tags.push(['is_archived', 'true']);
 
     const event = await publishEvent({
@@ -382,7 +387,10 @@ export function useMaintenanceActions() {
       }
     }
     
-    if (data.mileageInterval) tags.push(['mileage_interval', data.mileageInterval.toString()]);
+    if (data.mileageInterval) {
+      tags.push(['mileage_interval', data.mileageInterval.toString()]);
+      if (data.intervalType) tags.push(['interval_type', data.intervalType]);
+    }
     if (data.isArchived) tags.push(['is_archived', 'true']);
 
     const event = await publishEvent({

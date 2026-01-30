@@ -144,7 +144,7 @@ function MaintenanceSection({
                     {schedule.mileageInterval && (
                       <div className="flex items-center gap-2">
                         <Gauge className="h-4 w-4" />
-                        <span>Every {schedule.mileageInterval.toLocaleString()} miles</span>
+                        <span>Every {schedule.mileageInterval.toLocaleString()} {schedule.intervalType === 'hours' ? 'hours' : 'miles'}</span>
                       </div>
                     )}
                     {company && (

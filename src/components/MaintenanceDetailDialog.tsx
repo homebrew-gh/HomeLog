@@ -350,13 +350,15 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
               </div>
             )}
 
-            {/* Show mileage interval for scheduled vehicle maintenance */}
+            {/* Show mileage/hours interval for scheduled vehicle maintenance */}
             {isVehicleMaintenance && !isLogOnly && maintenance.mileageInterval && (
               <div className="flex items-start gap-3">
                 <Gauge className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Mileage Interval</p>
-                  <p>Every {maintenance.mileageInterval.toLocaleString()} miles</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {maintenance.intervalType === 'hours' ? 'Hours' : 'Mileage'} Interval
+                  </p>
+                  <p>Every {maintenance.mileageInterval.toLocaleString()} {maintenance.intervalType === 'hours' ? 'hours' : 'miles'}</p>
                 </div>
               </div>
             )}

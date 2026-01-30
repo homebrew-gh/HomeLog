@@ -13,7 +13,7 @@ import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate } from '@/hooks/useMaintenance';
 import { useCompletionsByMaintenance, useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
 import { toast } from '@/hooks/useToast';
-import { FREQUENCY_UNITS, type MaintenanceSchedule, type MaintenancePart } from '@/lib/types';
+import { FREQUENCY_UNITS, INTERVAL_TYPES, type MaintenanceSchedule, type MaintenancePart, type IntervalType } from '@/lib/types';
 
 interface MaintenanceDialogProps {
   isOpen: boolean;
@@ -54,6 +54,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
     frequency: '',
     frequencyUnit: 'months' as NonNullable<MaintenanceSchedule['frequencyUnit']>,
     mileageInterval: '',
+    intervalType: 'miles' as IntervalType,
     lastCompletedDate: '', // Optional initial completion date
   });
 
@@ -106,6 +107,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           frequency: maintenance.frequency?.toString() || '',
           frequencyUnit: maintenance.frequencyUnit || 'months',
           mileageInterval: maintenance.mileageInterval?.toString() || '',
+          intervalType: maintenance.intervalType || 'miles',
           lastCompletedDate: '', // Not editable when editing - use the completion records
         });
       } else {
@@ -119,6 +121,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           frequency: '',
           frequencyUnit: 'months',
           mileageInterval: '',
+          intervalType: 'miles',
           lastCompletedDate: '',
         });
       }
@@ -242,6 +245,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
         frequency: frequency,
         frequencyUnit: formData.frequencyUnit,
         mileageInterval: mileageInterval && mileageInterval > 0 ? mileageInterval : undefined,
+        intervalType: mileageInterval && mileageInterval > 0 ? formData.intervalType : undefined,
       };
 
       if (isEditing && maintenance) {
@@ -620,20 +624,40 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
             </div>
           )}
 
-          {/* Mileage Interval (for vehicles only) */}
+          {/* Mileage/Hours Interval (for vehicles only) */}
           {isVehicleMode && (
             <div className="space-y-2">
-              <Label htmlFor="mileageInterval">Mileage Interval (optional)</Label>
-              <Input
-                id="mileageInterval"
-                type="number"
-                min="1"
-                value={formData.mileageInterval}
-                onChange={(e) => setFormData(prev => ({ ...prev, mileageInterval: e.target.value }))}
-                placeholder="e.g., 5000 (miles between service)"
-              />
+              <Label htmlFor="mileageInterval">
+                {formData.intervalType === 'hours' ? 'Hours' : 'Mileage'} Interval (optional)
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="mileageInterval"
+                  type="number"
+                  min="1"
+                  value={formData.mileageInterval}
+                  onChange={(e) => setFormData(prev => ({ ...prev, mileageInterval: e.target.value }))}
+                  placeholder={formData.intervalType === 'hours' ? 'e.g., 100' : 'e.g., 5000'}
+                  className="flex-1"
+                />
+                <Select
+                  value={formData.intervalType}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, intervalType: value as IntervalType }))}
+                >
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INTERVAL_TYPES.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Optional: Track maintenance by mileage in addition to time
+                Optional: Track maintenance by {formData.intervalType === 'hours' ? 'engine hours' : 'mileage'} in addition to time
               </p>
             </div>
           )}

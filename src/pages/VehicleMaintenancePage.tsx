@@ -279,7 +279,7 @@ export function VehicleMaintenancePage() {
                                   {m.mileageInterval && (
                                     <span className="flex items-center gap-1">
                                       <Gauge className="h-3.5 w-3.5" />
-                                      Every {m.mileageInterval.toLocaleString()} mi
+                                      Every {m.mileageInterval.toLocaleString()} {m.intervalType === 'hours' ? 'hrs' : 'mi'}
                                     </span>
                                   )}
                                 </div>

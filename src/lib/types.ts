@@ -73,6 +73,14 @@ export interface Vehicle {
   createdAt: number;
 }
 
+// Interval types for vehicle maintenance (miles vs hours)
+export const INTERVAL_TYPES = [
+  { value: 'miles', label: 'Miles' },
+  { value: 'hours', label: 'Hours' },
+] as const;
+
+export type IntervalType = typeof INTERVAL_TYPES[number]['value'];
+
 export interface MaintenanceSchedule {
   id: string;
   applianceId?: string; // Optional - for appliance maintenance
@@ -84,8 +92,9 @@ export interface MaintenanceSchedule {
   parts?: MaintenancePart[]; // Parts needed for this maintenance
   frequency?: number; // Optional for log-only maintenance
   frequencyUnit?: 'days' | 'weeks' | 'months' | 'years'; // Optional for log-only maintenance
-  // Additional fields for mileage-based maintenance
-  mileageInterval?: number; // e.g., every 5000 miles
+  // Additional fields for mileage/hours-based maintenance
+  mileageInterval?: number; // e.g., every 5000 miles or 100 hours
+  intervalType?: IntervalType; // 'miles' or 'hours' - defaults to 'miles' for backwards compatibility
   isLogOnly?: boolean; // If true, this is log-only tracking without a recurring schedule
   isArchived?: boolean; // Whether this maintenance is archived
   pubkey: string;
