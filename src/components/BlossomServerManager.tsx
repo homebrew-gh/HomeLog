@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, X, Cloud, RefreshCw, GripVertical, Lock, Globe, Settings } from 'lucide-react';
+import { Plus, X, Cloud, RefreshCw, GripVertical, Lock, Globe, Settings, Upload, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -11,8 +11,17 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserPreferences, DEFAULT_BLOSSOM_SERVERS, type BlossomServer } from '@/contexts/UserPreferencesContext';
 import { useToast } from '@/hooks/useToast';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { BlossomUploader } from '@nostrify/nostrify/uploaders';
 
 type ServerStatus = 'checking' | 'connected' | 'error' | 'unknown';
+
+interface TestResult {
+  url: string;
+  success: boolean;
+  error?: string;
+  uploadedUrl?: string;
+}
 
 // Check Blossom server connectivity by making a HEAD request
 async function checkServerConnectivity(url: string): Promise<boolean> {
@@ -42,10 +51,13 @@ export function BlossomServerManager() {
     hasPrivateBlossomServer,
   } = useUserPreferences();
   const { toast } = useToast();
+  const { user } = useCurrentUser();
 
   const [newServerUrl, setNewServerUrl] = useState('');
   const [serverStatuses, setServerStatuses] = useState<Record<string, ServerStatus>>({});
   const [isCheckingAll, setIsCheckingAll] = useState(false);
+  const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+  const [isTesting, setIsTesting] = useState<Record<string, boolean>>({});
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const servers = preferences.blossomServers || DEFAULT_BLOSSOM_SERVERS;
@@ -229,6 +241,78 @@ export function BlossomServerManager() {
     }
   };
 
+  // Test upload to a specific server
+  const handleTestUpload = useCallback(async (serverUrl: string) => {
+    if (!user) {
+      toast({
+        title: 'Authentication required',
+        description: 'Please log in to test file uploads',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsTesting(prev => ({ ...prev, [serverUrl]: true }));
+    
+    try {
+      // Create a tiny test file (1x1 transparent PNG)
+      const testImageData = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const byteCharacters = atob(testImageData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const testFile = new File([byteArray], 'test-upload.png', { type: 'image/png' });
+
+      console.log(`[BlossomTest] Testing upload to ${serverUrl}`);
+      
+      const uploader = new BlossomUploader({
+        servers: [serverUrl],
+        signer: user.signer,
+      });
+
+      const tags = await uploader.upload(testFile);
+      const uploadedUrl = tags[0]?.[1];
+      
+      console.log(`[BlossomTest] ✓ Success! File uploaded to: ${uploadedUrl}`);
+      
+      setTestResults(prev => ({
+        ...prev,
+        [serverUrl]: {
+          url: serverUrl,
+          success: true,
+          uploadedUrl,
+        },
+      }));
+
+      toast({
+        title: 'Upload test successful! ✓',
+        description: `File successfully uploaded to ${renderServerUrl(serverUrl)}. Check the console for the full URL.`,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[BlossomTest] ✗ Failed to upload to ${serverUrl}:`, errorMessage);
+      
+      setTestResults(prev => ({
+        ...prev,
+        [serverUrl]: {
+          url: serverUrl,
+          success: false,
+          error: errorMessage,
+        },
+      }));
+
+      toast({
+        title: 'Upload test failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTesting(prev => ({ ...prev, [serverUrl]: false }));
+    }
+  }, [user, toast]);
+
   const enabledCount = servers.filter(s => s.enabled).length;
   const privateCount = servers.filter(s => s.enabled && s.isPrivate).length;
 
@@ -274,114 +358,169 @@ export function BlossomServerManager() {
         {sortedServers.map((server) => {
           const status = serverStatuses[server.url] || 'unknown';
           const statusInfo = getStatusInfo(status);
+          const testResult = testResults[server.url];
+          const isTestingServer = isTesting[server.url] || false;
           
           return (
-            <div
-              key={server.url}
-              className={`flex items-center gap-3 p-3 rounded-md border ${
-                server.isPrivate
-                  ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30'
-                  : server.enabled
-                    ? 'bg-muted/20'
-                    : 'bg-muted/10 opacity-60'
-              }`}
-            >
-              {/* Status Indicator */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${statusInfo.color}`} />
-                </TooltipTrigger>
-                <TooltipContent side="left" className="text-xs">
-                  {statusInfo.tooltip}
-                </TooltipContent>
-              </Tooltip>
+            <div key={server.url} className="space-y-2">
+              <div
+                className={`flex items-center gap-3 p-3 rounded-md border ${
+                  server.isPrivate
+                    ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30'
+                    : server.enabled
+                      ? 'bg-muted/20'
+                      : 'bg-muted/10 opacity-60'
+                }`}
+              >
+                {/* Status Indicator */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${statusInfo.color}`} />
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="text-xs">
+                    {statusInfo.tooltip}
+                  </TooltipContent>
+                </Tooltip>
 
-              {server.isPrivate ? (
-                <Lock className="h-4 w-4 shrink-0 text-amber-600" />
-              ) : (
-                <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
-              )}
-              
-              <div className="flex-1 min-w-0 flex items-center gap-2">
-                <span className={`font-mono text-sm truncate ${!server.enabled ? 'line-through' : ''}`} title={server.url}>
-                  {renderServerUrl(server.url)}
-                </span>
-                {server.isPrivate && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 shrink-0">
-                    <Lock className="h-2.5 w-2.5 mr-0.5" />
-                    Private
-                  </Badge>
+                {server.isPrivate ? (
+                  <Lock className="h-4 w-4 shrink-0 text-amber-600" />
+                ) : (
+                  <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
                 )}
-                {!server.isPrivate && server.enabled && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground shrink-0">
-                    <Globe className="h-2.5 w-2.5 mr-0.5" />
-                    Public
-                  </Badge>
+                
+                <div className="flex-1 min-w-0 flex items-center gap-2">
+                  <span className={`font-mono text-sm truncate ${!server.enabled ? 'line-through' : ''}`} title={server.url}>
+                    {renderServerUrl(server.url)}
+                  </span>
+                  {server.isPrivate && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 shrink-0">
+                      <Lock className="h-2.5 w-2.5 mr-0.5" />
+                      Private
+                    </Badge>
+                  )}
+                  {!server.isPrivate && server.enabled && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground shrink-0">
+                      <Globe className="h-2.5 w-2.5 mr-0.5" />
+                      Public
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Test Upload Button */}
+                {user && server.enabled && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleTestUpload(server.url)}
+                        disabled={isTestingServer}
+                        className="size-5 shrink-0"
+                      >
+                        {isTestingServer ? (
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Upload className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      Test file upload
+                    </TooltipContent>
+                  </Tooltip>
                 )}
+
+                {/* Settings Popover */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-5 text-muted-foreground hover:text-foreground shrink-0"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64" align="end">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor={`enabled-${server.url}`} className="text-sm cursor-pointer">
+                          Enabled
+                        </Label>
+                        <Switch
+                          id={`enabled-${server.url}`}
+                          checked={server.enabled}
+                          onCheckedChange={() => handleToggleServer(server.url)}
+                          className="data-[state=checked]:bg-green-500 scale-75"
+                        />
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor={`private-${server.url}`} className="text-sm cursor-pointer flex items-center gap-1">
+                            <Lock className="h-3 w-3" />
+                            Private Server
+                          </Label>
+                          <p className="text-[10px] text-muted-foreground">
+                            Trusted for sensitive uploads
+                          </p>
+                        </div>
+                        <Switch
+                          id={`private-${server.url}`}
+                          checked={server.isPrivate}
+                          onCheckedChange={() => handleTogglePrivate(server.url)}
+                          className="data-[state=checked]:bg-amber-500 scale-75"
+                        />
+                      </div>
+                      
+                      <p className="text-[10px] text-muted-foreground border-t pt-2">
+                        Only mark servers as "Private" if you control them or trust them with sensitive data like receipts and documents.
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Remove Button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveServer(server.url)}
+                  className="size-5 text-muted-foreground hover:text-destructive hover:bg-transparent shrink-0"
+                  disabled={servers.length <= 1}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
 
-              {/* Settings Popover */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-5 text-muted-foreground hover:text-foreground shrink-0"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64" align="end">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor={`enabled-${server.url}`} className="text-sm cursor-pointer">
-                        Enabled
-                      </Label>
-                      <Switch
-                        id={`enabled-${server.url}`}
-                        checked={server.enabled}
-                        onCheckedChange={() => handleToggleServer(server.url)}
-                        className="data-[state=checked]:bg-green-500 scale-75"
-                      />
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor={`private-${server.url}`} className="text-sm cursor-pointer flex items-center gap-1">
-                          <Lock className="h-3 w-3" />
-                          Private Server
-                        </Label>
-                        <p className="text-[10px] text-muted-foreground">
-                          Trusted for sensitive uploads
-                        </p>
-                      </div>
-                      <Switch
-                        id={`private-${server.url}`}
-                        checked={server.isPrivate}
-                        onCheckedChange={() => handleTogglePrivate(server.url)}
-                        className="data-[state=checked]:bg-amber-500 scale-75"
-                      />
-                    </div>
-                    
-                    <p className="text-[10px] text-muted-foreground border-t pt-2">
-                      Only mark servers as "Private" if you control them or trust them with sensitive data like receipts and documents.
-                    </p>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              {/* Remove Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveServer(server.url)}
-                className="size-5 text-muted-foreground hover:text-destructive hover:bg-transparent shrink-0"
-                disabled={servers.length <= 1}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              {/* Test Result Display */}
+              {testResult && (
+                <Alert className={testResult.success ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/50' : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/50'}>
+                  {testResult.success ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                  )}
+                  <AlertDescription className="text-xs">
+                    {testResult.success ? (
+                      <>
+                        <strong className="text-green-800 dark:text-green-200">Upload successful!</strong>
+                        <div className="mt-1 font-mono text-[10px] text-green-700 dark:text-green-300 truncate">
+                          {testResult.uploadedUrl}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <strong className="text-red-800 dark:text-red-200">Upload failed</strong>
+                        <div className="mt-1 text-[10px] text-red-700 dark:text-red-300">
+                          {testResult.error}
+                        </div>
+                      </>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           );
         })}
