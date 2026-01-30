@@ -317,6 +317,8 @@ export const WARRANTY_KIND = 35043;
 export const PET_KIND = 38033;
 export const PROJECT_KIND = 35389;
 export const PROJECT_ENTRY_KIND = 1661;
+export const PROJECT_TASK_KIND = 4209;
+export const PROJECT_MATERIAL_KIND = 8347;
 
 export interface Pet {
   id: string;
@@ -394,6 +396,52 @@ export interface ProjectEntry {
   content: string; // Main text content (notes, observations, etc.)
   // Photos and media
   photoUrls?: string[]; // Array of uploaded photo URLs
+  // Metadata
+  pubkey: string;
+  createdAt: number;
+}
+
+// Project Task (To-Do Item)
+export interface ProjectTask {
+  id: string;
+  projectId: string; // Reference to the parent project
+  description: string; // Task description
+  isCompleted: boolean; // Whether the task is done
+  completedDate?: string; // MM/DD/YYYY format - when task was completed
+  priority?: 'low' | 'medium' | 'high'; // Task priority
+  dueDate?: string; // MM/DD/YYYY format - optional due date
+  // Metadata
+  pubkey: string;
+  createdAt: number;
+}
+
+// Expense categories for budget tracking
+export const EXPENSE_CATEGORIES = [
+  { value: 'materials', label: 'Materials' },
+  { value: 'labor', label: 'Labor' },
+  { value: 'rentals', label: 'Rentals' },
+  { value: 'permits', label: 'Permits & Fees' },
+  { value: 'tools', label: 'Tools' },
+  { value: 'delivery', label: 'Delivery' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number]['value'];
+
+// Project Material/Expense Item
+export interface ProjectMaterial {
+  id: string;
+  projectId: string; // Reference to the parent project
+  name: string; // Item name
+  category: ExpenseCategory; // Expense category
+  quantity?: number; // Quantity needed
+  unit?: string; // Unit of measurement (e.g., "sq ft", "each", "hours")
+  unitPrice?: string; // Price per unit
+  totalPrice: string; // Total price for this item
+  isPurchased: boolean; // Whether the item has been bought
+  purchasedDate?: string; // MM/DD/YYYY format - when item was purchased
+  vendor?: string; // Where it was purchased from
+  notes?: string; // Additional notes
   // Metadata
   pubkey: string;
   createdAt: number;
