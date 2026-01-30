@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle } from 'lucide-react';
+import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -290,7 +290,7 @@ const Index = () => {
               </Button>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-6 mb-12">
+            <div className="grid sm:grid-cols-3 gap-6 mb-8">
               <Card className="bg-card border-border">
                 <CardContent className="pt-6">
                   <Package className="h-10 w-10 text-primary mx-auto mb-3" />
@@ -321,6 +321,33 @@ const Index = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* House Key Explainer */}
+            <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20 mb-12">
+              <CardContent className="py-6">
+                <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                  <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <KeyRound className="h-7 w-7 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-1 flex items-center justify-center sm:justify-start gap-2">
+                      House Key
+                      <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                        Recommended
+                      </span>
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Create a dedicated key for your household — separate from your social Nostr identity. 
+                      Share it with family members for joint access, with built-in security isolation if your social key is ever compromised.
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>Family sharing</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <LoginArea className="justify-center" />
 

@@ -2,7 +2,7 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Upload, Eye, EyeOff } from 'lucide-react';
+import { Download, Upload, Eye, EyeOff, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,7 @@ import { useLoginActions } from '@/hooks/useLoginActions';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+import { HouseKeyExplainer } from './HouseKeyExplainer';
 
 interface SignupDialogProps {
   isOpen: boolean;
@@ -19,7 +20,8 @@ interface SignupDialogProps {
 }
 
 const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
-  const [step, setStep] = useState<'generate' | 'download' | 'profile'>('generate');
+  const [step, setStep] = useState<'explainer' | 'generate' | 'download' | 'profile'>('explainer');
+  const [showExplainer, setShowExplainer] = useState(true);
   const [nsec, setNsec] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -147,26 +149,50 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
   };
 
   const getTitle = () => {
-    if (step === 'generate') return 'Sign up';
-    if (step === 'download') return 'Secret Key';
+    if (step === 'explainer') return 'Sign up';
+    if (step === 'generate') return 'Generate House Key';
+    if (step === 'download') return 'Your House Key';
     if (step === 'profile') return 'Create Your Profile';
+  };
+
+  const handleExplainerContinue = () => {
+    setShowExplainer(false);
+    setStep('generate');
+  };
+
+  const handleExplainerClose = () => {
+    // User wants to use existing key instead - close signup and they can use login
+    onClose();
   };
 
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
-      setStep('generate');
+      setStep('explainer');
+      setShowExplainer(true);
       setNsec('');
       setShowKey(false);
       setProfileData({ name: '', about: '', picture: '' });
     }
   }, [isOpen]);
 
+  // Show the explainer dialog first
+  if (step === 'explainer' && showExplainer) {
+    return (
+      <HouseKeyExplainer
+        isOpen={isOpen}
+        onClose={handleExplainerClose}
+        onContinue={handleExplainerContinue}
+      />
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] sm:max-w-sm max-h-[90dvh] p-0 gap-6 overflow-hidden rounded-2xl overflow-y-auto">
         <DialogHeader className="px-6 pt-6">
-          <DialogTitle className="text-lg font-semibold leading-none tracking-tight text-center">
+          <DialogTitle className="text-lg font-semibold leading-none tracking-tight text-center flex items-center justify-center gap-2">
+            <Home className="h-5 w-5 text-primary" />
             {getTitle()}
           </DialogTitle>
         </DialogHeader>
@@ -176,11 +202,15 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
           {step === 'generate' && (
             <div className='text-center space-y-6'>
               <div className="flex size-40 text-8xl bg-primary/10 rounded-full items-center justify-center justify-self-center">
-                🔑
+                🏠
               </div>
 
+              <p className="text-sm text-muted-foreground">
+                Generate a dedicated key for your household. This key is separate from any social Nostr identity.
+              </p>
+
               <Button className="w-full h-12 px-9" onClick={generateKey}>
-                Generate key
+                Generate House Key
               </Button>
             </div>
           )}
@@ -189,7 +219,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
           {step === 'download' && (
             <div className='space-y-4'>
               <div className="flex size-16 text-4xl bg-primary/10 rounded-full items-center justify-center justify-self-center">
-                🔑
+                🏠
               </div>
 
               <div className="relative">
@@ -219,10 +249,10 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
                 onClick={downloadKey}
               >
                 <Download className="size-4" />
-                Download key
+                Download House Key
               </Button>
 
-              <div className='mx-auto max-w-sm'>
+              <div className='mx-auto max-w-sm space-y-2'>
                 <div className='p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800'>
                   <div className='flex items-center gap-2 mb-1'>
                     <span className='text-xs font-semibold text-amber-800 dark:text-amber-200'>
@@ -230,7 +260,12 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
                     </span>
                   </div>
                   <p className='text-xs text-amber-900 dark:text-amber-300'>
-                    This key is your primary and only means of accessing your account. Store it safely and securely. Please download your key to continue.
+                    This House Key is your only means of accessing your home data. Store it safely and securely. Please download your key to continue.
+                  </p>
+                </div>
+                <div className='p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800'>
+                  <p className='text-xs text-blue-900 dark:text-blue-300'>
+                    <strong>Tip:</strong> Share this key file with household members who need access to your home management data.
                   </p>
                 </div>
               </div>
