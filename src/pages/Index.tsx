@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint } from 'lucide-react';
+import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -29,6 +29,7 @@ import { CompanyDetailDialog } from '@/components/CompanyDetailDialog';
 import { SubscriptionDetailDialog } from '@/components/SubscriptionDetailDialog';
 import { WarrantyDetailDialog } from '@/components/WarrantyDetailDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
+import { FeatureTourDialog } from '@/components/FeatureTourDialog';
 import type { Company, Subscription, Warranty, MaintenanceSchedule } from '@/lib/types';
 import {
   HomeTab,
@@ -92,6 +93,9 @@ const Index = () => {
   const [viewingSubscription, setViewingSubscription] = useState<Subscription | undefined>();
   const [viewingWarranty, setViewingWarranty] = useState<Warranty | undefined>();
   const [viewingMaintenance, setViewingMaintenance] = useState<MaintenanceSchedule | undefined>();
+  
+  // Feature tour state
+  const [featureTourOpen, setFeatureTourOpen] = useState(false);
   
   // Scroll target state for navigating to specific sections within tabs
   const [scrollTarget, setScrollTarget] = useState<string | undefined>(undefined);
@@ -271,6 +275,19 @@ const Index = () => {
               <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
                 Keep track of home appliances, vehicle maintenance, general home maintenance, companies/service providers, subscriptions, warranties, and future home projects. Caring for your home has never been easier or more organized!
               </p>
+            </div>
+
+            {/* Take a Tour Button */}
+            <div className="mb-8">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setFeatureTourOpen(true)}
+                className="gap-2 rounded-full px-6"
+              >
+                <PlayCircle className="h-5 w-5" />
+                Take a Tour
+              </Button>
             </div>
 
             <div className="grid sm:grid-cols-3 gap-6 mb-12">
@@ -482,6 +499,12 @@ const Index = () => {
           onEdit={() => {}} // View-only from search
         />
       )}
+
+      {/* Feature Tour */}
+      <FeatureTourDialog
+        isOpen={featureTourOpen}
+        onClose={() => setFeatureTourOpen(false)}
+      />
     </div>
   );
 };
