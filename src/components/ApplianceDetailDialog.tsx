@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, FileText, Image, Calendar, Factory, Home, Edit, Trash2, DollarSign, Archive, ArchiveRestore } from 'lucide-react';
+import { FileText, Image, Calendar, Factory, Home, Edit, Trash2, DollarSign, Archive, ArchiveRestore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { ArchiveConfirmDialog } from '@/components/ArchiveConfirmDialog';
+import { BlossomDocumentLink } from '@/components/BlossomMedia';
 import { useApplianceActions } from '@/hooks/useAppliances';
 import { toast } from '@/hooks/useToast';
 import type { Appliance } from '@/lib/types';
@@ -148,15 +149,11 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDe
                 <Image className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-muted-foreground">Receipt</p>
-                  <a 
+                  <BlossomDocumentLink 
                     href={appliance.receiptUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-1 text-sm"
-                  >
-                    <span className="truncate">View Receipt</span>
-                    <ExternalLink className="h-3 w-3 shrink-0" />
-                  </a>
+                    name="View Receipt"
+                    icon={null}
+                  />
                 </div>
               </div>
             )}
@@ -166,15 +163,11 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDe
                 <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-muted-foreground">Manual</p>
-                  <a 
+                  <BlossomDocumentLink 
                     href={appliance.manualUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-1 text-sm"
-                  >
-                    <span className="truncate">View Manual</span>
-                    <ExternalLink className="h-3 w-3 shrink-0" />
-                  </a>
+                    name="View Manual"
+                    icon={null}
+                  />
                 </div>
               </div>
             )}

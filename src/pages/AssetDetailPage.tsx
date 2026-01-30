@@ -562,15 +562,11 @@ function ApplianceDetailContent({ id }: { id: string }) {
                   <Image className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Receipt</p>
-                    <a
+                    <BlossomDocumentLink
                       href={appliance.receiptUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline flex items-center gap-1"
-                    >
-                      View Receipt
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
+                      name="View Receipt"
+                      icon={null}
+                    />
                   </div>
                 </div>
               )}
@@ -580,15 +576,11 @@ function ApplianceDetailContent({ id }: { id: string }) {
                   <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Manual</p>
-                    <a
+                    <BlossomDocumentLink
                       href={appliance.manualUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline flex items-center gap-1"
-                    >
-                      View Manual
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
+                      name="View Manual"
+                      icon={null}
+                    />
                   </div>
                 </div>
               )}
@@ -893,41 +885,35 @@ function VehicleDetailContent({ id }: { id: string }) {
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {vehicle.receiptUrl && (
-                  <a
+                  <BlossomDocumentLink
                     href={vehicle.receiptUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                    className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-foreground"
+                    showIcon={false}
                   >
                     <Image className="h-5 w-5 text-primary" />
                     <span>View Receipt</span>
-                    <ExternalLink className="h-4 w-4 ml-auto" />
-                  </a>
+                  </BlossomDocumentLink>
                 )}
                 {vehicle.warrantyUrl && (
-                  <a
+                  <BlossomDocumentLink
                     href={vehicle.warrantyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                    className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-foreground"
+                    showIcon={false}
                   >
                     <Shield className="h-5 w-5 text-primary" />
                     <span>View Warranty Document</span>
-                    <ExternalLink className="h-4 w-4 ml-auto" />
-                  </a>
+                  </BlossomDocumentLink>
                 )}
                 {vehicle.documentsUrls?.map((url, index) => (
-                  <a
+                  <BlossomDocumentLink
                     key={index}
                     href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                    className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-foreground"
+                    showIcon={false}
                   >
                     <FileText className="h-5 w-5 text-primary" />
                     <span>Document {index + 1}</span>
-                    <ExternalLink className="h-4 w-4 ml-auto" />
-                  </a>
+                  </BlossomDocumentLink>
                 ))}
               </CardContent>
             </Card>
