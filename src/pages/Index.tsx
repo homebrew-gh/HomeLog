@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users } from 'lucide-react';
+import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -47,6 +47,45 @@ import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
 import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
 import { useApplyColorTheme } from '@/hooks/useColorTheme';
 import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
+
+// House Key Recommendation Component - Collapsible tip shown on landing page
+const HouseKeyRecommendation = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="mt-6 max-w-md mx-auto">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full group flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-primary/5 hover:bg-primary/10 border border-primary/20 hover:border-primary/30 transition-all duration-200"
+      >
+        <KeyRound className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium text-primary">
+          Tip: Create a House Key
+        </span>
+        <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">
+          Recommended
+        </span>
+        <ChevronDown className={`h-4 w-4 text-primary/60 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+      </button>
+      
+      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-48 opacity-100 mt-3' : 'max-h-0 opacity-0'}`}>
+        <div className="p-4 rounded-lg bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border border-primary/20">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Create a dedicated key for your household — separate from your social Nostr identity. 
+                Share it with family members for joint access, with built-in security isolation if your social key is ever compromised.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Index = () => {
   useSeoMeta({
@@ -322,34 +361,10 @@ const Index = () => {
               </Card>
             </div>
 
-            {/* House Key Explainer */}
-            <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20 mb-12">
-              <CardContent className="py-6">
-                <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-                  <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <KeyRound className="h-7 w-7 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1 flex items-center justify-center sm:justify-start gap-2">
-                      House Key
-                      <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-primary/20 text-primary">
-                        Recommended
-                      </span>
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Create a dedicated key for your household — separate from your social Nostr identity. 
-                      Share it with family members for joint access, with built-in security isolation if your social key is ever compromised.
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>Family sharing</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             <LoginArea className="justify-center" />
+
+            {/* House Key Recommendation - Collapsible */}
+            <HouseKeyRecommendation />
 
             <div className="mt-8 text-sm text-muted-foreground space-y-2">
               <p className="flex items-center justify-center gap-3 flex-wrap">
