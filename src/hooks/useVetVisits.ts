@@ -1,0 +1,314 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { NostrEvent } from '@nostrify/nostrify';
+
+import { useCurrentUser } from './useCurrentUser';
+import { useNostrPublish } from './useNostrPublish';
+import { useEncryption } from './useEncryption';
+import { useEncryptionSettings } from '@/contexts/EncryptionContext';
+import { VET_VISIT_KIND, PET_KIND, type VetVisit, type VetVisitType } from '@/lib/types';
+import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
+
+// Encrypted content marker
+const ENCRYPTED_MARKER = 'nip44:';
+
+// Helper to get tag value
+function getTagValue(event: NostrEvent, tagName: string): string | undefined {
+  return event.tags.find(([name]) => name === tagName)?.[1];
+}
+
+// Helper to get all tag values (for arrays like vaccinations or documents)
+function getTagValues(event: NostrEvent, tagName: string): string[] {
+  return event.tags
+    .filter(([name]) => name === tagName)
+    .map(tag => tag[1])
+    .filter(Boolean);
+}
+
+// Data stored in encrypted content
+type VetVisitData = Omit<VetVisit, 'id' | 'pubkey' | 'createdAt'>;
+
+// Parse a Nostr event into a VetVisit object (plaintext version)
+function parseVetVisitPlaintext(event: NostrEvent): VetVisit | null {
+  const id = event.id;
+  const visitDate = getTagValue(event, 'visit_date');
+  const visitType = getTagValue(event, 'visit_type') as VetVisitType;
+  const reason = getTagValue(event, 'reason');
+
+  // Get pet reference from 'a' tag
+  const aTag = event.tags.find(([name]) => name === 'a')?.[1];
+  const petId = aTag?.split(':')[2]; // Format: kind:pubkey:d-tag
+
+  if (!id || !visitDate || !visitType || !reason || !petId) return null;
+
+  return {
+    id,
+    petId,
+    visitDate,
+    visitType,
+    reason,
+    vetClinic: getTagValue(event, 'vet_clinic'),
+    veterinarian: getTagValue(event, 'veterinarian'),
+    diagnosis: getTagValue(event, 'diagnosis'),
+    treatment: getTagValue(event, 'treatment'),
+    prescriptions: getTagValue(event, 'prescriptions'),
+    weight: getTagValue(event, 'weight'),
+    vaccinations: getTagValues(event, 'vaccination'),
+    followUpDate: getTagValue(event, 'follow_up_date'),
+    followUpNotes: getTagValue(event, 'follow_up_notes'),
+    cost: getTagValue(event, 'cost'),
+    documentsUrls: getTagValues(event, 'document_url'),
+    notes: getTagValue(event, 'notes'),
+    pubkey: event.pubkey,
+    createdAt: event.created_at,
+  };
+}
+
+// Parse encrypted vet visit from content
+async function parseVetVisitEncrypted(
+  event: NostrEvent,
+  decryptFn: (content: string) => Promise<VetVisitData>
+): Promise<VetVisit | null> {
+  const id = event.id;
+  if (!id) return null;
+
+  try {
+    const data = await decryptFn(event.content);
+    return {
+      id,
+      ...data,
+      pubkey: event.pubkey,
+      createdAt: event.created_at,
+    };
+  } catch (error) {
+    console.error('[VetVisits] Failed to decrypt vet visit:', id, error);
+    return null;
+  }
+}
+
+// Extract deleted vet visit IDs from kind 5 events
+function getDeletedVetVisitIds(deletionEvents: NostrEvent[]): Set<string> {
+  const deletedIds = new Set<string>();
+
+  for (const event of deletionEvents) {
+    for (const tag of event.tags) {
+      if (tag[0] === 'e') {
+        deletedIds.add(tag[1]);
+      }
+    }
+  }
+
+  return deletedIds;
+}
+
+// Parse events into vet visits
+async function parseEventsToVetVisits(
+  events: NostrEvent[],
+  decryptForCategory: <T>(content: string) => Promise<T>
+): Promise<VetVisit[]> {
+  // Separate vet visit events from deletion events
+  const vetVisitEvents = events.filter(e => e.kind === VET_VISIT_KIND);
+  const deletionEvents = events.filter(e => e.kind === 5);
+
+  // Get the set of deleted vet visit IDs
+  const deletedIds = getDeletedVetVisitIds(deletionEvents);
+
+  const vetVisits: VetVisit[] = [];
+
+  for (const event of vetVisitEvents) {
+    // Skip if this event was deleted
+    if (deletedIds.has(event.id)) continue;
+
+    // Check if content is encrypted
+    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
+      // Decrypt and parse
+      const vetVisit = await parseVetVisitEncrypted(
+        event,
+        (content) => decryptForCategory<VetVisitData>(content)
+      );
+      if (vetVisit) {
+        vetVisits.push(vetVisit);
+      }
+    } else {
+      // Parse plaintext from tags
+      const vetVisit = parseVetVisitPlaintext(event);
+      if (vetVisit) {
+        vetVisits.push(vetVisit);
+      }
+    }
+  }
+
+  // Sort by visit date (newest first)
+  return vetVisits.sort((a, b) => {
+    // Parse MM/DD/YYYY dates for comparison
+    const parseDate = (dateStr: string) => {
+      const parts = dateStr.split('/');
+      if (parts.length !== 3) return 0;
+      return new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1])).getTime();
+    };
+    return parseDate(b.visitDate) - parseDate(a.visitDate);
+  });
+}
+
+export function useVetVisits() {
+  const { user } = useCurrentUser();
+  const { decryptForCategory } = useEncryption();
+
+  // Main query - loads from cache only
+  // Background sync is handled centrally by useDataSyncStatus
+  const query = useQuery({
+    queryKey: ['vet-visits', user?.pubkey],
+    queryFn: async () => {
+      if (!user?.pubkey) {
+        return [];
+      }
+
+      // Load from cache (populated by useDataSyncStatus)
+      const cachedEvents = await getCachedEvents([VET_VISIT_KIND, 5], user.pubkey);
+
+      if (cachedEvents.length > 0) {
+        const vetVisits = await parseEventsToVetVisits(cachedEvents, decryptForCategory);
+        return vetVisits;
+      }
+
+      return [];
+    },
+    enabled: !!user?.pubkey,
+    staleTime: Infinity, // Data comes from IndexedDB cache, no need to refetch
+    gcTime: Infinity, // Keep in memory for the session
+    refetchOnWindowFocus: false,
+    refetchOnMount: false, // Don't refetch when component remounts - use cached data
+  });
+
+  return query;
+}
+
+export function useVetVisitsByPetId(petId: string | undefined) {
+  const { data: vetVisits } = useVetVisits();
+  if (!petId) return [];
+  return vetVisits?.filter(v => v.petId === petId) || [];
+}
+
+export function useVetVisitActions() {
+  const { user } = useCurrentUser();
+  const { mutateAsync: publishEvent } = useNostrPublish();
+  const queryClient = useQueryClient();
+  const { encryptForCategory, shouldEncrypt } = useEncryption();
+  const { isEncryptionEnabled } = useEncryptionSettings();
+
+  const createVetVisit = async (
+    petId: string,
+    data: Omit<VetVisit, 'id' | 'petId' | 'pubkey' | 'createdAt'>
+  ) => {
+    if (!user) throw new Error('Must be logged in');
+
+    const useEncryption = isEncryptionEnabled('pets');
+
+    // Base tags (always included)
+    const tags: string[][] = [
+      ['a', `${PET_KIND}:${user.pubkey}:${petId}`, '', 'pet'],
+      ['alt', useEncryption ? 'Encrypted Cypher Log vet visit data' : `Vet visit on ${data.visitDate}`],
+    ];
+
+    let content = '';
+
+    if (useEncryption && shouldEncrypt('pets')) {
+      // Store data in encrypted content (include petId)
+      content = await encryptForCategory('pets', { petId, ...data });
+    } else {
+      // Store data in plaintext tags
+      tags.push(['visit_date', data.visitDate]);
+      tags.push(['visit_type', data.visitType]);
+      tags.push(['reason', data.reason]);
+
+      if (data.vetClinic) tags.push(['vet_clinic', data.vetClinic]);
+      if (data.veterinarian) tags.push(['veterinarian', data.veterinarian]);
+      if (data.diagnosis) tags.push(['diagnosis', data.diagnosis]);
+      if (data.treatment) tags.push(['treatment', data.treatment]);
+      if (data.prescriptions) tags.push(['prescriptions', data.prescriptions]);
+      if (data.weight) tags.push(['weight', data.weight]);
+      if (data.followUpDate) tags.push(['follow_up_date', data.followUpDate]);
+      if (data.followUpNotes) tags.push(['follow_up_notes', data.followUpNotes]);
+      if (data.cost) tags.push(['cost', data.cost]);
+      if (data.notes) tags.push(['notes', data.notes]);
+
+      if (data.vaccinations) {
+        for (const vaccination of data.vaccinations) {
+          tags.push(['vaccination', vaccination]);
+        }
+      }
+
+      if (data.documentsUrls) {
+        for (const url of data.documentsUrls) {
+          tags.push(['document_url', url]);
+        }
+      }
+    }
+
+    const event = await publishEvent({
+      kind: VET_VISIT_KIND,
+      content,
+      tags,
+    });
+
+    if (event) {
+      await cacheEvents([event]);
+    }
+
+    // Small delay to allow the event to propagate
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    await queryClient.refetchQueries({ queryKey: ['vet-visits', user.pubkey] });
+
+    return event?.id;
+  };
+
+  const updateVetVisit = async (
+    id: string,
+    petId: string,
+    data: Omit<VetVisit, 'id' | 'petId' | 'pubkey' | 'createdAt'>
+  ) => {
+    if (!user) throw new Error('Must be logged in');
+
+    // For regular events, we need to delete the old one and create a new one
+    // First, delete the old event
+    await deleteVetVisit(id);
+
+    // Then create a new event with the updated data
+    return await createVetVisit(petId, data);
+  };
+
+  const deleteVetVisit = async (id: string) => {
+    if (!user) throw new Error('Must be logged in');
+
+    const event = await publishEvent({
+      kind: 5,
+      content: 'Deleted vet visit',
+      tags: [
+        ['e', id],
+      ],
+    });
+
+    if (event) {
+      await cacheEvents([event]);
+      await deleteCachedEventById(id);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await queryClient.refetchQueries({ queryKey: ['vet-visits', user.pubkey] });
+  };
+
+  const deleteVetVisitsByPetId = async (petId: string) => {
+    if (!user) throw new Error('Must be logged in');
+
+    // Get all vet visits for this pet
+    const vetVisits = queryClient.getQueryData<VetVisit[]>(['vet-visits', user.pubkey]) || [];
+    const toDelete = vetVisits.filter(v => v.petId === petId);
+
+    // Delete each vet visit
+    for (const vetVisit of toDelete) {
+      await deleteVetVisit(vetVisit.id);
+    }
+  };
+
+  return { createVetVisit, updateVetVisit, deleteVetVisit, deleteVetVisitsByPetId };
+}

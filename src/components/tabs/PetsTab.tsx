@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, ChevronDown, ChevronRight, List, LayoutGrid, Calendar, Archive, ArrowLeft, PawPrint, Dog, Cat, Bird, Fish, Rabbit, Tractor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +40,7 @@ interface PetsTabProps {
 }
 
 export function PetsTab({ scrollTarget }: PetsTabProps) {
+  const navigate = useNavigate();
   const { data: pets = [], isLoading } = usePets();
   const { preferences, setPetsViewMode } = useUserPreferences();
   const viewMode = preferences.petsViewMode;
@@ -49,7 +51,7 @@ export function PetsTab({ scrollTarget }: PetsTabProps) {
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | undefined>();
-  const [viewingPet, setViewingPet] = useState<Pet | undefined>();
+  const [viewingPet, setViewingPet] = useState<Pet | undefined>(); // For archived pets only
 
   // Collapsed types state (for list view)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
@@ -135,6 +137,16 @@ export function PetsTab({ scrollTarget }: PetsTabProps) {
   const handleEditPet = (pet: Pet) => {
     setEditingPet(pet);
     setDialogOpen(true);
+  };
+
+  const handlePetClick = (pet: Pet) => {
+    if (showArchived) {
+      // For archived pets, show the detail dialog (allows restore/delete)
+      setViewingPet(pet);
+    } else {
+      // For active pets, navigate to the detail page
+      navigate(`/pet/${pet.id}`);
+    }
   };
 
   return (
@@ -322,7 +334,7 @@ export function PetsTab({ scrollTarget }: PetsTabProps) {
                       {petsByType.grouped[type].map((pet) => (
                         <button
                           key={pet.id}
-                          onClick={() => setViewingPet(pet)}
+                          onClick={() => handlePetClick(pet)}
                           className="flex items-center gap-2 w-full p-2 rounded-lg text-left hover:bg-primary/5 transition-colors group"
                         >
                           {pet.photoUrl ? (
@@ -383,7 +395,7 @@ export function PetsTab({ scrollTarget }: PetsTabProps) {
                       <PetCard
                         key={pet.id}
                         pet={pet}
-                        onClick={() => setViewingPet(pet)}
+                        onClick={() => handlePetClick(pet)}
                       />
                     ))}
                   </div>

@@ -760,3 +760,85 @@ Materials and expenses are used to track project budgets:
 4. **Category Breakdown**: Expenses grouped by category for analysis
 
 The application compares these totals against the project's `budget` field (if set) to show remaining budget and over/under budget status.
+
+---
+
+## Kind 7443: Vet Visit
+
+A regular event representing a veterinary visit for a pet/animal.
+
+### Format
+
+```json
+{
+  "kind": 7443,
+  "content": "",
+  "tags": [
+    ["a", "38033:<pubkey>:<pet-d-tag>", "", "pet"],
+    ["alt", "Vet visit on <MM/DD/YYYY>"],
+    ["visit_date", "<MM/DD/YYYY>"],
+    ["visit_type", "<type>"],
+    ["reason", "<reason for visit>"],
+    ["vet_clinic", "<clinic name>"],
+    ["veterinarian", "<vet name>"],
+    ["diagnosis", "<diagnosis>"],
+    ["treatment", "<treatment provided>"],
+    ["prescriptions", "<medications prescribed>"],
+    ["weight", "<weight at visit>"],
+    ["vaccination", "<vaccination name>"],
+    ["follow_up_date", "<MM/DD/YYYY>"],
+    ["follow_up_notes", "<notes>"],
+    ["cost", "<visit cost>"],
+    ["document_url", "<url>"],
+    ["notes", "<notes>"]
+  ]
+}
+```
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `a` | Yes | Reference to the pet (kind 38033) this visit is for |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `visit_date` | Yes | Date of the visit in MM/DD/YYYY format |
+| `visit_type` | Yes | Type of visit (see Visit Types below) |
+| `reason` | Yes | Reason for the visit |
+| `vet_clinic` | No | Name of veterinary clinic |
+| `veterinarian` | No | Name of the veterinarian |
+| `diagnosis` | No | Diagnosis or findings from the visit |
+| `treatment` | No | Treatment provided during the visit |
+| `prescriptions` | No | Medications prescribed |
+| `weight` | No | Pet's weight at the time of visit (e.g., "45 lbs") |
+| `vaccination` | No | Vaccination given. Can have multiple for multiple vaccinations. |
+| `follow_up_date` | No | Scheduled follow-up appointment date in MM/DD/YYYY format |
+| `follow_up_notes` | No | Notes about the follow-up appointment |
+| `cost` | No | Cost of the visit (e.g., "$150.00") |
+| `document_url` | No | URL to uploaded documents (receipts, records). Can have multiple. |
+| `notes` | No | Additional notes about the visit |
+
+### Visit Types
+
+Valid visit type values:
+- `checkup` - Routine Checkup
+- `vaccination` - Vaccination
+- `illness` - Illness/Injury
+- `surgery` - Surgery
+- `dental` - Dental Care
+- `grooming` - Grooming
+- `emergency` - Emergency
+- `follow_up` - Follow-up
+- `other` - Other
+
+### Notes
+
+- Vet visits are regular events (not replaceable) so the full visit history is preserved
+- Visits are displayed chronologically under each pet, with most recent first
+- Multiple vaccinations can be recorded in a single visit using multiple `vaccination` tags
+- The application automatically updates the pet's `last_vet_visit` and optionally `weight` when a new visit is logged
+- Follow-up appointments are highlighted in the UI when approaching or overdue
+- Vet visits can be deleted using kind 5 deletion events with an `e` tag referencing the visit event ID
+
+### Privacy Considerations
+
+Vet visit records may contain sensitive information about pet health and medical history. Users should consider enabling encryption for the "pets" data category when using the application. Vet visit data inherits the encryption settings from the pet data category.

@@ -319,6 +319,7 @@ export const PROJECT_KIND = 35389;
 export const PROJECT_ENTRY_KIND = 1661;
 export const PROJECT_TASK_KIND = 4209;
 export const PROJECT_MATERIAL_KIND = 8347;
+export const VET_VISIT_KIND = 7443;
 
 export interface Pet {
   id: string;
@@ -487,6 +488,52 @@ export interface Warranty {
   // General
   notes?: string;
   isArchived?: boolean; // Whether this warranty is archived
+  // Metadata
+  pubkey: string;
+  createdAt: number;
+}
+
+// Vet Visit Types
+export const VET_VISIT_TYPES = [
+  { value: 'checkup', label: 'Routine Checkup' },
+  { value: 'vaccination', label: 'Vaccination' },
+  { value: 'illness', label: 'Illness/Injury' },
+  { value: 'surgery', label: 'Surgery' },
+  { value: 'dental', label: 'Dental Care' },
+  { value: 'grooming', label: 'Grooming' },
+  { value: 'emergency', label: 'Emergency' },
+  { value: 'follow_up', label: 'Follow-up' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export type VetVisitType = typeof VET_VISIT_TYPES[number]['value'];
+
+export interface VetVisit {
+  id: string;
+  petId: string; // Reference to the parent pet
+  visitDate: string; // MM/DD/YYYY format
+  visitType: VetVisitType;
+  // Vet information
+  vetClinic?: string;
+  veterinarian?: string; // Name of the veterinarian
+  // Visit details
+  reason: string; // Reason for visit
+  diagnosis?: string; // Diagnosis/findings
+  treatment?: string; // Treatment provided
+  prescriptions?: string; // Medications prescribed
+  // Weight tracking
+  weight?: string; // Weight at visit (e.g., "45 lbs")
+  // Vaccinations
+  vaccinations?: string[]; // List of vaccinations given
+  // Follow-up
+  followUpDate?: string; // MM/DD/YYYY format - next appointment
+  followUpNotes?: string;
+  // Costs
+  cost?: string; // Visit cost
+  // Documents
+  documentsUrls?: string[]; // Uploaded documents (receipts, records, etc.)
+  // Notes
+  notes?: string;
   // Metadata
   pubkey: string;
   createdAt: number;
