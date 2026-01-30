@@ -336,6 +336,10 @@ const FAQ_ITEMS = [
     answer: 'Your data is automatically backed up to all your connected relays. For additional safety, you can add more relays in Settings > Manage Relays. Your private key (managed by your signer/extension) is the master key to your data - keep it safe and backed up!',
   },
   {
+    question: 'Can relays see my IP address?',
+    answer: 'Yes. When Cypher Log connects to a relay, that relay can see your IP address. This is how all Nostr clients work - they connect directly to relays via WebSocket. Relay operators can correlate your IP address with your pubkey and see when you connect. Your encrypted content remains unreadable, but connection metadata (IP, timestamps) is visible to relay operators. For enhanced privacy, consider using a VPN or Tor, or use only private relays you control.',
+  },
+  {
     question: 'How do I track vet visits for my pets?',
     answer: 'Add a pet in the Pets & Animals tab, then click on the pet to open their detail page. From there, click "Log Vet Visit" to record visits including diagnosis, treatment, vaccinations, prescriptions, weight, and follow-up appointments. The app will remind you of upcoming follow-ups.',
   },

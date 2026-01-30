@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Home, ArrowLeft, Shield, Lock, Server, Key, Eye, Database, Globe, AlertTriangle } from 'lucide-react';
+import { Home, ArrowLeft, Shield, Lock, Server, Key, Eye, Database, Globe, AlertTriangle, Wifi } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -366,6 +366,48 @@ export function Privacy() {
                 <li>Cypher Log does not include analytics, tracking pixels, or advertising</li>
                 <li>Cypher Log does not collect usage statistics</li>
                 <li>Cypher Log does not share data with advertisers or data brokers</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* IP Address & Network Privacy */}
+          <Card className="bg-white dark:bg-slate-800 border-sky-200 dark:border-slate-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Wifi className="h-5 w-5 text-sky-600" />
+                IP Address & Network Privacy
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
+              <p>
+                <strong className="text-slate-800 dark:text-slate-200">Important:</strong> Your IP address is visible to certain third parties when using Cypher Log. This is inherent to how Nostr and web applications work.
+              </p>
+              <p className="font-medium text-slate-800 dark:text-slate-200">Who Can See Your IP Address:</p>
+              <ul className="list-disc list-inside space-y-2 ml-2 mb-4">
+                <li><strong>Nostr Relays:</strong> Every relay you connect to sees your IP address. Relay operators can correlate your IP with your pubkey and connection timestamps.</li>
+                <li><strong>Blossom/Media Servers:</strong> When uploading or viewing files, media servers see your IP address.</li>
+                <li><strong>Remote Signers:</strong> If using NIP-46 (Nostr Connect, nsec.app, etc.), the relay used for signer communication sees your IP.</li>
+                <li><strong>The Website Host:</strong> If accessing Cypher Log from a hosted version, the hosting provider (Cloudflare, Vercel, Netlify, etc.) sees visitor IPs.</li>
+              </ul>
+              <p className="font-medium text-slate-800 dark:text-slate-200">What This Means:</p>
+              <ul className="list-disc list-inside space-y-2 ml-2 mb-4">
+                <li>Relay operators can see that your IP address uses Cypher Log (based on the event kinds you publish)</li>
+                <li>They can see when you connect and how often</li>
+                <li>They cannot read your encrypted content, but they know you have data</li>
+                <li>If relays keep logs, this information could potentially be subpoenaed</li>
+              </ul>
+              <p className="font-medium text-slate-800 dark:text-slate-200">How to Protect Your IP:</p>
+              <ul className="list-disc list-inside space-y-2 ml-2 mb-4">
+                <li><strong>Use a VPN:</strong> Routes your traffic through another server, hiding your real IP from relays</li>
+                <li><strong>Use Tor:</strong> Provides stronger anonymity, though some relays may block Tor exit nodes</li>
+                <li><strong>Self-host relays:</strong> Run your own relay so only you see the connection logs</li>
+                <li><strong>Use private relays:</strong> Trusted relays with strict privacy policies</li>
+              </ul>
+              <p className="font-medium text-slate-800 dark:text-slate-200">What Cypher Log Does NOT Expose:</p>
+              <ul className="list-disc list-inside space-y-2 ml-2">
+                <li>Your IP is not visible to other Nostr users - only to relay/server operators</li>
+                <li>Your IP is not stored in your Nostr events</li>
+                <li>Relays do not share your IP with each other (unless they collude)</li>
               </ul>
             </CardContent>
           </Card>
