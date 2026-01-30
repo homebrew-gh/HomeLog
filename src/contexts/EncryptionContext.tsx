@@ -11,7 +11,8 @@ export type EncryptableCategory =
   | 'subscriptions'
   | 'warranties'
   | 'companies'
-  | 'projects';
+  | 'projects'
+  | 'pets';
 
 /**
  * Per-category relay settings
@@ -30,6 +31,7 @@ export interface EncryptionSettings {
   warranties: boolean;
   companies: boolean;
   projects: boolean;
+  pets: boolean;
 }
 
 /**
@@ -44,6 +46,7 @@ export interface CategoryRelayConfig {
   warranties: CategoryRelaySettings;
   companies: CategoryRelaySettings;
   projects: CategoryRelaySettings;
+  pets: CategoryRelaySettings;
 }
 
 /**
@@ -70,6 +73,7 @@ const DEFAULT_ENCRYPTION_SETTINGS: EncryptionSettings = {
   warranties: true,
   companies: false,
   projects: false,
+  pets: true,
 };
 
 const DEFAULT_CATEGORY_RELAY_CONFIG: CategoryRelayConfig = {
@@ -80,6 +84,7 @@ const DEFAULT_CATEGORY_RELAY_CONFIG: CategoryRelayConfig = {
   warranties: {},
   companies: {},
   projects: {},
+  pets: {},
 };
 
 /**
@@ -124,6 +129,11 @@ export const CATEGORY_INFO: Record<EncryptableCategory, {
     label: 'Projects',
     description: 'Home improvement projects - keep unencrypted for future sharing',
     recommendEncryption: false,
+  },
+  pets: {
+    label: 'Pets & Animals',
+    description: 'Pet information including medical records and vet details',
+    recommendEncryption: true,
   },
 };
 

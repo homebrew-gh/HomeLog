@@ -18,7 +18,7 @@ import {
   type CategoryRelayConfig,
   type EncryptionSettings,
 } from '@/contexts/EncryptionContext';
-import { APPLIANCE_KIND, VEHICLE_KIND, MAINTENANCE_KIND } from '@/lib/types';
+import { APPLIANCE_KIND, VEHICLE_KIND, MAINTENANCE_KIND, PET_KIND } from '@/lib/types';
 
 interface EncryptionSettingsDialogProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ const CATEGORY_ORDER: EncryptableCategory[] = [
   'maintenance',
   'warranties',
   'subscriptions',
+  'pets',
   'companies',
   'projects',
 ];
@@ -116,6 +117,7 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
       warranties: true,
       companies: false,
       projects: false,
+      pets: true,
     });
     setLocalCategoryRelayConfig({
       appliances: {},
@@ -125,6 +127,7 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
       warranties: {},
       companies: {},
       projects: {},
+      pets: {},
     });
   }, []);
 
@@ -209,10 +212,10 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
     setShowDecrypted(false);
 
     try {
-      // Query for encrypted events (appliances, vehicles, maintenance)
+      // Query for encrypted events (appliances, vehicles, maintenance, pets)
       const events = await nostr.query(
         [
-          { kinds: [APPLIANCE_KIND, VEHICLE_KIND, MAINTENANCE_KIND], authors: [user.pubkey], limit: 50 },
+          { kinds: [APPLIANCE_KIND, VEHICLE_KIND, MAINTENANCE_KIND, PET_KIND], authors: [user.pubkey], limit: 50 },
         ],
         { signal: AbortSignal.timeout(5000) }
       );
@@ -285,6 +288,7 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
       case APPLIANCE_KIND: return 'Appliance';
       case VEHICLE_KIND: return 'Vehicle';
       case MAINTENANCE_KIND: return 'Maintenance';
+      case PET_KIND: return 'Pet';
       default: return 'Event';
     }
   };
@@ -467,7 +471,7 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
           <Separator />
 
           {/* Warning for unencrypted sensitive data */}
-          {(!settings.appliances || !settings.vehicles || !settings.maintenance) && (
+          {(!settings.appliances || !settings.vehicles || !settings.maintenance || !settings.pets) && (
             <Alert variant="destructive" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
