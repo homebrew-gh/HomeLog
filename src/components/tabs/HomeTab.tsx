@@ -520,27 +520,50 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   }, [preferences.activeTabs, hiddenWidgets]);
 
   // Auto-scroll configuration
-  const SCROLL_ZONE_SIZE = 80; // pixels from edge to trigger scroll
-  const SCROLL_SPEED_SLOW = 2; // pixels per frame (slow, deliberate)
-  const SCROLL_SPEED_FAST = 5; // pixels per frame when closer to edge
+  const SCROLL_ZONE_SIZE = 100; // pixels from edge to trigger scroll
+  const SCROLL_SPEED_SLOW = 3; // pixels per frame (slow, deliberate)
+  const SCROLL_SPEED_FAST = 8; // pixels per frame when closer to edge
   const autoScrollRef = useRef<number | null>(null);
   const currentPointerY = useRef<number>(0);
+  const isDraggingRef = useRef<boolean>(false); // Track dragging state in a ref for the animation loop
+
+  // Keep the ref in sync with state
+  useEffect(() => {
+    isDraggingRef.current = !!draggedWidget;
+  }, [draggedWidget]);
 
   // Auto-scroll function that runs in animation frame loop
+  // Uses refs to avoid stale closure issues
   const performAutoScroll = useCallback(() => {
+    // Use the ref to check if we're still dragging (avoids stale closure)
+    if (!isDraggingRef.current) {
+      autoScrollRef.current = null;
+      return;
+    }
+
     const viewportHeight = window.innerHeight;
     const y = currentPointerY.current;
     
     let scrollAmount = 0;
     
-    // Check if near top edge - scroll up
-    if (y < SCROLL_ZONE_SIZE) {
-      const intensity = 1 - (y / SCROLL_ZONE_SIZE); // 0 to 1, higher when closer to edge
+    // Account for the sticky header (approximately 120px)
+    const headerOffset = 120;
+    const topScrollZone = headerOffset + SCROLL_ZONE_SIZE;
+    
+    // Check if near top edge (below header) - scroll up
+    if (y < topScrollZone && y > headerOffset) {
+      const distanceFromZoneStart = topScrollZone - y;
+      const intensity = distanceFromZoneStart / SCROLL_ZONE_SIZE; // 0 to 1, higher when closer to edge
       scrollAmount = -(SCROLL_SPEED_SLOW + (SCROLL_SPEED_FAST - SCROLL_SPEED_SLOW) * intensity);
+    }
+    // Check if in header area - scroll up faster
+    else if (y <= headerOffset) {
+      scrollAmount = -SCROLL_SPEED_FAST;
     }
     // Check if near bottom edge - scroll down
     else if (y > viewportHeight - SCROLL_ZONE_SIZE) {
-      const intensity = 1 - ((viewportHeight - y) / SCROLL_ZONE_SIZE); // 0 to 1, higher when closer to edge
+      const distanceFromBottom = viewportHeight - y;
+      const intensity = 1 - (distanceFromBottom / SCROLL_ZONE_SIZE); // 0 to 1, higher when closer to edge
       scrollAmount = SCROLL_SPEED_SLOW + (SCROLL_SPEED_FAST - SCROLL_SPEED_SLOW) * intensity;
     }
     
@@ -548,16 +571,25 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
       window.scrollBy(0, scrollAmount);
     }
     
-    // Continue the loop if we're still dragging
-    if (draggedWidget) {
+    // Continue the loop using the ref check
+    if (isDraggingRef.current) {
       autoScrollRef.current = requestAnimationFrame(performAutoScroll);
     }
-  }, [draggedWidget]);
+  }, []); // No dependencies - uses refs for all dynamic values
 
   // Start auto-scroll loop when dragging begins
   useEffect(() => {
     if (draggedWidget) {
-      autoScrollRef.current = requestAnimationFrame(performAutoScroll);
+      // Start the auto-scroll loop
+      if (!autoScrollRef.current) {
+        autoScrollRef.current = requestAnimationFrame(performAutoScroll);
+      }
+    } else {
+      // Stop the auto-scroll loop
+      if (autoScrollRef.current) {
+        cancelAnimationFrame(autoScrollRef.current);
+        autoScrollRef.current = null;
+      }
     }
     
     return () => {
