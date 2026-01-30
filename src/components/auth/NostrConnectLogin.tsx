@@ -58,10 +58,12 @@ export function NostrConnectLogin({
   }, [config.relayMetadata.relays]);
 
   // Generate a random secret for the connection
+  // NIP-46 example shows short alphanumeric secrets like "0s8j2djs"
   const generateSecret = () => {
-    const bytes = new Uint8Array(16);
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    const bytes = new Uint8Array(8);
     crypto.getRandomValues(bytes);
-    return bytesToHex(bytes).slice(0, 16);
+    return Array.from(bytes).map(b => chars[b % chars.length]).join('');
   };
 
   // Generate the nostrconnect:// URI and QR code
@@ -98,6 +100,9 @@ export function NostrConnectLogin({
       params.set('perms', 'sign_event,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt');
 
       const uri = `nostrconnect://${clientPubkey}?${params.toString()}`;
+      console.log('[NostrConnectLogin] Generated URI:', uri);
+      console.log('[NostrConnectLogin] Secret:', secret);
+      console.log('[NostrConnectLogin] Relay:', relayUrl);
       setConnectUri(uri);
 
       // Generate QR code
@@ -162,24 +167,29 @@ export function NostrConnectLogin({
 
         if (msg[0] === 'EVENT') {
           const event = msg[2];
+          console.log('[NostrConnectLogin] Received event from:', event.pubkey);
 
           // Decrypt the response using NIP-44 or NIP-04
           let decrypted: string;
           try {
             // Try NIP-44 first
             decrypted = await clientSigner.nip44!.decrypt(event.pubkey, event.content);
-          } catch {
+            console.log('[NostrConnectLogin] Decrypted with NIP-44');
+          } catch (e) {
+            console.log('[NostrConnectLogin] NIP-44 decrypt failed, trying NIP-04:', e);
             // Fall back to NIP-04
             try {
               decrypted = await clientSigner.nip04!.decrypt(event.pubkey, event.content);
-            } catch {
-              console.warn('[NostrConnectLogin] Failed to decrypt response');
+              console.log('[NostrConnectLogin] Decrypted with NIP-04');
+            } catch (e2) {
+              console.warn('[NostrConnectLogin] Failed to decrypt response with both NIP-44 and NIP-04:', e2);
               continue;
             }
           }
 
           const response = JSON.parse(decrypted);
           console.log('[NostrConnectLogin] Received response:', response);
+          console.log('[NostrConnectLogin] Expected secret:', secret);
 
           // Check for errors first
           if (response.error) {
