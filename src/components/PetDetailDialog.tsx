@@ -143,6 +143,8 @@ export function PetDetailDialog({ isOpen, onClose, pet, onEdit, onDelete }: PetD
                   src={pet.photoUrl} 
                   alt={pet.name} 
                   className="max-h-48 rounded-lg object-cover shadow-md"
+                  enableViewer
+                  viewerTitle={`${pet.name} - Photo`}
                 />
               </div>
             )}

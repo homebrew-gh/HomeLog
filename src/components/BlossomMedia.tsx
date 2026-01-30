@@ -1,9 +1,10 @@
 import { useState, useCallback } from 'react';
-import { ExternalLink, AlertCircle, RefreshCw } from 'lucide-react';
+import { ExternalLink, AlertCircle, RefreshCw, FileText, Eye } from 'lucide-react';
 import { useBlossomUrl } from '@/hooks/useBlossomUrl';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FileViewer } from '@/components/FileViewer';
 
 interface BlossomImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src' | 'onError'> {
   /** The original Blossom file URL */
@@ -16,6 +17,10 @@ interface BlossomImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElemen
   showSkeleton?: boolean;
   /** Additional class for the skeleton */
   skeletonClassName?: string;
+  /** Whether clicking the image opens a full-screen viewer */
+  enableViewer?: boolean;
+  /** Title to display in the viewer */
+  viewerTitle?: string;
 }
 
 /**
@@ -40,11 +45,14 @@ export function BlossomImage({
   showSkeleton = true,
   skeletonClassName,
   className,
+  enableViewer = false,
+  viewerTitle,
   ...props
 }: BlossomImageProps) {
   const { currentUrl, tryNextUrl, hasFailed, currentIndex, totalUrls } = useBlossomUrl(src);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
   
   const handleLoad = useCallback(() => {
     setIsLoaded(true);
@@ -64,6 +72,12 @@ export function BlossomImage({
     setHasError(false);
     setIsLoaded(false);
   }, []);
+
+  const handleClick = useCallback(() => {
+    if (enableViewer && isLoaded) {
+      setViewerOpen(true);
+    }
+  }, [enableViewer, isLoaded]);
 
   // All URLs exhausted - show fallback
   if (hasFailed && hasError) {
@@ -94,35 +108,57 @@ export function BlossomImage({
   }
 
   return (
-    <div className="relative">
-      {/* Skeleton while loading */}
-      {showSkeleton && !isLoaded && (
-        <Skeleton className={cn("absolute inset-0", skeletonClassName || className)} />
-      )}
-      
-      {/* Actual image */}
-      <img
-        src={currentUrl}
-        alt={alt}
-        className={cn(
-          className,
-          !isLoaded && showSkeleton && "invisible"
+    <>
+      <div 
+        className={cn("relative", enableViewer && isLoaded && "cursor-pointer group")}
+        onClick={handleClick}
+      >
+        {/* Skeleton while loading */}
+        {showSkeleton && !isLoaded && (
+          <Skeleton className={cn("absolute inset-0", skeletonClassName || className)} />
         )}
-        onLoad={handleLoad}
-        onError={handleError}
-        {...props}
-      />
+        
+        {/* Actual image */}
+        <img
+          src={currentUrl}
+          alt={alt}
+          className={cn(
+            className,
+            !isLoaded && showSkeleton && "invisible"
+          )}
+          onLoad={handleLoad}
+          onError={handleError}
+          {...props}
+        />
+        
+        {/* View overlay for clickable images */}
+        {enableViewer && isLoaded && (
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+            <Eye className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        )}
+        
+        {/* Fallback indicator */}
+        {currentIndex > 0 && isLoaded && (
+          <div 
+            className="absolute bottom-1 right-1 bg-yellow-500/80 text-yellow-950 text-xs px-1.5 py-0.5 rounded"
+            title={`Loaded from fallback server ${currentIndex + 1}/${totalUrls}`}
+          >
+            Fallback
+          </div>
+        )}
+      </div>
       
-      {/* Debug indicator in development */}
-      {currentIndex > 0 && isLoaded && (
-        <div 
-          className="absolute bottom-1 right-1 bg-yellow-500/80 text-yellow-950 text-xs px-1.5 py-0.5 rounded"
-          title={`Loaded from fallback server ${currentIndex + 1}/${totalUrls}`}
-        >
-          Fallback
-        </div>
+      {/* File viewer */}
+      {enableViewer && (
+        <FileViewer
+          url={src}
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+          title={viewerTitle || alt}
+        />
       )}
-    </div>
+    </>
   );
 }
 
@@ -219,15 +255,25 @@ export function BlossomLink({
   );
 }
 
-interface BlossomDocumentLinkProps extends BlossomLinkProps {
+interface BlossomDocumentLinkProps {
+  /** The document URL */
+  href: string;
   /** Document name to display */
   name?: string;
   /** Icon to show before the link */
   icon?: React.ReactNode;
+  /** Link text/children */
+  children?: React.ReactNode;
+  /** Additional className */
+  className?: string;
+  /** Whether to show external link icon */
+  showIcon?: boolean;
+  /** Whether to open in viewer (default: true) */
+  enableViewer?: boolean;
 }
 
 /**
- * Document link with icon and name, with automatic fallback
+ * Document link with icon and name, opens in-app file viewer
  * 
  * @example
  * ```tsx
@@ -244,16 +290,46 @@ export function BlossomDocumentLink({
   icon,
   children,
   className,
-  ...props
+  showIcon = true,
+  enableViewer = true,
 }: BlossomDocumentLinkProps) {
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const displayName = children || name || 'View Document';
+  
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (enableViewer) {
+      setViewerOpen(true);
+    } else {
+      window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  }, [enableViewer, href]);
+
   return (
-    <BlossomLink
-      href={href}
-      className={cn("text-primary hover:underline flex items-center gap-1 text-sm", className)}
-      {...props}
-    >
-      {icon}
-      <span className="truncate">{children || name || 'View Document'}</span>
-    </BlossomLink>
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        className={cn(
+          "text-primary hover:underline flex items-center gap-1 text-sm cursor-pointer",
+          className
+        )}
+      >
+        {icon || <FileText className="h-4 w-4" />}
+        <span className="truncate">{displayName}</span>
+        {showIcon && <Eye className="h-3 w-3 shrink-0" />}
+      </button>
+      
+      {enableViewer && (
+        <FileViewer
+          url={href}
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+          title={typeof displayName === 'string' ? displayName : name}
+        />
+      )}
+    </>
   );
 }
