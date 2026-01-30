@@ -116,6 +116,8 @@ The project includes a **`docs/`** directory containing specialized documentatio
 
 - **`docs/NOSTR_DIRECT_MESSAGES.md`**: Read when implementing direct messaging features, building chat interfaces, or working with encrypted peer-to-peer communication (NIP-04 and NIP-17).
 
+- **`docs/AGENT_API.md`**: Read when building AI agent integrations that need to programmatically create, read, update, or delete user data. Contains complete schemas for all data types (appliances, vehicles, maintenance, subscriptions, warranties, pets, projects, etc.) and workflow examples.
+
 ## System Prompt Management
 
 The AI assistant's behavior and knowledge is defined by the AGENTS.md file, which serves as the system prompt. To modify the assistant's instructions or add new project-specific guidelines:

@@ -160,6 +160,17 @@ Cypher Log uses custom Nostr event kinds for data storage. See [NIP.md](./NIP.md
 
 Cypher Log supports optional NIP-44 encryption for sensitive data categories. When enabled, data is encrypted to your own public key before being published to relays.
 
+### AI Agent Integration
+
+Cypher Log is designed to work with AI agents that can programmatically manage your data. See [docs/AGENT_API.md](./docs/AGENT_API.md) for the complete API specification, including:
+
+- Schemas for all data types (appliances, vehicles, maintenance, subscriptions, warranties, pets, projects)
+- CRUD operations with TypeScript interfaces
+- Workflow examples for common agent tasks
+- File upload handling
+
+Example use case: *"Read this appliance manual and add all the recommended maintenance tasks to my schedule."*
+
 ## Project Structure
 
 ```
