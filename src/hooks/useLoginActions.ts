@@ -28,7 +28,7 @@ export function useLoginActions() {
     // Login with NIP-46 NostrConnect (client-initiated connection)
     // The connection is already established - we just need to create the signer
     // and store the session for future use
-    async nostrconnect(remotePubkey: string, clientNsec: string, relayUrl: string): Promise<void> {
+    async nostrconnect(remotePubkey: string, userPubkey: string, clientNsec: string, relayUrl: string): Promise<void> {
       // Decode the client secret key
       const decoded = nip19.decode(clientNsec);
       if (decoded.type !== 'nsec') {
@@ -49,10 +49,8 @@ export function useLoginActions() {
         pubkey: remotePubkey,
         signer: localSigner,
         encryption: 'nip44', // Use NIP-44 encryption (modern)
+        timeout: 30000, // 30 second timeout for operations
       });
-      
-      // Get the actual user pubkey from the remote signer
-      const userPubkey = await signer.getPublicKey();
       
       // Create the login object
       // Store as bunker URI for persistence/reconnection
@@ -61,7 +59,7 @@ export function useLoginActions() {
       const login: NLogin = {
         id: crypto.randomUUID(),
         type: 'bunker',
-        pubkey: userPubkey,
+        pubkey: userPubkey, // Use pubkey from the initial handshake
         bunkerUri,
         signer,
         createdAt: Date.now(),

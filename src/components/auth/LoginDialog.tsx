@@ -278,7 +278,8 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
     setErrors({});
     
     try {
-      await login.nostrconnect(result.remotePubkey, result.clientNsec, result.relayUrl);
+      // Pass userPubkey from the handshake - no need for another round trip
+      await login.nostrconnect(result.remotePubkey, result.userPubkey, result.clientNsec, result.relayUrl);
       onLogin();
       onClose();
     } catch (err) {
