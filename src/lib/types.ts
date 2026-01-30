@@ -316,6 +316,7 @@ export const SUBSCRIPTION_KIND = 37004;
 export const WARRANTY_KIND = 35043;
 export const PET_KIND = 38033;
 export const PROJECT_KIND = 35389;
+export const PROJECT_ENTRY_KIND = 1661;
 
 export interface Pet {
   id: string;
@@ -370,11 +371,29 @@ export interface Project {
   startDate: string; // MM/DD/YYYY format
   // Status tracking
   status?: 'planning' | 'in_progress' | 'on_hold' | 'completed';
-  // Future fields (to be implemented later)
+  // Budget and timeline
   budget?: string;
   completionDate?: string; // MM/DD/YYYY format - when project was completed
+  targetCompletionDate?: string; // MM/DD/YYYY format - planned completion date
+  // Linked companies/service providers
+  companyIds?: string[]; // Array of company IDs linked to this project
+  // General
   notes?: string;
   isArchived?: boolean;
+  // Metadata
+  pubkey: string;
+  createdAt: number;
+}
+
+// Project Entry (Progress Diary Entry)
+export interface ProjectEntry {
+  id: string;
+  projectId: string; // Reference to the parent project
+  entryDate: string; // MM/DD/YYYY format - date of the entry
+  title?: string; // Optional title for the entry
+  content: string; // Main text content (notes, observations, etc.)
+  // Photos and media
+  photoUrls?: string[]; // Array of uploaded photo URLs
   // Metadata
   pubkey: string;
   createdAt: number;

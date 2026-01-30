@@ -16,6 +16,14 @@ function getTagValue(event: NostrEvent, tagName: string): string | undefined {
   return event.tags.find(([name]) => name === tagName)?.[1];
 }
 
+// Helper to get all tag values for a given tag name
+function getTagValues(event: NostrEvent, tagName: string): string[] {
+  return event.tags
+    .filter(([name]) => name === tagName)
+    .map(tag => tag[1])
+    .filter((val): val is string => !!val);
+}
+
 // Data stored in encrypted content
 type ProjectData = Omit<Project, 'id' | 'pubkey' | 'createdAt'>;
 
@@ -27,6 +35,13 @@ function parseProjectPlaintext(event: NostrEvent): Project | null {
 
   if (!id || !name || !startDate) return null;
 
+  // Get linked company IDs from 'a' tags
+  const companyIds = event.tags
+    .filter(([name, value]) => name === 'a' && value?.includes(':') && value.split(':')[2])
+    .filter(tag => tag[3] === 'company')
+    .map(tag => tag[1].split(':')[2])
+    .filter((id): id is string => !!id);
+
   return {
     id,
     name,
@@ -35,6 +50,8 @@ function parseProjectPlaintext(event: NostrEvent): Project | null {
     status: getTagValue(event, 'status') as Project['status'],
     budget: getTagValue(event, 'budget'),
     completionDate: getTagValue(event, 'completion_date'),
+    targetCompletionDate: getTagValue(event, 'target_completion_date'),
+    companyIds: companyIds.length > 0 ? companyIds : undefined,
     notes: getTagValue(event, 'notes'),
     isArchived: getTagValue(event, 'is_archived') === 'true',
     pubkey: event.pubkey,
@@ -184,6 +201,13 @@ export function useProjectActions() {
 
     let content = '';
 
+    // Add company links (always included, even with encryption for queryability)
+    if (data.companyIds && data.companyIds.length > 0) {
+      for (const companyId of data.companyIds) {
+        tags.push(['a', `37003:${user.pubkey}:${companyId}`, '', 'company']);
+      }
+    }
+
     if (useEncryption && shouldEncrypt('projects')) {
       // Store data in encrypted content
       content = await encryptForCategory('projects', data);
@@ -196,6 +220,7 @@ export function useProjectActions() {
       if (data.status) tags.push(['status', data.status]);
       if (data.budget) tags.push(['budget', data.budget]);
       if (data.completionDate) tags.push(['completion_date', data.completionDate]);
+      if (data.targetCompletionDate) tags.push(['target_completion_date', data.targetCompletionDate]);
       if (data.notes) tags.push(['notes', data.notes]);
       if (data.isArchived) tags.push(['is_archived', 'true']);
     }
@@ -227,6 +252,13 @@ export function useProjectActions() {
       ['alt', useEncryption ? 'Encrypted Cypher Log project data' : `Project: ${data.name}`],
     ];
 
+    // Add company links (always included, even with encryption for queryability)
+    if (data.companyIds && data.companyIds.length > 0) {
+      for (const companyId of data.companyIds) {
+        tags.push(['a', `37003:${user.pubkey}:${companyId}`, '', 'company']);
+      }
+    }
+
     let content = '';
 
     if (useEncryption && shouldEncrypt('projects')) {
@@ -241,6 +273,7 @@ export function useProjectActions() {
       if (data.status) tags.push(['status', data.status]);
       if (data.budget) tags.push(['budget', data.budget]);
       if (data.completionDate) tags.push(['completion_date', data.completionDate]);
+      if (data.targetCompletionDate) tags.push(['target_completion_date', data.targetCompletionDate]);
       if (data.notes) tags.push(['notes', data.notes]);
       if (data.isArchived) tags.push(['is_archived', 'true']);
     }
