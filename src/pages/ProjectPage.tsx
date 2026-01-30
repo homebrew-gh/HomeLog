@@ -36,6 +36,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { BlossomImage } from '@/components/BlossomMedia';
+import { TaskList, MaterialsList, BudgetTracker } from '@/components/project';
 import { useProjectById, useProjects, useProjectActions } from '@/hooks/useProjects';
 import { useProjectEntries, useProjectEntryActions } from '@/hooks/useProjectEntries';
 import { useCompanies, useCompanyById } from '@/hooks/useCompanies';
@@ -982,6 +983,18 @@ export function ProjectPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Budget Tracker */}
+        <BudgetTracker projectId={projectId!} originalBudget={project.budget} />
+
+        {/* Tasks and Materials - Side by Side on larger screens */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* To-Do List */}
+          <TaskList projectId={projectId!} />
+
+          {/* Materials & Expenses */}
+          <MaterialsList projectId={projectId!} />
+        </div>
 
         {/* Progress Diary */}
         <Card>

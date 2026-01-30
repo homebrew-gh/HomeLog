@@ -649,3 +649,114 @@ A regular event representing a progress diary entry for a project.
 ### Future Enhancements
 
 Project entries are designed to support future long-form publishing to Nostr. The content structure is compatible with NIP-23 long-form content, allowing entries to potentially be shared publicly on Nostr clients like Primal.
+
+---
+
+## Kind 4209: Project Task
+
+A regular event representing a to-do item for a project.
+
+### Format
+
+```json
+{
+  "kind": 4209,
+  "content": "",
+  "tags": [
+    ["a", "35389:<pubkey>:<project-d-tag>", "", "project"],
+    ["alt", "Task: <description>"],
+    ["description", "<task description>"],
+    ["is_completed", "true|false"],
+    ["completed_date", "<MM/DD/YYYY>"],
+    ["priority", "low|medium|high"],
+    ["due_date", "<MM/DD/YYYY>"]
+  ]
+}
+```
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `a` | Yes | Reference to the parent project (kind 35389) |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `description` | Yes | Task description |
+| `is_completed` | Yes | Whether the task is done ("true" or "false") |
+| `completed_date` | No | Date when task was completed in MM/DD/YYYY format |
+| `priority` | No | Task priority: `low`, `medium`, or `high` |
+| `due_date` | No | Optional due date in MM/DD/YYYY format |
+
+### Notes
+
+- Tasks are regular events (not replaceable) so changes create new events
+- To update a task (e.g., mark complete), delete the old event and create a new one
+- Tasks are sorted by priority (high first) and then by creation date
+- Completed tasks are displayed separately from incomplete tasks
+
+---
+
+## Kind 8347: Project Material/Expense
+
+A regular event representing a material or expense item for a project.
+
+### Format
+
+```json
+{
+  "kind": 8347,
+  "content": "",
+  "tags": [
+    ["a", "35389:<pubkey>:<project-d-tag>", "", "project"],
+    ["alt", "Material: <name>"],
+    ["name", "<item name>"],
+    ["category", "<expense category>"],
+    ["quantity", "<number>"],
+    ["unit", "<unit of measurement>"],
+    ["unit_price", "<price per unit>"],
+    ["total_price", "<total price>"],
+    ["is_purchased", "true|false"],
+    ["purchased_date", "<MM/DD/YYYY>"],
+    ["vendor", "<vendor/store name>"],
+    ["notes", "<notes>"]
+  ]
+}
+```
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `a` | Yes | Reference to the parent project (kind 35389) |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `name` | Yes | Item name |
+| `category` | Yes | Expense category (see categories below) |
+| `quantity` | No | Quantity needed |
+| `unit` | No | Unit of measurement (e.g., "sq ft", "each", "hours") |
+| `unit_price` | No | Price per unit |
+| `total_price` | Yes | Total price for this item |
+| `is_purchased` | Yes | Whether the item has been purchased ("true" or "false") |
+| `purchased_date` | No | Date when item was purchased in MM/DD/YYYY format |
+| `vendor` | No | Where the item was/will be purchased |
+| `notes` | No | Additional notes |
+
+### Expense Categories
+
+Valid category values:
+- `materials` - Building materials, supplies
+- `labor` - Labor costs, contractor fees
+- `rentals` - Equipment rentals
+- `permits` - Permits and fees
+- `tools` - Tools purchased for the project
+- `delivery` - Delivery fees
+- `other` - Miscellaneous expenses
+
+### Budget Tracking
+
+Materials and expenses are used to track project budgets:
+
+1. **Total Planned**: Sum of all `total_price` values
+2. **Total Spent**: Sum of `total_price` for items where `is_purchased` is "true"
+3. **Remaining**: Original budget minus total spent
+4. **Category Breakdown**: Expenses grouped by category for analysis
+
+The application compares these totals against the project's `budget` field (if set) to show remaining budget and over/under budget status.
