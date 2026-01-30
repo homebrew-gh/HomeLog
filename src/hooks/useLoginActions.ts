@@ -1,6 +1,6 @@
 import { useNostr } from '@nostrify/react';
 import { NLogin, useNostrLogin } from '@nostrify/react/login';
-import { NConnectSigner, NRelay1 } from '@nostrify/nostrify';
+import { NConnectSigner, NSecSigner, NRelay1 } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
 
 // NOTE: This file should not be edited except for adding new login methods.
@@ -36,6 +36,9 @@ export function useLoginActions() {
       }
       const clientSecretKey = decoded.data;
       
+      // Create a local signer with the client secret key
+      const localSigner = new NSecSigner(clientSecretKey);
+      
       // Create a relay connection for the signer
       const relay = new NRelay1(relayUrl);
       
@@ -44,7 +47,8 @@ export function useLoginActions() {
       const signer = new NConnectSigner({
         relay,
         pubkey: remotePubkey,
-        secretKey: clientSecretKey,
+        signer: localSigner,
+        encryption: 'nip44', // Use NIP-44 encryption (modern)
       });
       
       // Get the actual user pubkey from the remote signer
