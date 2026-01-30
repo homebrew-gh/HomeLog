@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, X, Cloud, RefreshCw, GripVertical, Lock, Globe, Settings, Upload, Check, AlertCircle } from 'lucide-react';
+import { Plus, X, Cloud, RefreshCw, GripVertical, Lock, Globe, Settings, Upload, Check, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -326,6 +326,14 @@ export function BlossomServerManager() {
 
   return (
     <div className="space-y-4">
+      {/* Encryption info notice */}
+      <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/50">
+        <ShieldCheck className="h-4 w-4 text-green-600" />
+        <AlertDescription className="text-sm text-green-800 dark:text-green-200">
+          <strong>Your server list is encrypted.</strong> Blossom server URLs are encrypted with NIP-44 before being stored on Nostr relays. Public relays cannot see your private server addresses.
+        </AlertDescription>
+      </Alert>
+
       {/* Warning if no private server configured */}
       {!hasPrivateServer && (
         <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">

@@ -236,10 +236,17 @@ export function Privacy() {
                 <li><strong>Key compromise:</strong> If your Nostr private key is compromised, all encrypted data can be decrypted by whoever has your key.</li>
                 <li><strong>Metadata visible:</strong> Even with encrypted content, event metadata (timestamps, event kind, public key) is visible to relay operators.</li>
               </ul>
+              <p className="font-medium text-slate-800 dark:text-slate-200">Blossom Server Configuration:</p>
+              <ul className="list-disc list-inside space-y-2 ml-2 mb-3">
+                <li><strong>Your Blossom server URLs are encrypted</strong> using NIP-44 before being stored on Nostr relays</li>
+                <li>This protects private server addresses (like your home NAS) from being visible on public relays</li>
+                <li>Only you can decrypt and see your configured server URLs</li>
+                <li>Requires a signer that supports NIP-44 encryption</li>
+              </ul>
               <p className="font-medium text-slate-800 dark:text-slate-200">Data NOT Encrypted (by design):</p>
               <ul className="list-disc list-inside space-y-2 ml-2">
                 <li><strong>Relay list (NIP-65):</strong> Public so other Nostr clients can discover you</li>
-                <li><strong>App preferences:</strong> Tab configuration, display settings, custom type lists</li>
+                <li><strong>App preferences:</strong> Tab configuration, display settings, custom type lists (but NOT Blossom server URLs - those are encrypted)</li>
                 <li><strong>Profile data:</strong> If you create a profile, it follows standard Nostr conventions</li>
                 <li><strong>Uploaded files:</strong> Files uploaded to Blossom servers are NOT encrypted and are publicly accessible via their URLs</li>
               </ul>
@@ -331,7 +338,8 @@ export function Privacy() {
               <p className="font-medium text-slate-800 dark:text-slate-200">Blossom/Media Servers (File Uploads)</p>
               <ul className="list-disc list-inside space-y-2 ml-2 mb-4">
                 <li>Uploaded files (receipts, manuals, photos, documents) are stored on media servers you configure</li>
-                <li><strong className="text-red-600 dark:text-red-400">Uploaded files are NOT encrypted</strong> and may be publicly accessible via their URLs</li>
+                <li><strong className="text-green-600 dark:text-green-400">Your Blossom server URLs are encrypted</strong> with NIP-44 so public relays cannot see your private server addresses</li>
+                <li><strong className="text-red-600 dark:text-red-400">Uploaded files themselves are NOT encrypted</strong> and may be publicly accessible via their URLs</li>
                 <li>Do not upload files containing sensitive information (bank statements, medical records, identification documents)</li>
                 <li>Media server operators can see and access all files you upload</li>
                 <li>Deletion of uploaded files depends on the media server's policies</li>
