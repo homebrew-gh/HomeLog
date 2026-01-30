@@ -541,3 +541,111 @@ Custom pet types can also be used.
 ### Privacy Considerations
 
 Pet records may contain sensitive personal information (vet details, microchip IDs). Users should consider enabling encryption for this data category when using the application.
+
+---
+
+## Kind 35389: Project
+
+An addressable event representing a home/farm project for tracking renovations, improvements, or other work.
+
+### Format
+
+```json
+{
+  "kind": 35389,
+  "content": "",
+  "tags": [
+    ["d", "<unique-identifier>"],
+    ["alt", "Project: <name>"],
+    ["name", "<project name>"],
+    ["description", "<project description>"],
+    ["start_date", "<MM/DD/YYYY>"],
+    ["target_completion_date", "<MM/DD/YYYY>"],
+    ["status", "<planning|in_progress|on_hold|completed>"],
+    ["budget", "<budget amount>"],
+    ["completion_date", "<MM/DD/YYYY>"],
+    ["notes", "<notes>"],
+    ["a", "37003:<pubkey>:<company-d-tag>", "", "company"]
+  ]
+}
+```
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `d` | Yes | Unique identifier (UUID) for the project |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `name` | Yes | Project name |
+| `description` | No | Brief description of the project |
+| `start_date` | Yes | Start date in MM/DD/YYYY format |
+| `target_completion_date` | No | Target completion date in MM/DD/YYYY format |
+| `status` | No | Project status: `planning`, `in_progress`, `on_hold`, or `completed` |
+| `budget` | No | Budget amount (e.g., "$5,000") |
+| `completion_date` | No | Actual completion date in MM/DD/YYYY format |
+| `notes` | No | Additional notes |
+| `a` | No | Reference to linked companies (kind 37003). Can have multiple. |
+| `is_archived` | No | If "true", the project is archived |
+
+### Project Status
+
+Valid status values:
+- `planning` - Project is in the planning phase
+- `in_progress` - Work is actively being done
+- `on_hold` - Project is temporarily paused
+- `completed` - Project is finished
+
+### Company Linking
+
+Projects can be linked to one or more companies/service providers using the `a` tag format:
+
+```
+["a", "37003:<pubkey>:<company-d-tag>", "", "company"]
+```
+
+Multiple `a` tags can be present to link multiple companies to a single project. This is useful for tracking all contractors, suppliers, and service providers involved in a project.
+
+---
+
+## Kind 1661: Project Entry (Progress Diary)
+
+A regular event representing a progress diary entry for a project.
+
+### Format
+
+```json
+{
+  "kind": 1661,
+  "content": "",
+  "tags": [
+    ["a", "35389:<pubkey>:<project-d-tag>", "", "project"],
+    ["alt", "Project entry: <title or date>"],
+    ["entry_date", "<MM/DD/YYYY>"],
+    ["title", "<optional title>"],
+    ["content_text", "<entry notes>"],
+    ["image", "<photo url>"]
+  ]
+}
+```
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `a` | Yes | Reference to the parent project (kind 35389) |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `entry_date` | Yes | Date of the entry in MM/DD/YYYY format |
+| `title` | No | Optional title for the entry |
+| `content_text` | Yes | Main text content (notes, observations, etc.) |
+| `image` | No | URL to an uploaded photo. Can have multiple for multiple photos. |
+
+### Notes
+
+- Project entries are regular events (not replaceable) so the full history is preserved
+- Entries are displayed chronologically under each project
+- Multiple photos can be attached to a single entry using multiple `image` tags
+- Entries can be deleted using kind 5 deletion events with an `e` tag referencing the entry event ID
+
+### Future Enhancements
+
+Project entries are designed to support future long-form publishing to Nostr. The content structure is compatible with NIP-23 long-form content, allowing entries to potentially be shared publicly on Nostr clients like Primal.
