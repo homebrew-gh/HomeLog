@@ -10,6 +10,9 @@ import { useAppContext } from '@/hooks/useAppContext';
 const APP_DATA_KIND = 30078;
 const APP_IDENTIFIER = 'cypherlog/preferences';
 
+// Marker to identify encrypted blossomServers field
+const ENCRYPTED_BLOSSOM_MARKER = 'nip44:';
+
 export type TabId = 
   | 'home'
   | 'appliances'
@@ -123,6 +126,13 @@ export interface UserPreferences {
   blossomServers: BlossomServer[];
   // Version for future migrations
   version: number;
+}
+
+/**
+ * Type for preferences as stored on Nostr (blossomServers may be encrypted string)
+ */
+interface StoredPreferences extends Omit<UserPreferences, 'blossomServers'> {
+  blossomServers?: BlossomServer[] | string; // Can be array (legacy) or encrypted string
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -295,7 +305,40 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         }
 
         try {
-          const preferences = JSON.parse(events[0].content) as UserPreferences;
+          const storedPrefs = JSON.parse(events[0].content) as StoredPreferences;
+          
+          // Decrypt blossomServers if encrypted
+          let blossomServers: BlossomServer[] = DEFAULT_BLOSSOM_SERVERS;
+          
+          if (storedPrefs.blossomServers) {
+            if (typeof storedPrefs.blossomServers === 'string' && storedPrefs.blossomServers.startsWith(ENCRYPTED_BLOSSOM_MARKER)) {
+              // Encrypted - try to decrypt
+              if (user.signer.nip44) {
+                try {
+                  const encryptedData = storedPrefs.blossomServers.slice(ENCRYPTED_BLOSSOM_MARKER.length);
+                  const decrypted = await user.signer.nip44.decrypt(user.pubkey, encryptedData);
+                  blossomServers = JSON.parse(decrypted) as BlossomServer[];
+                  console.log('[UserPreferences] Decrypted blossomServers from relay');
+                } catch (decryptError) {
+                  console.warn('[UserPreferences] Failed to decrypt blossomServers:', decryptError);
+                  // Fall back to defaults
+                }
+              } else {
+                console.warn('[UserPreferences] Cannot decrypt blossomServers - no NIP-44 support');
+              }
+            } else if (Array.isArray(storedPrefs.blossomServers)) {
+              // Legacy unencrypted format
+              blossomServers = storedPrefs.blossomServers;
+              console.log('[UserPreferences] Loaded unencrypted blossomServers (legacy)');
+            }
+          }
+          
+          // Reconstruct full preferences
+          const preferences: UserPreferences = {
+            ...storedPrefs,
+            blossomServers,
+          } as UserPreferences;
+          
           console.log('[UserPreferences] Loaded preferences from relay');
           return preferences;
         } catch (error) {
@@ -389,7 +432,31 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
           // Exclude transient UI state (activeTab) and large cached data (exchangeRates) from Nostr sync
           // activeTab is transient UI state that doesn't need to be synced across devices
           // exchangeRates are cached API data that can be re-fetched on any device
-          const { activeTab: _activeTab, exchangeRates: _exchangeRates, ...prefsToSync } = preferences;
+          const { activeTab: _activeTab, exchangeRates: _exchangeRates, blossomServers, ...restPrefs } = preferences;
+          
+          // Prepare preferences for storage
+          const prefsToSync: StoredPreferences = { ...restPrefs };
+          
+          // Encrypt blossomServers if user has NIP-44 support and there are servers to encrypt
+          if (blossomServers && blossomServers.length > 0) {
+            if (user.signer.nip44) {
+              try {
+                const encryptedServers = await user.signer.nip44.encrypt(
+                  user.pubkey,
+                  JSON.stringify(blossomServers)
+                );
+                prefsToSync.blossomServers = ENCRYPTED_BLOSSOM_MARKER + encryptedServers;
+                console.log('[UserPreferences] Encrypted blossomServers for relay storage');
+              } catch (encryptError) {
+                console.warn('[UserPreferences] Failed to encrypt blossomServers, storing unencrypted:', encryptError);
+                prefsToSync.blossomServers = blossomServers;
+              }
+            } else {
+              // No NIP-44 support, store unencrypted (legacy)
+              console.log('[UserPreferences] No NIP-44 support, storing blossomServers unencrypted');
+              prefsToSync.blossomServers = blossomServers;
+            }
+          }
           
           await publishEvent({
             kind: APP_DATA_KIND,
