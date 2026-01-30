@@ -24,10 +24,10 @@ export function Logo({ className = 'h-10 w-10', alt = 'Cypher Log' }: LogoProps)
   const { preferences } = useUserPreferences();
   const { theme } = useTheme();
   
-  const colorTheme = preferences.colorTheme || 'blue';
+  const colorTheme = preferences.colorTheme || 'purple';
   const isDark = theme === 'dark';
   
-  const logoPath = LOGO_PATHS[colorTheme]?.[isDark ? 'dark' : 'light'] || LOGO_PATHS.blue.dark;
+  const logoPath = LOGO_PATHS[colorTheme]?.[isDark ? 'dark' : 'light'] || LOGO_PATHS.purple.dark;
 
   return (
     <img 
