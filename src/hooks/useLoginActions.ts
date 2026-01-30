@@ -1,5 +1,7 @@
 import { useNostr } from '@nostrify/react';
 import { NLogin, useNostrLogin } from '@nostrify/react/login';
+import { NConnectSigner, NRelay1 } from '@nostrify/nostrify';
+import { nip19 } from 'nostr-tools';
 
 // NOTE: This file should not be edited except for adding new login methods.
 
@@ -24,18 +26,43 @@ export function useLoginActions() {
       addLogin(login);
     },
     // Login with NIP-46 NostrConnect (client-initiated connection)
-    // After establishing a nostrconnect:// session, we convert it to a bunker:// URI
-    // for persistent storage. The bunker URI contains:
-    // - The remote signer's pubkey (for reconnection)
-    // - The relay URL (for communication)
-    // - The client's secret key as the "secret" (for authentication)
+    // The connection is already established - we just need to create the signer
+    // and store the session for future use
     async nostrconnect(remotePubkey: string, clientNsec: string, relayUrl: string): Promise<void> {
-      // Construct a bunker:// URI from the established NostrConnect session
-      // This allows us to reuse the existing bunker login infrastructure
+      // Decode the client secret key
+      const decoded = nip19.decode(clientNsec);
+      if (decoded.type !== 'nsec') {
+        throw new Error('Invalid client nsec');
+      }
+      const clientSecretKey = decoded.data;
+      
+      // Create a relay connection for the signer
+      const relay = new NRelay1(relayUrl);
+      
+      // Create the NConnectSigner with the already-established connection
+      // The connection is already authenticated, so we don't need to send connect again
+      const signer = new NConnectSigner({
+        relay,
+        pubkey: remotePubkey,
+        secretKey: clientSecretKey,
+      });
+      
+      // Get the actual user pubkey from the remote signer
+      const userPubkey = await signer.getPublicKey();
+      
+      // Create the login object
+      // Store as bunker URI for persistence/reconnection
       const bunkerUri = `bunker://${remotePubkey}?relay=${encodeURIComponent(relayUrl)}&secret=${clientNsec}`;
       
-      // Use the bunker login flow with the constructed URI
-      const login = await NLogin.fromBunker(bunkerUri, nostr);
+      const login: NLogin = {
+        id: crypto.randomUUID(),
+        type: 'bunker',
+        pubkey: userPubkey,
+        bunkerUri,
+        signer,
+        createdAt: Date.now(),
+      };
+      
       addLogin(login);
     },
     // Log out the current user
