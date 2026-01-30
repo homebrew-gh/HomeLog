@@ -179,16 +179,35 @@ export function NostrConnectLogin({
           }
 
           const response = JSON.parse(decrypted);
+          console.log('[NostrConnectLogin] Received response:', response);
 
-          // Check if this is a successful connect response with our secret
-          if (response.result === secret || response.result === 'ack') {
+          // Check for errors first
+          if (response.error) {
+            console.error('[NostrConnectLogin] Signer returned error:', response.error);
+            throw new Error(response.error);
+          }
+
+          // Check if this is a successful connect response
+          // Different signers respond differently:
+          // - Some return the secret we sent
+          // - Some return "ack"  
+          // - Some return the user's pubkey
+          // - Some just return a truthy result
+          if (response.result) {
             // The remote signer's pubkey is the event author
             const remotePubkey = event.pubkey;
 
-            // Get the actual user pubkey by calling get_public_key
-            // For now, assume user pubkey = remote pubkey (most common case)
-            // The bunker flow will handle this correctly when re-establishing
-            const userPubkey = remotePubkey;
+            // If the result looks like a pubkey (64 hex chars), use it as the user pubkey
+            // Otherwise assume user pubkey = remote pubkey
+            const resultIsHexPubkey = typeof response.result === 'string' && 
+                                       /^[0-9a-f]{64}$/i.test(response.result);
+            const userPubkey = resultIsHexPubkey ? response.result : remotePubkey;
+            
+            console.log('[NostrConnectLogin] Connection successful!', {
+              remotePubkey,
+              userPubkey,
+              resultWas: response.result,
+            });
             
             // Convert client secret key to nsec for storage
             const clientNsec = nip19.nsecEncode(clientSecretKey);
@@ -203,8 +222,6 @@ export function NostrConnectLogin({
               relayUrl,
             });
             return;
-          } else if (response.error) {
-            throw new Error(response.error);
           }
         }
       }
