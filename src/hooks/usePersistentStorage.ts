@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 /**
  * Key for logout on close preference
@@ -98,7 +99,7 @@ export function usePersistentStorage() {
         quota: estimate.quota || 0,
       });
     } catch (error) {
-      console.error('[PersistentStorage] Failed to check status:', error);
+      logger.error('[PersistentStorage] Failed to check status');
       setState(prev => ({ ...prev, isSupported: false, isChecking: false }));
     }
   }, []);
@@ -114,14 +115,14 @@ export function usePersistentStorage() {
       
       if (granted) {
         setState(prev => ({ ...prev, isPersisted: true }));
-        console.log('[PersistentStorage] Persistent storage granted');
+        logger.log('[PersistentStorage] Persistent storage granted');
       } else {
-        console.log('[PersistentStorage] Persistent storage denied');
+        logger.log('[PersistentStorage] Persistent storage denied');
       }
       
       return granted;
     } catch (error) {
-      console.error('[PersistentStorage] Failed to request persistence:', error);
+      logger.error('[PersistentStorage] Failed to request persistence');
       return false;
     }
   }, []);
@@ -145,7 +146,7 @@ export function usePersistentStorage() {
           }
         }
       } catch (error) {
-        console.error('[PersistentStorage] Failed to check preference:', error);
+        logger.error('[PersistentStorage] Failed to check preference');
       }
     };
 

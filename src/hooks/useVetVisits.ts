@@ -7,6 +7,7 @@ import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { VET_VISIT_KIND, PET_KIND, type VetVisit, type VetVisitType } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -80,7 +81,7 @@ async function parseVetVisitEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
-    console.error('[VetVisits] Failed to decrypt vet visit:', id, error);
+    logger.error('[VetVisits] Failed to decrypt vet visit');
     return null;
   }
 }

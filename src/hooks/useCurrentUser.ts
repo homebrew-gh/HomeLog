@@ -3,6 +3,7 @@ import { useNostr } from '@nostrify/react';
 import { useCallback, useMemo } from 'react';
 
 import { useAuthor } from './useAuthor.ts';
+import { logger } from '@/lib/logger';
 
 export function useCurrentUser() {
   const { nostr } = useNostr();
@@ -30,7 +31,7 @@ export function useCurrentUser() {
         const user = loginToUser(login);
         users.push(user);
       } catch (error) {
-        console.warn('[useCurrentUser] Skipped invalid login', login.id, error);
+        logger.warn('[useCurrentUser] Skipped invalid login');
       }
     }
 

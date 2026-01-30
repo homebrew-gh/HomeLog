@@ -3,6 +3,7 @@ import { useNostrLogin } from '@nostrify/react/login';
 import { useQuery } from '@tanstack/react-query';
 import { NSchema as n, NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { getCachedEvents, cacheEvents } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 export interface Account {
   id: string;
@@ -65,8 +66,8 @@ export function useLoggedInAccounts() {
         
         // Cache the fresh events for next time
         if (freshEvents.length > 0) {
-          cacheEvents(freshEvents).catch(err => 
-            console.warn('[useLoggedInAccounts] Failed to cache profiles:', err)
+          cacheEvents(freshEvents).catch(() => 
+            logger.warn('[useLoggedInAccounts] Failed to cache profiles')
           );
         }
         
@@ -79,7 +80,7 @@ export function useLoggedInAccounts() {
           return { id, pubkey, metadata: parseMetadata(event), event };
         });
       } catch (error) {
-        console.warn('[useLoggedInAccounts] Relay fetch failed, using cache:', error);
+        logger.warn('[useLoggedInAccounts] Relay fetch failed, using cache');
         // If relay fetch fails but we have cached data, return that
         if (cachedEvents.length > 0) {
           return cachedResults;

@@ -7,6 +7,7 @@ import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { WARRANTY_KIND, type Warranty, type WarrantyDocument, type WarrantyLinkedType } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -93,7 +94,7 @@ async function parseWarrantyEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
-    console.error('[Warranties] Failed to decrypt warranty:', id, error);
+    logger.error('[Warranties] Failed to decrypt warranty');
     return null;
   }
 }

@@ -19,6 +19,7 @@ import {
   VET_VISIT_KIND,
 } from '@/lib/types';
 import { cacheEvents, getCachedEvents } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 // Timeout for new users - if no data is found quickly, assume new user
 const NEW_USER_FAST_TIMEOUT_MS = 3000;
@@ -76,7 +77,7 @@ export function useDataSyncStatus() {
     
     // Check cache instantly (IndexedDB is very fast)
     const checkCache = async () => {
-      console.log('[DataSync] Checking IndexedDB cache for pubkey:', user.pubkey);
+      logger.log('[DataSync] Checking IndexedDB cache');
       
       const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedSubscriptions, cachedWarranties, cachedCompletions, cachedPets, cachedProjects, cachedProjectEntries, cachedProjectTasks, cachedProjectMaterials, cachedVetVisits] = await Promise.all([
         getCachedEvents([APPLIANCE_KIND], user.pubkey),
@@ -123,7 +124,7 @@ export function useDataSyncStatus() {
           cachedVetVisits.length > 0,
       };
       
-      console.log('[DataSync] Cache check result:', result);
+      logger.log('[DataSync] Cache check complete, hasAny:', result.hasAny);
       setCacheResult(result);
       setCacheChecked(true);
     };
@@ -168,8 +169,7 @@ export function useDataSyncStatus() {
       const timeoutMs = hasAnyCachedData ? 20000 : NEW_USER_FAST_TIMEOUT_MS;
 
       try {
-        console.log('[DataSync] Starting relay query for pubkey:', user.pubkey);
-        console.log('[DataSync] Timeout:', timeoutMs, 'ms, Has cached data:', hasAnyCachedData);
+        logger.log('[DataSync] Starting relay query, timeout:', timeoutMs, 'ms');
         
         // Fetch all data types in one query for efficiency
         const events = await nostr.query(
@@ -192,23 +192,7 @@ export function useDataSyncStatus() {
           { signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) }
         );
 
-        console.log('[DataSync] Query complete. Events found:', events.length);
-        console.log('[DataSync] Events by kind:', {
-          appliances: events.filter(e => e.kind === APPLIANCE_KIND).length,
-          vehicles: events.filter(e => e.kind === VEHICLE_KIND).length,
-          maintenance: events.filter(e => e.kind === MAINTENANCE_KIND).length,
-          companies: events.filter(e => e.kind === COMPANY_KIND).length,
-          subscriptions: events.filter(e => e.kind === SUBSCRIPTION_KIND).length,
-          warranties: events.filter(e => e.kind === WARRANTY_KIND).length,
-          completions: events.filter(e => e.kind === MAINTENANCE_COMPLETION_KIND).length,
-          pets: events.filter(e => e.kind === PET_KIND).length,
-          projects: events.filter(e => e.kind === PROJECT_KIND).length,
-          projectEntries: events.filter(e => e.kind === PROJECT_ENTRY_KIND).length,
-          projectTasks: events.filter(e => e.kind === PROJECT_TASK_KIND).length,
-          projectMaterials: events.filter(e => e.kind === PROJECT_MATERIAL_KIND).length,
-          vetVisits: events.filter(e => e.kind === VET_VISIT_KIND).length,
-          deletions: events.filter(e => e.kind === 5).length,
-        });
+        logger.log('[DataSync] Query complete, events synced:', events.length > 0);
 
         // Cache all events for other hooks to use
         if (events.length > 0) {
@@ -271,7 +255,7 @@ export function useDataSyncStatus() {
           }
         };
       } catch (error) {
-        console.error('[DataSync] Relay query failed:', error);
+        logger.error('[DataSync] Relay query failed');
         // If sync fails but we have cached data, consider it "synced" with cache
         if (hasAnyCachedData && cacheResult) {
           return {

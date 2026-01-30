@@ -3,6 +3,7 @@ import { BlossomUploader, NostrBuildUploader } from '@nostrify/nostrify/uploader
 
 import { useCurrentUser } from "./useCurrentUser";
 import { useUserPreferences } from "@/contexts/UserPreferencesContext";
+import { logger } from "@/lib/logger";
 
 /** Error thrown when no private Blossom server is configured */
 export class NoPrivateServerError extends Error {
@@ -55,7 +56,7 @@ export function useUploadFile() {
 
       const servers = getPrivateBlossomServers();
       
-      console.log('Uploading to ALL configured servers for redundancy:', servers);
+      logger.log('[Upload] Starting upload to configured servers');
 
       // Separate nostr.build native URLs from Blossom URLs
       const nostrBuildUrls = servers.filter(isNostrBuildNativeUrl);
@@ -65,7 +66,7 @@ export function useUploadFile() {
 
       // Upload to nostr.build using their native API
       if (nostrBuildUrls.length > 0) {
-        console.log('Using NostrBuildUploader for:', nostrBuildUrls);
+        logger.log('[Upload] Using NostrBuildUploader');
         const nostrBuildUploader = new NostrBuildUploader({
           signer: user.signer,
         });
@@ -78,7 +79,7 @@ export function useUploadFile() {
 
       // Upload to each Blossom server individually for redundancy
       for (const serverUrl of blossomUrls) {
-        console.log('Using BlossomUploader for:', serverUrl);
+        logger.log('[Upload] Using BlossomUploader');
         const blossomUploader = new BlossomUploader({
           servers: [serverUrl],
           signer: user.signer,
@@ -97,13 +98,11 @@ export function useUploadFile() {
       // Wait for ALL uploads to complete (success or failure)
       const results = await Promise.all(uploadPromises);
       
-      // Log results for each server
+      // Count results
       const succeeded = results.filter(r => r.success);
       const failed = results.filter(r => !r.success);
       
-      console.log(`Upload complete: ${succeeded.length}/${results.length} servers succeeded`);
-      succeeded.forEach(r => console.log(`  ✓ ${r.server}`));
-      failed.forEach(r => console.log(`  ✗ ${r.server}: ${r.error}`));
+      logger.log(`[Upload] Complete: ${succeeded.length}/${results.length} servers succeeded`);
 
       // Check if at least one upload succeeded
       if (succeeded.length === 0) {
@@ -113,13 +112,12 @@ export function useUploadFile() {
 
       // Warn if some servers failed but continue with successful upload
       if (failed.length > 0) {
-        console.warn(`Warning: Upload failed on ${failed.length} server(s):`, 
-          failed.map(r => r.server).join(', '));
+        logger.warn(`[Upload] Failed on ${failed.length} server(s)`);
       }
 
       // Return tags from first successful upload (all should have same content hash)
       const tags = succeeded[0].tags!;
-      console.log('Upload successful, tags:', tags);
+      logger.log('[Upload] Success');
       return tags;
     },
   });
@@ -193,7 +191,7 @@ export function useDeleteFile() {
 
       const hash = extractFileHash(fileUrl);
       if (!hash) {
-        console.warn('Could not extract file hash from URL:', fileUrl);
+        logger.warn('[Delete] Could not extract file hash from URL');
         throw new Error('Could not determine file hash from URL. The file may need to be deleted manually from your media server.');
       }
 
@@ -202,7 +200,7 @@ export function useDeleteFile() {
         throw new Error('Could not determine server from URL');
       }
 
-      console.log('Attempting to delete file:', { url: fileUrl, hash, server });
+      logger.log('[Delete] Attempting to delete file');
 
       // Create Blossom delete authorization event (kind 24242)
       const now = Math.floor(Date.now() / 1000);
@@ -222,7 +220,7 @@ export function useDeleteFile() {
 
       // Make DELETE request to the server
       const deleteUrl = `${server}${hash}`;
-      console.log('Sending DELETE request to:', deleteUrl);
+      logger.log('[Delete] Sending DELETE request');
 
       const response = await fetch(deleteUrl, {
         method: 'DELETE',
@@ -233,18 +231,18 @@ export function useDeleteFile() {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        console.error('Delete failed:', response.status, errorText);
+        logger.error('[Delete] Failed:', response.status);
         
         if (response.status === 404) {
           // File already deleted or doesn't exist - treat as success
-          console.log('File not found on server (may already be deleted)');
+          logger.log('[Delete] File not found (may already be deleted)');
           return { success: true, alreadyDeleted: true };
         }
         
         throw new Error(`Failed to delete file: ${response.status} ${errorText}`);
       }
 
-      console.log('File deleted successfully');
+      logger.log('[Delete] Success');
       return { success: true, alreadyDeleted: false };
     },
   });

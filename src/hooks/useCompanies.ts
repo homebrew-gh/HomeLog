@@ -7,6 +7,7 @@ import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { COMPANY_KIND, type Company, type Invoice } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -83,7 +84,7 @@ async function parseCompanyEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
-    console.error('[Companies] Failed to decrypt company:', id, error);
+    logger.error('[Companies] Failed to decrypt company');
     return null;
   }
 }

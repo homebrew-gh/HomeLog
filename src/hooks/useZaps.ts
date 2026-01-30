@@ -11,6 +11,7 @@ import type { WebLNProvider } from '@webbtc/webln-types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { logger } from '@/lib/logger';
 
 export function useZaps(
   target: Event | Event[],
@@ -102,8 +103,8 @@ export function useZaps(
           const invoiceSats = nip57.getSatoshisAmountFromBolt11(bolt11Tag);
           sats += invoiceSats;
           return;
-        } catch (error) {
-          console.warn('Failed to parse bolt11 amount:', error);
+        } catch {
+          logger.warn('[Zaps] Failed to parse bolt11 amount');
         }
       }
 
@@ -118,12 +119,12 @@ export function useZaps(
             sats += Math.floor(millisats / 1000);
             return;
           }
-        } catch (error) {
-          console.warn('Failed to parse description JSON:', error);
+        } catch {
+          logger.warn('[Zaps] Failed to parse description JSON');
         }
       }
 
-      console.warn('Could not extract amount from zap receipt:', zap.id);
+      logger.warn('[Zaps] Could not extract amount from zap receipt');
     });
 
 
@@ -252,7 +253,7 @@ export function useZaps(
                 onZapSuccess?.();
                 return;
               } catch (nwcError) {
-                console.error('NWC payment failed, falling back:', nwcError);
+                logger.error('[Zaps] NWC payment failed, falling back');
 
                 // Show specific NWC error to user for debugging
                 const errorMessage = nwcError instanceof Error ? nwcError.message : 'Unknown NWC error';
@@ -295,7 +296,7 @@ export function useZaps(
                 // Close dialog last to ensure clean state
                 onZapSuccess?.();
               } catch (weblnError) {
-                console.error('WebLN payment failed, falling back:', weblnError);
+                logger.error('[Zaps] WebLN payment failed, falling back');
 
                 // Show specific WebLN error to user for debugging
                 const errorMessage = weblnError instanceof Error ? weblnError.message : 'Unknown WebLN error';
@@ -313,7 +314,7 @@ export function useZaps(
               setIsZapping(false);
             }
           } catch (err) {
-            console.error('Zap error:', err);
+            logger.error('[Zaps] Zap error');
             toast({
               title: 'Zap failed',
               description: (err as Error).message,
@@ -322,7 +323,7 @@ export function useZaps(
             setIsZapping(false);
           }
     } catch (err) {
-      console.error('Zap error:', err);
+      logger.error('[Zaps] Zap error');
       toast({
         title: 'Zap failed',
         description: (err as Error).message,

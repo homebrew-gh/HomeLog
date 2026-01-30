@@ -7,6 +7,7 @@ import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_MATERIAL_KIND, PROJECT_KIND, type ProjectMaterial, type ExpenseCategory } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEvent } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -84,7 +85,7 @@ async function parseProjectMaterialEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
-    console.error('[ProjectMaterials] Failed to decrypt material:', event.id, error);
+    logger.error('[ProjectMaterials] Failed to decrypt material');
     return null;
   }
 }

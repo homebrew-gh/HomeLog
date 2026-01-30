@@ -7,6 +7,7 @@ import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_ENTRY_KIND, PROJECT_KIND, type ProjectEntry } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEvent } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -83,7 +84,7 @@ async function parseProjectEntryEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
-    console.error('[ProjectEntries] Failed to decrypt entry:', event.id, error);
+    logger.error('[ProjectEntries] Failed to decrypt entry');
     return null;
   }
 }

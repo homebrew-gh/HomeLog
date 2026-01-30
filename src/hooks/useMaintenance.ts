@@ -6,6 +6,7 @@ import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 import { MAINTENANCE_KIND, APPLIANCE_KIND, VEHICLE_KIND, COMPANY_KIND, type MaintenanceSchedule, type MaintenancePart } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 // Helper to get tag value
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
@@ -535,7 +536,7 @@ export function calculateNextDueDate(
   }
 
   if (iterations >= maxIterations) {
-    console.warn('calculateNextDueDate: max iterations reached, returning null');
+    logger.warn('[Maintenance] calculateNextDueDate: max iterations reached');
     return null;
   }
 

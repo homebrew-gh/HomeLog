@@ -1,6 +1,8 @@
 // Currency definitions and utilities for Cypher Log
 // Supports top 20 world currencies plus Bitcoin (base and satoshi)
 
+import { logger } from '@/lib/logger';
+
 export interface Currency {
   code: string;
   name: string;
@@ -138,7 +140,7 @@ export function convertCurrency(
   const btcPrice = rates.btcPrice || 0;
   
   if (btcPrice === 0 && (fromCurrency === 'BTC' || fromCurrency === 'SATS' || toCurrency === 'BTC' || toCurrency === 'SATS')) {
-    console.warn('No BTC price available for conversion');
+    logger.warn('[Currency] No BTC price available for conversion');
     return amount;
   }
 
@@ -158,7 +160,7 @@ export function convertCurrency(
     // Fiat -> USD: divide by exchange rate
     const fromRate = rates.rates[fromCurrency];
     if (!fromRate) {
-      console.warn(`No exchange rate found for ${fromCurrency}`);
+      logger.warn(`[Currency] No exchange rate found for ${fromCurrency}`);
       return amount;
     }
     amountInBase = amount / fromRate;
@@ -178,7 +180,7 @@ export function convertCurrency(
     // USD -> Fiat: multiply by exchange rate
     const toRate = rates.rates[toCurrency];
     if (!toRate) {
-      console.warn(`No exchange rate found for ${toCurrency}`);
+      logger.warn(`[Currency] No exchange rate found for ${toCurrency}`);
       return amountInBase;
     }
     return amountInBase * toRate;
@@ -215,8 +217,8 @@ export async function fetchExchangeRates(baseCurrency: string = 'USD'): Promise<
           btcPrice = btcPrice / fiatData.rates.USD;
         }
       }
-    } catch (error) {
-      console.warn('Failed to fetch BTC price:', error);
+    } catch {
+      logger.warn('[Currency] Failed to fetch BTC price');
     }
 
     return {
@@ -225,8 +227,8 @@ export async function fetchExchangeRates(baseCurrency: string = 'USD'): Promise<
       timestamp: Date.now(),
       btcPrice,
     };
-  } catch (error) {
-    console.error('Failed to fetch exchange rates:', error);
+  } catch {
+    logger.error('[Currency] Failed to fetch exchange rates');
     // Return empty rates on error
     return {
       base: baseCurrency,

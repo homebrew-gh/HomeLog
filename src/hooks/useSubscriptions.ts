@@ -7,6 +7,7 @@ import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { SUBSCRIPTION_KIND, type Subscription, type BillingFrequency, type LinkedAssetType } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -65,7 +66,7 @@ async function parseSubscriptionEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
-    console.error('[Subscriptions] Failed to decrypt subscription:', id, error);
+    logger.error('[Subscriptions] Failed to decrypt subscription');
     return null;
   }
 }

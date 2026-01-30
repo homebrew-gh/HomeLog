@@ -7,6 +7,7 @@ import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_TASK_KIND, PROJECT_KIND, type ProjectTask } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEvent } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -74,7 +75,7 @@ async function parseProjectTaskEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
-    console.error('[ProjectTasks] Failed to decrypt task:', event.id, error);
+    logger.error('[ProjectTasks] Failed to decrypt task');
     return null;
   }
 }

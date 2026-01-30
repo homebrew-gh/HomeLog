@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useCurrentUser } from './useCurrentUser';
 import { useEncryptionSettings, type EncryptableCategory } from '@/contexts/EncryptionContext';
+import { logger } from '@/lib/logger';
 
 /**
  * Marker prefix for encrypted content
@@ -9,8 +10,32 @@ import { useEncryptionSettings, type EncryptableCategory } from '@/contexts/Encr
 const ENCRYPTED_MARKER = 'nip44:';
 
 /**
+ * Error thrown when encryption is required but unavailable or fails
+ * This prevents silent fallback to plaintext storage
+ */
+export class EncryptionUnavailableError extends Error {
+  constructor(reason: 'no_nip44_support' | 'encryption_failed', originalError?: unknown) {
+    const messages = {
+      no_nip44_support: 'Your signer does not support NIP-44 encryption. Please upgrade your signer extension (Alby, nos2x, etc.) to a version that supports NIP-44, or disable encryption for this data category in Settings.',
+      encryption_failed: 'Failed to encrypt data. Your data will NOT be stored to protect your privacy. Please try again or check your signer extension.',
+    };
+    super(messages[reason]);
+    this.name = 'EncryptionUnavailableError';
+    this.reason = reason;
+    this.originalError = originalError;
+  }
+  
+  reason: 'no_nip44_support' | 'encryption_failed';
+  originalError?: unknown;
+}
+
+/**
  * Hook for encrypting and decrypting data using NIP-44
  * Encrypts data to self (user's own pubkey) for private storage
+ * 
+ * SECURITY: This hook will throw EncryptionUnavailableError instead of
+ * silently falling back to plaintext. Callers must handle this error
+ * and inform users appropriately.
  */
 export function useEncryption() {
   const { user } = useCurrentUser();
@@ -26,11 +51,13 @@ export function useEncryption() {
   /**
    * Encrypt data to self using NIP-44
    * Returns the encrypted string with a marker prefix
+   * 
+   * @throws {EncryptionUnavailableError} When NIP-44 is not available or encryption fails
    */
   const encryptToSelf = useCallback(async (plaintext: string): Promise<string> => {
     if (!user?.signer?.nip44) {
-      console.warn('[Encryption] NIP-44 not available, storing plaintext');
-      return plaintext;
+      logger.warn('[Encryption] NIP-44 not available - blocking plaintext storage');
+      throw new EncryptionUnavailableError('no_nip44_support');
     }
 
     try {
@@ -38,9 +65,9 @@ export function useEncryption() {
       const encrypted = await user.signer.nip44.encrypt(user.pubkey, plaintext);
       return ENCRYPTED_MARKER + encrypted;
     } catch (error) {
-      console.error('[Encryption] Failed to encrypt:', error);
-      // Fall back to plaintext if encryption fails
-      return plaintext;
+      logger.error('[Encryption] Failed to encrypt:', error);
+      // SECURITY: Do NOT fall back to plaintext - throw error instead
+      throw new EncryptionUnavailableError('encryption_failed', error);
     }
   }, [user]);
 
@@ -56,8 +83,8 @@ export function useEncryption() {
     }
 
     if (!user?.signer?.nip44) {
-      console.warn('[Encryption] NIP-44 not available, cannot decrypt');
-      throw new Error('NIP-44 decryption not available');
+      logger.warn('[Encryption] NIP-44 not available, cannot decrypt');
+      throw new Error('NIP-44 decryption not available. Please use a signer that supports NIP-44 encryption.');
     }
 
     try {
@@ -66,8 +93,8 @@ export function useEncryption() {
       const decrypted = await user.signer.nip44.decrypt(user.pubkey, encryptedData);
       return decrypted;
     } catch (error) {
-      console.error('[Encryption] Failed to decrypt:', error);
-      throw new Error('Failed to decrypt content');
+      logger.error('[Encryption] Failed to decrypt:', error);
+      throw new Error('Failed to decrypt content. The data may be corrupted or encrypted with a different key.');
     }
   }, [user]);
 
@@ -81,10 +108,16 @@ export function useEncryption() {
 
   /**
    * Decrypt and parse a JSON object
+   * @throws Error if decryption or JSON parsing fails
    */
   const decryptJson = useCallback(async <T>(content: string): Promise<T> => {
     const decrypted = await decryptFromSelf(content);
-    return JSON.parse(decrypted) as T;
+    try {
+      return JSON.parse(decrypted) as T;
+    } catch (error) {
+      logger.error('[Encryption] Failed to parse decrypted JSON');
+      throw new Error('Failed to parse decrypted data. The content may be corrupted.');
+    }
   }, [decryptFromSelf]);
 
   /**
@@ -111,6 +144,7 @@ export function useEncryption() {
   /**
    * Conditionally decrypt based on content format
    * Automatically handles both encrypted and plaintext content
+   * @throws Error if decryption or JSON parsing fails
    */
   const decryptForCategory = useCallback(async <T>(
     content: string
@@ -118,8 +152,13 @@ export function useEncryption() {
     if (isEncrypted(content)) {
       return decryptJson<T>(content);
     }
-    // Parse plaintext JSON
-    return JSON.parse(content) as T;
+    // Parse plaintext JSON with error handling
+    try {
+      return JSON.parse(content) as T;
+    } catch (error) {
+      logger.error('[Encryption] Failed to parse plaintext JSON');
+      throw new Error('Failed to parse data. The content may be malformed.');
+    }
   }, [isEncrypted, decryptJson]);
 
   /**

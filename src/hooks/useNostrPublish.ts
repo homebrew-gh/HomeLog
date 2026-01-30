@@ -2,6 +2,7 @@ import { useNostr } from "@nostrify/react";
 import { useMutation, type UseMutationResult } from "@tanstack/react-query";
 
 import { useCurrentUser } from "./useCurrentUser";
+import { logger } from "@/lib/logger";
 
 import type { NostrEvent } from "@nostrify/nostrify";
 
@@ -41,10 +42,10 @@ export function useNostrPublish(): UseMutationResult<NostrEvent> {
       }
     },
     onError: (error) => {
-      console.error("Failed to publish event:", error);
+      logger.error("[Publish] Failed to publish event:", error);
     },
-    onSuccess: (data) => {
-      console.log("Event published successfully:", data);
+    onSuccess: () => {
+      logger.log("[Publish] Event published successfully");
     },
   });
 }

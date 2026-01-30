@@ -13,6 +13,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { logger } from '@/lib/logger';
 import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { APPLIANCE_KIND, type Appliance } from '@/lib/types';
@@ -82,7 +83,7 @@ async function parseApplianceEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
-    console.error('[Appliances] Failed to decrypt appliance:', id, error);
+    logger.error('[Appliances] Failed to decrypt appliance');
     return null;
   }
 }

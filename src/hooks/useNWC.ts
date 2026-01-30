@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/useToast';
 import { LN } from '@getalby/sdk';
+import { logger } from '@/lib/logger';
 
 export interface NWCConnection {
   connectionString: string;
@@ -30,12 +31,12 @@ export function useNWCInternal() {
     const parseNWCUri = (uri: string): { connectionString: string } | null => {
       try {
         if (!uri.startsWith('nostr+walletconnect://') && !uri.startsWith('nostrwalletconnect://')) {
-          console.error('Invalid NWC URI protocol:', { protocol: uri.split('://')[0] });
+          logger.error('[NWC] Invalid NWC URI protocol');
           return null;
         }
         return { connectionString: uri };
       } catch (error) {
-        console.error('Failed to parse NWC URI:', error);
+        logger.error('[NWC] Failed to parse NWC URI');
         return null;
       }
     };
@@ -109,7 +110,7 @@ export function useNWCInternal() {
 
       return true;
     } catch (error) {
-      console.error('NWC connection failed:', error);
+      logger.error('[NWC] Connection failed');
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 
       toast({
@@ -169,7 +170,7 @@ export function useNWCInternal() {
     try {
       client = new LN(connection.connectionString);
     } catch (error) {
-      console.error('Failed to create NWC client:', error);
+      logger.error('[NWC] Failed to create NWC client');
       throw new Error(`Failed to create NWC client: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
@@ -190,7 +191,7 @@ export function useNWCInternal() {
         throw error;
       }
     } catch (error) {
-      console.error('NWC payment failed:', error);
+      logger.error('[NWC] Payment failed');
 
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {

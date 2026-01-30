@@ -7,6 +7,7 @@ import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { VEHICLE_KIND, type Vehicle } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -82,7 +83,7 @@ async function parseVehicleEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
-    console.error('[Vehicles] Failed to decrypt vehicle:', id, error);
+    logger.error('[Vehicles] Failed to decrypt vehicle');
     return null;
   }
 }

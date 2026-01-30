@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { logger } from '@/lib/logger';
 
 /**
  * Generic hook for managing localStorage state
@@ -37,7 +38,7 @@ export function useLocalStorage<T>(
       }
       return deserialize(item);
     } catch (error) {
-      console.warn(`Failed to load ${key} from localStorage:`, error);
+      logger.warn(`[LocalStorage] Failed to load from localStorage`);
       return defaultValueRef.current;
     }
   }, [key, deserialize]);
@@ -67,7 +68,7 @@ export function useLocalStorage<T>(
         
         return valueToStore;
       } catch (error) {
-        console.warn(`Failed to save ${key} to localStorage:`, error);
+        logger.warn(`[LocalStorage] Failed to save to localStorage`);
         return currentState;
       }
     });
@@ -85,7 +86,7 @@ export function useLocalStorage<T>(
             setState(deserialize(e.newValue));
           }
         } catch (error) {
-          console.warn(`Failed to sync ${key} from localStorage:`, error);
+          logger.warn(`[LocalStorage] Failed to sync from localStorage`);
         }
       }
     };

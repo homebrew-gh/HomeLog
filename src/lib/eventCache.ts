@@ -3,6 +3,9 @@
  * 
  * Stores Nostr events locally for instant loading on app start.
  * Data is synced with relays in the background.
+ * 
+ * NOTE: This is a low-level storage utility. Console.error is kept for genuine
+ * errors but sensitive data is never logged.
  */
 
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -31,7 +34,7 @@ function openDB(): Promise<IDBDatabase> {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
-      console.error('[EventCache] Failed to open database:', request.error);
+      console.error('[EventCache] Failed to open database');
       reject(request.error);
     };
 
