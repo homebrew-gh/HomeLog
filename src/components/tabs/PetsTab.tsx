@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { PetDialog } from '@/components/PetDialog';
 import { PetDetailDialog } from '@/components/PetDetailDialog';
+import { BlossomImage } from '@/components/BlossomMedia';
 import { usePets } from '@/hooks/usePets';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import type { Pet } from '@/lib/types';
@@ -325,10 +326,11 @@ export function PetsTab({ scrollTarget }: PetsTabProps) {
                           className="flex items-center gap-2 w-full p-2 rounded-lg text-left hover:bg-primary/5 transition-colors group"
                         >
                           {pet.photoUrl ? (
-                            <img 
+                            <BlossomImage 
                               src={pet.photoUrl} 
                               alt={pet.name}
                               className="h-8 w-8 rounded-full object-cover"
+                              showSkeleton={false}
                             />
                           ) : (
                             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -433,7 +435,7 @@ function PetCard({ pet, onClick }: PetCardProps) {
         {/* Photo or placeholder */}
         {pet.photoUrl ? (
           <div className="aspect-square w-full overflow-hidden">
-            <img 
+            <BlossomImage 
               src={pet.photoUrl} 
               alt={pet.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"

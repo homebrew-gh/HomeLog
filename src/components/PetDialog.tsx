@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DateInput } from '@/components/ui/date-input';
+import { BlossomImage, BlossomDocumentLink } from '@/components/BlossomMedia';
 import { usePetActions } from '@/hooks/usePets';
 import { usePetTypes } from '@/hooks/usePetTypes';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
@@ -366,10 +367,11 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
             <Label>Photo</Label>
             {formData.photoUrl ? (
               <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                <img 
+                <BlossomImage 
                   src={formData.photoUrl} 
                   alt={formData.name || 'Pet photo'} 
                   className="h-16 w-16 object-cover rounded-md"
+                  showSkeleton={false}
                 />
                 <span className="text-sm text-muted-foreground flex-1 truncate">Photo uploaded</span>
                 <DropdownMenu>

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { 
-  ExternalLink, 
   FileText, 
   Calendar, 
   Building, 
@@ -26,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
+import { BlossomDocumentLink } from '@/components/BlossomMedia';
 import { useWarrantyActions, formatWarrantyTimeRemaining, isWarrantyExpired, isWarrantyExpiringSoon } from '@/hooks/useWarranties';
 import { useApplianceById } from '@/hooks/useAppliances';
 import { useVehicleById } from '@/hooks/useVehicles';
@@ -393,15 +393,7 @@ export function WarrantyDetailDialog({ isOpen, onClose, warranty, onEdit, onDele
                             <p className="text-sm font-medium text-muted-foreground">
                               {doc.name || 'Document'}
                             </p>
-                            <a 
-                              href={doc.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline flex items-center gap-1 text-sm"
-                            >
-                              <span className="truncate">View Document</span>
-                              <ExternalLink className="h-3 w-3 shrink-0" />
-                            </a>
+                            <BlossomDocumentLink href={doc.url} name="View Document" />
                           </div>
                         </div>
                       ))}

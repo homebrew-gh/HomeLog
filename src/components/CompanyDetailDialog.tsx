@@ -23,6 +23,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
+import { BlossomLink } from '@/components/BlossomMedia';
 import { useCompanyActions } from '@/hooks/useCompanies';
 import { useSubscriptionsByCompanyId } from '@/hooks/useSubscriptions';
 import { toast } from '@/hooks/useToast';
@@ -243,12 +244,11 @@ export function CompanyDetailDialog({ isOpen, onClose, company, onEdit, onDelete
                     </p>
                     <div className="space-y-2">
                       {company.invoices.map((invoice, index) => (
-                        <a 
+                        <BlossomLink 
                           key={index}
                           href={invoice.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+                          className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors group text-foreground"
+                          showIcon={false}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 text-sm">
@@ -268,7 +268,7 @@ export function CompanyDetailDialog({ isOpen, onClose, company, onEdit, onDelete
                             )}
                           </div>
                           <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
-                        </a>
+                        </BlossomLink>
                       ))}
                     </div>
                   </div>

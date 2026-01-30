@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { 
-  ExternalLink, 
   FileText, 
   Calendar, 
   Edit, 
@@ -26,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { ArchiveConfirmDialog } from '@/components/ArchiveConfirmDialog';
+import { BlossomImage, BlossomDocumentLink } from '@/components/BlossomMedia';
 import { usePetActions } from '@/hooks/usePets';
 import { toast } from '@/hooks/useToast';
 import type { Pet } from '@/lib/types';
@@ -139,7 +139,7 @@ export function PetDetailDialog({ isOpen, onClose, pet, onEdit, onDelete }: PetD
             {/* Photo */}
             {pet.photoUrl && (
               <div className="flex justify-center">
-                <img 
+                <BlossomImage 
                   src={pet.photoUrl} 
                   alt={pet.name} 
                   className="max-h-48 rounded-lg object-cover shadow-md"
@@ -344,16 +344,11 @@ export function PetDetailDialog({ isOpen, onClose, pet, onEdit, onDelete }: PetD
                     <p className="text-sm font-medium text-muted-foreground">Documents</p>
                     <div className="space-y-1 mt-1">
                       {pet.documentsUrls.map((url, index) => (
-                        <a 
+                        <BlossomDocumentLink
                           key={index}
-                          href={url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline flex items-center gap-1 text-sm"
-                        >
-                          <span>Document {index + 1}</span>
-                          <ExternalLink className="h-3 w-3 shrink-0" />
-                        </a>
+                          href={url}
+                          name={`Document ${index + 1}`}
+                        />
                       ))}
                     </div>
                   </div>

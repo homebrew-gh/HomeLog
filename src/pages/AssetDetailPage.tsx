@@ -12,7 +12,6 @@ import {
   DollarSign,
   Home,
   FileText,
-  ExternalLink,
   Image,
   Wrench,
   Shield,
@@ -40,6 +39,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BlossomDocumentLink } from '@/components/BlossomMedia';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
 import { useVehicles, useVehicleById } from '@/hooks/useVehicles';
@@ -279,17 +279,12 @@ function WarrantySection({ warranties }: { warranties: Warranty[] }) {
                       <p className="text-sm font-medium mb-2">Documents</p>
                       <div className="flex flex-wrap gap-2">
                         {warranty.documents.map((doc, index) => (
-                          <a
+                          <BlossomDocumentLink
                             key={index}
                             href={doc.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline flex items-center gap-1 text-sm"
-                          >
-                            <FileText className="h-3 w-3" />
-                            {doc.name || `Document ${index + 1}`}
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                            name={doc.name || `Document ${index + 1}`}
+                            icon={<FileText className="h-3 w-3" />}
+                          />
                         ))}
                       </div>
                     </div>
@@ -1405,12 +1400,10 @@ function CompanyDetailContent({ id }: { id: string }) {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {company.invoices.map((invoice, index) => (
-                    <a
+                    <BlossomDocumentLink
                       key={index}
                       href={invoice.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                      className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-foreground"
                     >
                       <FileText className="h-5 w-5 text-primary" />
                       <div className="flex-1 min-w-0">
@@ -1422,8 +1415,7 @@ function CompanyDetailContent({ id }: { id: string }) {
                           {invoice.amount && ` • ${invoice.amount}`}
                         </p>
                       </div>
-                      <ExternalLink className="h-4 w-4 shrink-0" />
-                    </a>
+                    </BlossomDocumentLink>
                   ))}
                 </div>
               </CardContent>
