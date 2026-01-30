@@ -2,7 +2,7 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, AlertTriangle, ChevronDown, ExternalLink, QrCode, Shield, Info, Camera, X } from 'lucide-react';
+import { Upload, AlertTriangle, ChevronDown, ExternalLink, QrCode, Shield, Info, Camera, X, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLoginActions } from '@/hooks/useLoginActions';
 import { DialogTitle } from '@radix-ui/react-dialog';
+import { NostrConnectLogin, type NostrConnectResult } from './NostrConnectLogin';
 
 interface LoginDialogProps {
   isOpen: boolean;
@@ -271,6 +272,26 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
     window.open('https://nsec.app', '_blank', 'noopener,noreferrer');
   };
 
+  // Handle NostrConnect connection
+  const handleNostrConnect = async (result: NostrConnectResult) => {
+    setIsLoading(true);
+    setErrors({});
+    
+    try {
+      await login.nostrconnect(result.remotePubkey, result.clientNsec, result.relayUrl);
+      onLogin();
+      onClose();
+    } catch (err) {
+      console.error('[LoginDialog] NostrConnect login failed:', err);
+      setErrors(prev => ({
+        ...prev,
+        bunker: 'Failed to save login. Please try again.'
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const hasExtension = 'nostr' in window;
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
 
@@ -452,12 +473,30 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
     </form>
   );
 
+  const renderNostrConnectTab = () => (
+    <NostrConnectLogin
+      onConnect={handleNostrConnect}
+      onError={(error) => {
+        setErrors(prev => ({
+          ...prev,
+          bunker: error.message
+        }));
+      }}
+    />
+  );
+
   const renderTabs = () => (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-2 bg-muted/80 rounded-lg mb-4">
+      <TabsList className="grid w-full grid-cols-3 bg-muted/80 rounded-lg mb-4">
         <TabsTrigger value="bunker" className="flex items-center gap-2">
           <QrCode className="h-3.5 w-3.5" />
-          <span>Remote Signer</span>
+          <span className="hidden sm:inline">Remote Signer</span>
+          <span className="sm:hidden">Bunker</span>
+        </TabsTrigger>
+        <TabsTrigger value="connect" className="flex items-center gap-2">
+          <Smartphone className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Nostr Connect</span>
+          <span className="sm:hidden">Connect</span>
         </TabsTrigger>
         <TabsTrigger value="key" className="flex items-center gap-2">
           <span>Secret Key</span>
@@ -466,6 +505,10 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
 
       <TabsContent value='bunker'>
         {renderBunkerTab()}
+      </TabsContent>
+
+      <TabsContent value='connect'>
+        {renderNostrConnectTab()}
       </TabsContent>
 
       <TabsContent value='key'>

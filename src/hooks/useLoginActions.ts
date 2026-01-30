@@ -23,6 +23,21 @@ export function useLoginActions() {
       const login = await NLogin.fromExtension();
       addLogin(login);
     },
+    // Login with NIP-46 NostrConnect (client-initiated connection)
+    // After establishing a nostrconnect:// session, we convert it to a bunker:// URI
+    // for persistent storage. The bunker URI contains:
+    // - The remote signer's pubkey (for reconnection)
+    // - The relay URL (for communication)
+    // - The client's secret key as the "secret" (for authentication)
+    async nostrconnect(remotePubkey: string, clientNsec: string, relayUrl: string): Promise<void> {
+      // Construct a bunker:// URI from the established NostrConnect session
+      // This allows us to reuse the existing bunker login infrastructure
+      const bunkerUri = `bunker://${remotePubkey}?relay=${encodeURIComponent(relayUrl)}&secret=${clientNsec}`;
+      
+      // Use the bunker login flow with the constructed URI
+      const login = await NLogin.fromBunker(bunkerUri, nostr);
+      addLogin(login);
+    },
     // Log out the current user
     async logout(): Promise<void> {
       const login = logins[0];
