@@ -457,6 +457,121 @@ The notes field should NOT be used to store login credentials, passwords, or oth
 
 ---
 
+## Kind 35043: Warranty
+
+An addressable event representing a product warranty or service protection plan.
+
+### Format
+
+```json
+{
+  "kind": 35043,
+  "content": "",
+  "tags": [
+    ["d", "<unique-identifier>"],
+    ["alt", "Warranty: <name>"],
+    ["name", "<product name>"],
+    ["warranty_type", "<type>"],
+    ["description", "<warranty description>"],
+    ["purchase_date", "<MM/DD/YYYY>"],
+    ["purchase_price", "<price>"],
+    ["warranty_start_date", "<MM/DD/YYYY>"],
+    ["warranty_end_date", "<MM/DD/YYYY>"],
+    ["warranty_length_value", "<number>"],
+    ["warranty_length_unit", "weeks|months|years"],
+    ["is_lifetime", "true"],
+    ["linked_type", "appliance|vehicle|home_feature|custom"],
+    ["linked_item_id", "<item-d-tag>"],
+    ["linked_item_name", "<item name>"],
+    ["company_id", "<company-d-tag>"],
+    ["company_name", "<company name>"],
+    ["is_registered", "true|false"],
+    ["registration_date", "<MM/DD/YYYY>"],
+    ["registration_number", "<registration number>"],
+    ["registration_notes", "<notes>"],
+    ["has_extended_warranty", "true|false"],
+    ["extended_warranty_provider", "<provider name>"],
+    ["extended_warranty_end_date", "<MM/DD/YYYY>"],
+    ["extended_warranty_cost", "<cost>"],
+    ["extended_warranty_notes", "<notes>"],
+    ["document", "<url>", "<name>", "<uploadedAt>"],
+    ["receipt_url", "<url>"],
+    ["notes", "<notes>"],
+    ["is_archived", "true"]
+  ]
+}
+```
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `d` | Yes | Unique identifier (UUID) for the warranty |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `name` | Yes | Product or item name |
+| `warranty_type` | Yes | Type of warranty (see Warranty Types below) |
+| `description` | No | Description of warranty coverage |
+| `purchase_date` | No | Purchase date in MM/DD/YYYY format |
+| `purchase_price` | No | Purchase price |
+| `warranty_start_date` | No | Warranty start date (defaults to purchase date) |
+| `warranty_end_date` | No | Warranty expiration date in MM/DD/YYYY format |
+| `warranty_length_value` | No | Numeric warranty duration |
+| `warranty_length_unit` | No | Duration unit: `weeks`, `months`, or `years` |
+| `is_lifetime` | No | If "true", warranty has no expiration |
+| `linked_type` | No | Type of linked item: `appliance`, `vehicle`, `home_feature`, or `custom` |
+| `linked_item_id` | No | Reference to linked appliance/vehicle d-tag |
+| `linked_item_name` | No | Name of linked item (for display or custom items) |
+| `company_id` | No | Reference to a Company (d-tag from kind 37003) |
+| `company_name` | No | Manual company name entry |
+| `is_registered` | No | Whether warranty has been registered with manufacturer |
+| `registration_date` | No | Date of warranty registration |
+| `registration_number` | No | Registration/confirmation number |
+| `registration_notes` | No | Notes about registration |
+| `has_extended_warranty` | No | If "true", an extended warranty was purchased |
+| `extended_warranty_provider` | No | Provider of extended warranty |
+| `extended_warranty_end_date` | No | Extended warranty expiration date |
+| `extended_warranty_cost` | No | Cost of extended warranty |
+| `extended_warranty_notes` | No | Notes about extended warranty |
+| `document` | No | Warranty document with format: url, name (optional), uploadedAt (optional). Can have multiple. |
+| `receipt_url` | No | URL to purchase receipt |
+| `notes` | No | Additional notes |
+| `is_archived` | No | If "true", the warranty is archived |
+
+### Warranty Types
+
+Standard warranty types include:
+- Automotive
+- Appliance
+- Electronics
+- Tools
+- Furniture
+- Outdoor Gear
+- Home Features
+- Jewelry
+- Medical
+- Pet Products
+
+Custom warranty types can also be used.
+
+### Item Linking
+
+Warranties can be linked to assets in the system:
+
+1. **Appliances** (`linked_type: "appliance"`): Links to a My Stuff item (kind 32627)
+2. **Vehicles** (`linked_type: "vehicle"`): Links to a Vehicle (kind 32628)
+3. **Home Features** (`linked_type: "home_feature"`): Links by name only (no Nostr event)
+4. **Custom** (`linked_type: "custom"`): For items not tracked elsewhere
+
+### Extended Warranty Tracking
+
+Warranties support tracking of extended protection plans purchased separately from the manufacturer's warranty. When `has_extended_warranty` is true, the extended warranty fields provide details about the additional coverage.
+
+### Privacy Considerations
+
+Warranty records may contain sensitive information (purchase prices, registration numbers). Users should consider enabling encryption for the "warranties" data category.
+
+---
+
 ## Kind 38033: Pet/Animal
 
 An addressable event representing a pet or animal.
