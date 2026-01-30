@@ -70,7 +70,7 @@ export function useDataSyncStatus() {
     const checkCache = async () => {
       console.log('[DataSync] Checking IndexedDB cache for pubkey:', user.pubkey);
       
-      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedSubscriptions, cachedWarranties, cachedCompletions, cachedPets] = await Promise.all([
+      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedSubscriptions, cachedWarranties, cachedCompletions, cachedPets, cachedProjects] = await Promise.all([
         getCachedEvents([APPLIANCE_KIND], user.pubkey),
         getCachedEvents([VEHICLE_KIND], user.pubkey),
         getCachedEvents([MAINTENANCE_KIND], user.pubkey),
@@ -79,6 +79,7 @@ export function useDataSyncStatus() {
         getCachedEvents([WARRANTY_KIND], user.pubkey),
         getCachedEvents([MAINTENANCE_COMPLETION_KIND], user.pubkey),
         getCachedEvents([PET_KIND], user.pubkey),
+        getCachedEvents([PROJECT_KIND], user.pubkey),
       ]);
       
       const result: CacheCheckResult = {
@@ -90,6 +91,7 @@ export function useDataSyncStatus() {
         warranties: cachedWarranties.length,
         completions: cachedCompletions.length,
         pets: cachedPets.length,
+        projects: cachedProjects.length,
         hasAny: cachedAppliances.length > 0 ||
           cachedVehicles.length > 0 ||
           cachedMaintenance.length > 0 ||
@@ -97,7 +99,8 @@ export function useDataSyncStatus() {
           cachedSubscriptions.length > 0 ||
           cachedWarranties.length > 0 ||
           cachedCompletions.length > 0 ||
-          cachedPets.length > 0,
+          cachedPets.length > 0 ||
+          cachedProjects.length > 0,
       };
       
       console.log('[DataSync] Cache check result:', result);
@@ -127,6 +130,7 @@ export function useDataSyncStatus() {
             warranties: { synced: false, count: 0 },
             completions: { synced: false, count: 0 },
             pets: { synced: false, count: 0 },
+            projects: { synced: false, count: 0 },
           }
         };
       }
@@ -156,6 +160,7 @@ export function useDataSyncStatus() {
             { kinds: [WARRANTY_KIND], authors: [user.pubkey] },
             { kinds: [MAINTENANCE_COMPLETION_KIND], authors: [user.pubkey] },
             { kinds: [PET_KIND], authors: [user.pubkey] },
+            { kinds: [PROJECT_KIND], authors: [user.pubkey] },
             { kinds: [5], authors: [user.pubkey] }, // Deletion events
           ],
           { signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) }
@@ -170,6 +175,7 @@ export function useDataSyncStatus() {
           subscriptions: events.filter(e => e.kind === SUBSCRIPTION_KIND).length,
           warranties: events.filter(e => e.kind === WARRANTY_KIND).length,
           completions: events.filter(e => e.kind === MAINTENANCE_COMPLETION_KIND).length,
+          projects: events.filter(e => e.kind === PROJECT_KIND).length,
           pets: events.filter(e => e.kind === PET_KIND).length,
           deletions: events.filter(e => e.kind === 5).length,
         });
@@ -192,6 +198,7 @@ export function useDataSyncStatus() {
             queryClient.invalidateQueries({ queryKey: ['warranties'] });
             queryClient.invalidateQueries({ queryKey: ['maintenance-completions'] });
             queryClient.invalidateQueries({ queryKey: ['pets'] });
+            queryClient.invalidateQueries({ queryKey: ['projects'] });
           }
         }
 
@@ -204,6 +211,7 @@ export function useDataSyncStatus() {
         const warrantyCount = events.filter(e => e.kind === WARRANTY_KIND).length;
         const completionCount = events.filter(e => e.kind === MAINTENANCE_COMPLETION_KIND).length;
         const petCount = events.filter(e => e.kind === PET_KIND).length;
+        const projectCount = events.filter(e => e.kind === PROJECT_KIND).length;
 
         return {
           synced: true,
@@ -217,6 +225,7 @@ export function useDataSyncStatus() {
             warranties: { synced: true, count: warrantyCount },
             completions: { synced: true, count: completionCount },
             pets: { synced: true, count: petCount },
+            projects: { synced: true, count: projectCount },
           }
         };
       } catch (error) {
@@ -235,6 +244,7 @@ export function useDataSyncStatus() {
               warranties: { synced: true, count: cacheResult.warranties },
               completions: { synced: true, count: cacheResult.completions },
               pets: { synced: true, count: cacheResult.pets },
+              projects: { synced: true, count: cacheResult.projects },
             }
           };
         }
@@ -252,6 +262,7 @@ export function useDataSyncStatus() {
             warranties: { synced: true, count: 0 },
             completions: { synced: true, count: 0 },
             pets: { synced: true, count: 0 },
+            projects: { synced: true, count: 0 },
           }
         };
       }
@@ -280,6 +291,7 @@ export function useDataSyncStatus() {
       warranties: { synced: false, count: 0 },
       completions: { synced: false, count: 0 },
       pets: { synced: false, count: 0 },
+      projects: { synced: false, count: 0 },
     },
   };
 }
