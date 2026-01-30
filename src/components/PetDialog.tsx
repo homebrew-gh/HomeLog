@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, Trash2, MoreVertical } from 'lucide-react';
+import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, Trash2, MoreVertical, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DateInput } from '@/components/ui/date-input';
 import { usePetActions } from '@/hooks/usePets';
 import { usePetTypes } from '@/hooks/usePetTypes';
@@ -401,19 +403,47 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
                   accept="image/*"
                   className="hidden"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => photoInputRef.current?.click()}
-                  disabled={isUploading || !canUploadFiles}
-                  className="w-full"
-                >
-                  <Image className="h-4 w-4 mr-2" />
-                  {isUploading ? 'Uploading...' : 'Upload Photo'}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="w-full">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => photoInputRef.current?.click()}
+                        disabled={isUploading || !canUploadFiles}
+                        className="w-full"
+                      >
+                        {isUploading ? (
+                          <div className="h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : !canUploadFiles ? (
+                          <AlertCircle className="h-4 w-4 mr-2 text-amber-500" />
+                        ) : (
+                          <Image className="h-4 w-4 mr-2" />
+                        )}
+                        {isUploading ? 'Uploading...' : 'Upload Photo'}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {!canUploadFiles 
+                      ? 'Configure a private media server in Settings > Server Settings > Media to enable uploads'
+                      : 'Upload a photo of your pet'
+                    }
+                  </TooltipContent>
+                </Tooltip>
               </>
             )}
           </div>
+
+          {/* Warning when no private server is configured */}
+          {!canUploadFiles && (
+            <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/30">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+                <strong>File uploads disabled.</strong> To upload photos and documents, configure a private media server in Settings &gt; Server Settings &gt; Media.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Species & Breed */}
           <div className="grid grid-cols-2 gap-2">
@@ -621,16 +651,34 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
               accept=".pdf,.jpg,.jpeg,.png,.webp"
               className="hidden"
             />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => documentInputRef.current?.click()}
-              disabled={isUploading || !canUploadFiles}
-              className="w-full"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              {isUploading ? 'Uploading...' : 'Upload Document'}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="w-full block">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => documentInputRef.current?.click()}
+                    disabled={isUploading || !canUploadFiles}
+                    className="w-full"
+                  >
+                    {isUploading ? (
+                      <div className="h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : !canUploadFiles ? (
+                      <AlertCircle className="h-4 w-4 mr-2 text-amber-500" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    {isUploading ? 'Uploading...' : 'Upload Document'}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {!canUploadFiles 
+                  ? 'Configure a private media server in Settings > Server Settings > Media to enable uploads'
+                  : 'Upload vet records, vaccination certificates, or other documents'
+                }
+              </TooltipContent>
+            </Tooltip>
 
             {formData.documentsUrls.length > 0 && (
               <div className="space-y-2 mt-2">
