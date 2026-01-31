@@ -9,7 +9,6 @@ import {
   Pause, 
   PlayCircle, 
   Plus, 
-  Image as ImageIcon,
   Trash2,
   Edit,
   DollarSign,
@@ -34,7 +33,6 @@ import { DateInput } from '@/components/ui/date-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { BlossomImage } from '@/components/BlossomMedia';
 import { TaskList, MaterialsList, BudgetTracker } from '@/components/project';
 import { useProjectById, useProjects, useProjectActions } from '@/hooks/useProjects';
@@ -43,7 +41,7 @@ import { useCompanies, useCompanyById } from '@/hooks/useCompanies';
 import { useUploadFile, useCanUploadFiles, NoPrivateServerError } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import NotFound from './NotFound';
-import type { Project, ProjectEntry, Company } from '@/lib/types';
+import type { Project, ProjectEntry } from '@/lib/types';
 
 // Get icon based on project status
 function getStatusIcon(status?: Project['status']) {
@@ -545,7 +543,7 @@ function EditProjectDialog({
           : 'Project has been moved to archive.',
       });
       onClose();
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to archive project',
@@ -563,7 +561,7 @@ function EditProjectDialog({
       });
       // Navigate back since project no longer exists
       window.location.href = '/?tab=projects';
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to delete project',
@@ -821,7 +819,7 @@ export function ProjectPage() {
         title: 'Entry Deleted',
         description: 'Progress entry has been removed.',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to delete entry',

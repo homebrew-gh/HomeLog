@@ -98,7 +98,7 @@ export function usePersistentStorage() {
         usage: estimate.usage || 0,
         quota: estimate.quota || 0,
       });
-    } catch (error) {
+    } catch {
       logger.error('[PersistentStorage] Failed to check status');
       setState(prev => ({ ...prev, isSupported: false, isChecking: false }));
     }
@@ -121,7 +121,7 @@ export function usePersistentStorage() {
       }
       
       return granted;
-    } catch (error) {
+    } catch {
       logger.error('[PersistentStorage] Failed to request persistence');
       return false;
     }
@@ -145,7 +145,7 @@ export function usePersistentStorage() {
             await requestPersistence();
           }
         }
-      } catch (error) {
+      } catch {
         logger.error('[PersistentStorage] Failed to check preference');
       }
     };

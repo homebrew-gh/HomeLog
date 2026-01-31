@@ -57,7 +57,7 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
     settings: savedSettings, 
     categoryRelayConfig: savedCategoryRelayConfig,
     setEncryptionEnabled: persistEncryptionEnabled, 
-    resetToDefaults: persistResetToDefaults,
+    resetToDefaults: _persistResetToDefaults,
     setRelayEnabledForCategory: persistRelayEnabledForCategory,
     isPrivateRelay,
   } = useEncryptionSettings();

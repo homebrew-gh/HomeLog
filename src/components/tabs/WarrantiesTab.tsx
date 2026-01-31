@@ -62,7 +62,7 @@ export function WarrantiesTab({ scrollTarget }: WarrantiesTabProps) {
   const { data: warranties = [], isLoading } = useWarranties();
   const { data: appliances = [] } = useAppliances();
   const { data: vehicles = [] } = useVehicles();
-  const { preferences } = useUserPreferences();
+  const { preferences: _preferences } = useUserPreferences();
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
 
   // View mode: 'active' or 'archived'

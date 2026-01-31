@@ -18,12 +18,8 @@ import {
   Users, 
   FolderKanban,
   PawPrint,
-  AlertTriangle,
-  Clock,
   ArrowRight,
   Sparkles,
-  Calendar,
-  ChevronRight,
   GripVertical,
   Pencil,
   Check,
@@ -58,9 +54,9 @@ import { genUserName } from '@/lib/genUserName';
 import { parseCurrencyAmount, formatCurrency, convertCurrency } from '@/lib/currency';
 import { usePets } from '@/hooks/usePets';
 import { useProjects } from '@/hooks/useProjects';
-import type { MaintenanceSchedule, Warranty, Project } from '@/lib/types';
+import type { MaintenanceSchedule, Warranty } from '@/lib/types';
 
-const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
+const _TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
   home: Home,
   appliances: Package,
   maintenance: Wrench,
@@ -124,14 +120,14 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const { data: warranties = [], isLoading: isLoadingWarranties } = useWarranties();
   const { data: pets = [], isLoading: isLoadingPets } = usePets();
   const { data: projects = [], isLoading: isLoadingProjects } = useProjects();
-  const expiringWarranties = useExpiringWarranties(365); // Get warranties expiring within a year
+  const _expiringWarranties = useExpiringWarranties(365); // Get warranties expiring within a year
   const { data: maintenance = [], isLoading: isLoadingMaintenance } = useMaintenance();
   const { data: completions = [] } = useMaintenanceCompletions();
   const applianceMaintenance = useApplianceMaintenance();
   const vehicleMaintenance = useVehicleMaintenance();
   
   // Track data sync status for showing loading states
-  const { isSyncing: isDataSyncing, isSynced: isDataSynced, categories: syncCategories } = useDataSyncStatus();
+  const { isSyncing: isDataSyncing, isSynced: _isDataSynced, categories: syncCategories } = useDataSyncStatus();
   
   // Currency preferences
   const { entryCurrency, displayCurrency, hasRates, rates } = useCurrency();
@@ -214,7 +210,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   // Hysteresis state to prevent flickering when cursor is between columns
   const lastDropIndexRef = useRef<number | null>(null);
   const lastDropTimeRef = useRef<number>(0);
-  const DROP_INDEX_HYSTERESIS_THRESHOLD = 50; // Minimum distance (px) to switch drop zones
+  const _DROP_INDEX_HYSTERESIS_THRESHOLD = 50; // Minimum distance (px) to switch drop zones
   const DROP_INDEX_DEBOUNCE_MS = 100; // Minimum time between drop index changes
   
   // Long press state for touch drag (allows scrolling with quick swipes)
@@ -358,7 +354,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   }, [vehicleMaintenance, vehicles, completions]);
 
   // Get overdue and upcoming maintenance counts
-  const maintenanceWithStatus = maintenance.map(maint => {
+  const _maintenanceWithStatus = maintenance.map(maint => {
     const appliance = appliances.find(a => a.id === maint.applianceId);
     const vehicle = vehicles.find(v => v.id === maint.vehicleId);
     const purchaseDate = appliance?.purchaseDate || vehicle?.purchaseDate || '';
@@ -437,7 +433,7 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const activeProjects = useMemo(() => projects.filter(p => !p.isArchived), [projects]);
 
   // Calculate total monthly cost estimate for subscriptions with currency conversion
-  const { totalMonthlyCost, formattedTotalMonthlyCost } = useMemo(() => {
+  const { totalMonthlyCost: _totalMonthlyCost, formattedTotalMonthlyCost } = useMemo(() => {
     let total = 0;
     for (const sub of subscriptions) {
       // Extract numeric value from cost string

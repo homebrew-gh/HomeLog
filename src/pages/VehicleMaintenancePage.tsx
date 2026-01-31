@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import {
   ArrowLeft,
@@ -7,23 +7,19 @@ import {
   Plane,
   Ship,
   Tractor,
-  Calendar,
   Wrench,
   Clock,
   CheckCircle2,
   AlertTriangle,
   Gauge,
-  Edit,
   Plus,
   Package,
   ClipboardList,
-  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -33,7 +29,7 @@ import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { MaintenanceDialog } from '@/components/MaintenanceDialog';
 import { MaintenanceDetailDialog } from '@/components/MaintenanceDetailDialog';
 import { LogMaintenanceDialog } from '@/components/LogMaintenanceDialog';
-import type { MaintenanceSchedule, MaintenanceCompletion } from '@/lib/types';
+import type { MaintenanceSchedule } from '@/lib/types';
 import NotFound from './NotFound';
 
 // Get icon based on vehicle type
@@ -242,7 +238,7 @@ export function VehicleMaintenancePage() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {allMaintenanceWithDates.map(({ maintenance: m, completions, nextDue, overdue, dueSoon, lastCompletion }) => (
+                        {allMaintenanceWithDates.map(({ maintenance: m, completions: _completions, nextDue, overdue, dueSoon, lastCompletion }) => (
                           <button
                             key={m.id}
                             onClick={() => setViewingMaintenance(m)}

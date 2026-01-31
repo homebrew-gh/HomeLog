@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Check, RefreshCw, Clock, Bitcoin, DollarSign, Info } from 'lucide-react';
+import { RefreshCw, Clock, Bitcoin, DollarSign, Info } from 'lucide-react';
 import {
   Dialog,
   DialogContent,

@@ -282,7 +282,7 @@ export function useDataSyncStatus() {
             vetVisits: { synced: true, count: vetVisitCount },
           }
         };
-      } catch (error) {
+      } catch {
         logger.error('[DataSync] Relay query failed');
         // If sync fails but we have cached data, consider it "synced" with cache
         if (hasAnyCachedData && cacheResult) {

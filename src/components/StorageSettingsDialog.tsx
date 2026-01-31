@@ -11,8 +11,6 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/useToast';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { 
-  SAFE_STORAGE_KEYS, 
-  SENSITIVE_STORAGE_KEYS, 
   INDEXED_DB_DATABASES,
   getAppLocalStorageKeys,
   formatBytes,

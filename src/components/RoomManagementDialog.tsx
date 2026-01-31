@@ -3,7 +3,7 @@ import { Plus, Trash2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useCustomRooms } from '@/hooks/useCustomRooms';
 import { useAppliances } from '@/hooks/useAppliances';
 import { toast } from '@/hooks/useToast';
@@ -22,7 +22,7 @@ export function RoomManagementDialog({ isOpen, onClose }: RoomManagementDialogPr
     addCustomRoom, 
     removeRoom,
     restoreDefaultRoom,
-    isDefaultRoom,
+    isDefaultRoom: _isDefaultRoom,
   } = useCustomRooms();
   const { data: appliances = [] } = useAppliances();
   const [newRoom, setNewRoom] = useState('');

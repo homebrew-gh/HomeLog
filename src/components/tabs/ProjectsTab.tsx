@@ -377,7 +377,7 @@ interface ProjectCardProps {
   onEdit: () => void;
 }
 
-function ProjectCard({ project, onEdit }: ProjectCardProps) {
+function ProjectCard({ project, onEdit: _onEdit }: ProjectCardProps) {
   const StatusIcon = getStatusIcon(project.status);
 
   return (

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Archive, Trash2, AlertTriangle, Wrench, CreditCard, Shield, Building } from 'lucide-react';
+import { Archive, Trash2, AlertTriangle, Wrench, CreditCard, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';

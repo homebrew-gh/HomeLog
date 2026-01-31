@@ -22,14 +22,10 @@ import {
 } from '@/components/ui/command';
 import { useGlobalSearch, type SearchResult, type SearchResultType } from '@/hooks/useGlobalSearch';
 import type { 
-  Appliance, 
-  Vehicle, 
   Company, 
   Subscription, 
   Warranty, 
   MaintenanceSchedule,
-  Pet,
-  Project,
 } from '@/lib/types';
 
 // Icons for each result type

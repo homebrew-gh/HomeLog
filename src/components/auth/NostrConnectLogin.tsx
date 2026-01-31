@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
-import { bytesToHex } from '@noble/hashes/utils';
 import { NSecSigner, NRelay1 } from '@nostrify/nostrify';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';

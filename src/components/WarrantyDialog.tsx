@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { format, parse, addWeeks, addMonths, addYears, isValid } from 'date-fns';
-import { Plus, X, AlertTriangle, Building, Package, Car, Home, Tag, Upload, FileText, Image, AlertCircle, Trash2, MoreVertical, Infinity } from 'lucide-react';
+import { Plus, X, AlertTriangle, Building, Package, Car, Home, Tag, Upload, FileText, Image, AlertCircle, Trash2, MoreVertical, Infinity as InfinityIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -355,7 +355,7 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
     }
   };
 
-  const handleManualLinkedItemName = (name: string) => {
+  const _handleManualLinkedItemName = (name: string) => {
     setFormData(prev => ({
       ...prev,
       linkedItemId: '',
@@ -949,7 +949,7 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
                 htmlFor="isLifetime"
                 className="text-sm font-normal cursor-pointer flex items-center gap-1.5"
               >
-                <Infinity className="h-4 w-4" />
+                <InfinityIcon className="h-4 w-4" />
                 Lifetime Warranty
               </Label>
             </div>
@@ -966,7 +966,7 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
             )}
             {formData.isLifetime && (
               <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 p-2 rounded-md flex items-center gap-1.5">
-                <Infinity className="h-4 w-4" />
+                <InfinityIcon className="h-4 w-4" />
                 This warranty never expires
               </div>
             )}

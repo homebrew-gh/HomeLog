@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { CalendarPlus, Download, Check } from 'lucide-react';
+import { CalendarPlus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -55,7 +55,7 @@ function getMaintenanceDueInfo(
   const lastCompletionDate = maintenanceCompletions.length > 0 ? maintenanceCompletions[0].completedDate : undefined;
   
   // For home feature-only maintenance without a purchase date, use last completion or today
-  const isHomeFeatureOnly = maintenance.homeFeature && !maintenance.applianceId && !maintenance.vehicleId;
+  const _isHomeFeatureOnly = maintenance.homeFeature && !maintenance.applianceId && !maintenance.vehicleId;
   const effectivePurchaseDate = purchaseDate || (lastCompletionDate ? '' : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }));
   
   const dueDate = calculateNextDueDate(effectivePurchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate);

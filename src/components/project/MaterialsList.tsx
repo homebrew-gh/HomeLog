@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, ShoppingCart, Check, Package, Edit2 } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, Check, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -95,7 +95,7 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
         title: 'Item Added',
         description: 'Material has been added to your list.',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to add material',
@@ -109,7 +109,7 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
   const handleTogglePurchased = async (material: ProjectMaterial) => {
     try {
       await toggleMaterialPurchased(material);
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to update material',
@@ -125,7 +125,7 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
         title: 'Item Deleted',
         description: 'Material has been removed.',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to delete material',

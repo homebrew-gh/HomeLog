@@ -35,7 +35,7 @@ export function useNWCInternal() {
           return null;
         }
         return { connectionString: uri };
-      } catch (error) {
+      } catch {
         logger.error('[NWC] Failed to parse NWC URI');
         return null;
       }

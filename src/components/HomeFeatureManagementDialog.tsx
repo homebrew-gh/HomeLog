@@ -3,7 +3,7 @@ import { Plus, Trash2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useMaintenance } from '@/hooks/useMaintenance';
 import { toast } from '@/hooks/useToast';
@@ -22,7 +22,7 @@ export function HomeFeatureManagementDialog({ isOpen, onClose }: HomeFeatureMana
     addCustomHomeFeature, 
     removeHomeFeature,
     restoreDefaultHomeFeature,
-    isDefaultHomeFeature,
+    isDefaultHomeFeature: _isDefaultHomeFeature,
   } = useCustomHomeFeatures();
   const { data: maintenance = [] } = useMaintenance();
   const [newFeature, setNewFeature] = useState('');

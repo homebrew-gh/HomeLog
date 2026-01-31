@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DateInput } from '@/components/ui/date-input';
-import { BlossomImage, BlossomDocumentLink } from '@/components/BlossomMedia';
+import { BlossomImage } from '@/components/BlossomMedia';
 import { usePetActions } from '@/hooks/usePets';
 import { usePetTypes } from '@/hooks/usePetTypes';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
@@ -29,7 +29,7 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
   const { createPet, updatePet } = usePetActions();
   const { allPetTypes, addCustomPetType } = usePetTypes();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
-  const { mutateAsync: deleteFile, isPending: isDeleting } = useDeleteFile();
+  const { mutateAsync: deleteFile, isPending: _isDeleting } = useDeleteFile();
   const canUploadFiles = useCanUploadFiles();
 
   const [isSubmitting, setIsSubmitting] = useState(false);

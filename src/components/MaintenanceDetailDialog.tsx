@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
 import { Clock, Package, Wrench, Edit, Trash2, AlertTriangle, CheckCircle, Check, Car, Gauge, TreePine, ClipboardList, Plus, X, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,11 +19,6 @@ interface MaintenanceDetailDialogProps {
   onClose: () => void;
   maintenance: MaintenanceSchedule;
   onEdit: () => void;
-}
-
-// Get today's date in MM/DD/YYYY format
-function getTodayFormatted(): string {
-  return format(new Date(), 'MM/dd/yyyy');
 }
 
 export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }: MaintenanceDetailDialogProps) {

@@ -23,7 +23,7 @@ import { DateInput } from '@/components/ui/date-input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
-import { useVetVisitActions, useVetVisitsByPetId } from '@/hooks/useVetVisits';
+import { useVetVisitActions } from '@/hooks/useVetVisits';
 import { usePetById, usePetActions } from '@/hooks/usePets';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
@@ -144,7 +144,7 @@ export function VetVisitDialog({ isOpen, onClose, petId, vetVisit }: VetVisitDia
         title: 'Document uploaded',
         description: 'Your document has been uploaded successfully.',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Upload failed',
         description: 'Failed to upload document. Please try again.',
@@ -239,7 +239,7 @@ export function VetVisitDialog({ isOpen, onClose, petId, vetVisit }: VetVisitDia
       }
 
       onClose();
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: vetVisit 

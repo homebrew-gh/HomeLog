@@ -22,7 +22,7 @@ export function PetTypeManagementDialog({ isOpen, onClose }: PetTypeManagementDi
     addCustomPetType, 
     removeType,
     restoreDefaultPetType,
-    isDefaultType,
+    isDefaultType: _isDefaultType,
   } = usePetTypes();
   const { data: pets = [] } = usePets();
   const [newType, setNewType] = useState('');

@@ -22,7 +22,7 @@ import {
  */
 export function useCurrency() {
   const { preferences, setEntryCurrency, setDisplayCurrency, setExchangeRates } = useUserPreferences();
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   
   // Get stored exchange rates from preferences (persisted)
   const storedRates = preferences.exchangeRates;

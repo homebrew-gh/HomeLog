@@ -1,4 +1,4 @@
-import { DollarSign, TrendingUp, TrendingDown, Minus, PieChart } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, PieChart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useBudgetSummary } from '@/hooks/useProjectMaterials';
@@ -130,7 +130,7 @@ export function BudgetTracker({ projectId, originalBudget }: BudgetTrackerProps)
             <div className="space-y-2">
               {categories.map(([category, { planned, spent }]) => {
                 const categoryPercent = totalPlanned > 0 ? (planned / totalPlanned) * 100 : 0;
-                const spentPercent = planned > 0 ? (spent / planned) * 100 : 0;
+                const _spentPercent = planned > 0 ? (spent / planned) * 100 : 0;
                 
                 return (
                   <div key={category} className="space-y-1">

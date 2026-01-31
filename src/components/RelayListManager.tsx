@@ -81,7 +81,7 @@ export function RelayListManager() {
   configRelaysRef.current = config.relayMetadata.relays;
 
   // Check connectivity for a single relay
-  const checkRelay = useCallback(async (url: string) => {
+  const _checkRelay = useCallback(async (url: string) => {
     setRelayStatuses(prev => ({ ...prev, [url]: 'checking' }));
     const isConnected = await checkRelayConnectivity(url);
     setRelayStatuses(prev => ({ ...prev, [url]: isConnected ? 'connected' : 'error' }));

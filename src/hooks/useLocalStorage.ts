@@ -37,7 +37,7 @@ export function useLocalStorage<T>(
         return defaultValueRef.current;
       }
       return deserialize(item);
-    } catch (error) {
+    } catch {
       logger.warn(`[LocalStorage] Failed to load from localStorage`);
       return defaultValueRef.current;
     }
@@ -67,7 +67,7 @@ export function useLocalStorage<T>(
         localStorage.setItem(key, serialize(valueToStore));
         
         return valueToStore;
-      } catch (error) {
+      } catch {
         logger.warn(`[LocalStorage] Failed to save to localStorage`);
         return currentState;
       }
@@ -85,7 +85,7 @@ export function useLocalStorage<T>(
           } else {
             setState(deserialize(e.newValue));
           }
-        } catch (error) {
+        } catch {
           logger.warn(`[LocalStorage] Failed to sync from localStorage`);
         }
       }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Plus, Upload, X, FileText, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Star, FileUp, Bitcoin, ExternalLink, Calendar } from 'lucide-react';
+import { Plus, Upload, X, FileText, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Star, Bitcoin, ExternalLink, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -72,7 +72,7 @@ function parseVcf(vcfContent: string): VcfData {
         data.name = value.trim();
         break;
         
-      case 'N': // Structured Name - use as contact name if different
+      case 'N': { // Structured Name - use as contact name if different
         const nameParts = value.split(';').map(p => p.trim()).filter(Boolean);
         if (nameParts.length >= 2) {
           // Format: Last;First;Middle;Prefix;Suffix
@@ -82,7 +82,7 @@ function parseVcf(vcfContent: string): VcfData {
           }
         }
         break;
-        
+      }
       case 'ORG': // Organization
         if (!data.name) {
           data.name = value.split(';')[0].trim();
@@ -108,7 +108,7 @@ function parseVcf(vcfContent: string): VcfData {
         }
         break;
         
-      case 'ADR': // Address
+      case 'ADR': { // Address
         // Format: PO Box;Extended;Street;City;State;Postal;Country
         const addrParts = value.split(';').map(p => p.trim());
         if (addrParts.length >= 3) {
@@ -119,6 +119,7 @@ function parseVcf(vcfContent: string): VcfData {
           if (addrParts[5]) data.zipCode = addrParts[5];
         }
         break;
+      }
         
       case 'NOTE': // Notes
         data.notes = value.trim();

@@ -67,7 +67,7 @@ function getMaintenanceDueDate(
   const lastCompletionDate = maintenanceCompletions.length > 0 ? maintenanceCompletions[0].completedDate : undefined;
   
   // For home feature-only maintenance without a purchase date, use last completion or today
-  const isHomeFeatureOnly = maintenance.homeFeature && !maintenance.applianceId && !maintenance.vehicleId;
+  const _isHomeFeatureOnly = maintenance.homeFeature && !maintenance.applianceId && !maintenance.vehicleId;
   const effectivePurchaseDate = purchaseDate || (lastCompletionDate ? '' : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }));
   
   return calculateNextDueDate(effectivePurchaseDate, maintenance.frequency, maintenance.frequencyUnit, lastCompletionDate);
@@ -199,7 +199,7 @@ export function MaintenanceTab({ scrollTarget }: MaintenanceTabProps) {
     setDialogOpen(true);
   };
 
-  const handleAddMaintenance = (mode: 'appliance' | 'vehicle') => {
+  const _handleAddMaintenance = (mode: 'appliance' | 'vehicle') => {
     setEditingMaintenance(undefined);
     setDialogMode(mode);
     setDialogOpen(true);
@@ -712,7 +712,7 @@ interface HomeMaintenanceSectionProps {
 
 const HomeMaintenanceSection = forwardRef<HTMLDivElement, HomeMaintenanceSectionProps>(
   ({ appliances, homeMaintenance, completions, showArchived, onViewMaintenance }, ref) => {
-    const navigate = useNavigate();
+    const _navigate = useNavigate();
     const { allHomeFeatures } = useCustomHomeFeatures();
     const [addMaintenanceDialogOpen, setAddMaintenanceDialogOpen] = useState(false);
     const [logDialogOpen, setLogDialogOpen] = useState(false);
@@ -1481,7 +1481,7 @@ function AddVehicleToMaintenanceDialog({
   };
 
   const selectedVehicle = untrackedVehicles.find(v => v.id === selectedVehicleId);
-  const VehicleIcon = selectedVehicle ? getVehicleTypeIcon(selectedVehicle.vehicleType) : Car;
+  const _VehicleIcon = selectedVehicle ? getVehicleTypeIcon(selectedVehicle.vehicleType) : Car;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -1756,7 +1756,7 @@ function AddVehicleMaintenanceDialog({
 
 const VehicleMaintenanceSection = forwardRef<HTMLDivElement, VehicleMaintenanceSectionProps>(
   ({ vehicles, vehicleMaintenance, completions, showArchived, onViewMaintenance }, ref) => {
-    const navigate = useNavigate();
+    const _navigate = useNavigate();
     const [addVehicleDialogOpen, setAddVehicleDialogOpen] = useState(false);
     const [addMaintenanceDialogOpen, setAddMaintenanceDialogOpen] = useState(false);
     const [logDialogOpen, setLogDialogOpen] = useState(false);

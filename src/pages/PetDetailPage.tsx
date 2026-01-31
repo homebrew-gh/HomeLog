@@ -19,7 +19,6 @@ import {
   Plus,
   FileText,
   Syringe,
-  ClipboardList,
   DollarSign,
   Clock,
   Trash2,
@@ -136,7 +135,7 @@ export function PetDetailPage() {
   const { upcomingFollowUps, pastVisits } = useMemo(() => {
     const now = new Date();
     const upcoming: VetVisit[] = [];
-    const past: VetVisit[] = [];
+    const _past: VetVisit[] = [];
     
     for (const visit of vetVisits) {
       if (visit.followUpDate) {
@@ -176,7 +175,7 @@ export function PetDetailPage() {
         title: 'Vet visit deleted',
         description: 'The vet visit has been removed.',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to delete vet visit. Please try again.',

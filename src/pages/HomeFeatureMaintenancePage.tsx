@@ -4,7 +4,6 @@ import { useSeoMeta } from '@unhead/react';
 import {
   ArrowLeft,
   TreePine,
-  Calendar,
   Wrench,
   Clock,
   CheckCircle2,
@@ -231,7 +230,7 @@ export function HomeFeatureMaintenancePage() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {allMaintenanceWithDates.map(({ maintenance: m, completions, nextDue, overdue, dueSoon, lastCompletion }) => (
+                        {allMaintenanceWithDates.map(({ maintenance: m, completions: _completions, nextDue, overdue, dueSoon, lastCompletion }) => (
                           <button
                             key={m.id}
                             onClick={() => setViewingMaintenance(m)}

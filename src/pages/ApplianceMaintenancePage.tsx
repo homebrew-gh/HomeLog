@@ -4,16 +4,13 @@ import { useSeoMeta } from '@unhead/react';
 import {
   ArrowLeft,
   Package,
-  Calendar,
   Wrench,
   Clock,
   CheckCircle2,
   AlertTriangle,
-  Edit,
   Plus,
   ClipboardList,
   Home,
-  Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -224,7 +221,7 @@ export function ApplianceMaintenancePage() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {allMaintenanceWithDates.map(({ maintenance: m, completions, nextDue, overdue, dueSoon, lastCompletion }) => (
+                        {allMaintenanceWithDates.map(({ maintenance: m, completions: _completions, nextDue, overdue, dueSoon, lastCompletion }) => (
                           <button
                             key={m.id}
                             onClick={() => setViewingMaintenance(m)}

@@ -71,8 +71,8 @@ export function DateInput({
 }: DateInputProps) {
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
   const [isTodayChecked, setIsTodayChecked] = React.useState(false);
-  
-  const inputId = id || React.useId();
+  const generatedId = React.useId();
+  const inputId = id ?? generatedId;
   const checkboxId = `${inputId}-today`;
   
   // Parse current value to Date for calendar

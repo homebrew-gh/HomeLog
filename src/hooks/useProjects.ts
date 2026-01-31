@@ -19,7 +19,7 @@ function getTagValue(event: NostrEvent, tagName: string): string | undefined {
 }
 
 // Helper to get all tag values for a given tag name
-function getTagValues(event: NostrEvent, tagName: string): string[] {
+function _getTagValues(event: NostrEvent, tagName: string): string[] {
   return event.tags
     .filter(([name]) => name === tagName)
     .map(tag => tag[1])

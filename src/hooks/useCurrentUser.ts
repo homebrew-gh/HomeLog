@@ -30,7 +30,7 @@ export function useCurrentUser() {
       try {
         const user = loginToUser(login);
         users.push(user);
-      } catch (error) {
+      } catch {
         logger.warn('[useCurrentUser] Skipped invalid login');
       }
     }

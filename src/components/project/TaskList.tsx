@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, AlertCircle, Clock } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,7 +40,7 @@ export function TaskList({ projectId }: TaskListProps) {
         title: 'Task Added',
         description: 'New task has been added to your list.',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to add task',
@@ -54,7 +54,7 @@ export function TaskList({ projectId }: TaskListProps) {
   const handleToggleComplete = async (task: ProjectTask) => {
     try {
       await toggleTaskComplete(task);
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to update task',
@@ -70,7 +70,7 @@ export function TaskList({ projectId }: TaskListProps) {
         title: 'Task Deleted',
         description: 'Task has been removed.',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to delete task',

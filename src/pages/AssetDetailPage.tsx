@@ -38,14 +38,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BlossomDocumentLink } from '@/components/BlossomMedia';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppliances, useApplianceById } from '@/hooks/useAppliances';
 import { useVehicles, useVehicleById } from '@/hooks/useVehicles';
-import { useMaintenance, useMaintenanceByAppliance, useMaintenanceByVehicle, useMaintenanceByCompanyId, useHomeFeatureMaintenance, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
-import { useMaintenanceCompletions, useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
+import { useMaintenance, useMaintenanceByAppliance, useMaintenanceByVehicle, useMaintenanceByCompanyId, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
+import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { useWarranties, useWarrantiesByApplianceId, useWarrantiesByVehicleId, useWarrantiesByCompanyId, formatWarrantyTimeRemaining, isWarrantyExpired, isWarrantyExpiringSoon } from '@/hooks/useWarranties';
 import { useCompanyById, useCompanies } from '@/hooks/useCompanies';
 import { useSubscriptionsByCompanyId, useSubscriptions } from '@/hooks/useSubscriptions';

@@ -44,7 +44,7 @@ import { useVehicleById } from '@/hooks/useVehicles';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useSubscriptionCurrency, useCurrency } from '@/hooks/useCurrency';
 import { BILLING_FREQUENCIES, type Subscription } from '@/lib/types';
-import { parseCurrencyAmount, formatCurrency, convertCurrency, getCurrency } from '@/lib/currency';
+import { parseCurrencyAmount, formatCurrency, convertCurrency } from '@/lib/currency';
 
 // Get icon based on subscription type
 function getSubscriptionIcon(type: string) {
@@ -72,7 +72,7 @@ export function SubscriptionsTab({ scrollTarget }: SubscriptionsTabProps) {
   const { data: subscriptions = [], isLoading } = useSubscriptions();
   const { preferences, setSubscriptionsViewMode } = useUserPreferences();
   const viewMode = preferences.subscriptionsViewMode || 'card';
-  const { formatSubscriptionCost, entryCurrency, displayCurrency, hasRates } = useSubscriptionCurrency();
+  const { formatSubscriptionCost: _formatSubscriptionCost, entryCurrency, displayCurrency, hasRates } = useSubscriptionCurrency();
   const { rates } = useCurrency();
 
   // View mode: 'active' or 'archived'
@@ -157,7 +157,7 @@ export function SubscriptionsTab({ scrollTarget }: SubscriptionsTabProps) {
   }, [displayedSubscriptions]);
 
   // Calculate total monthly cost estimate with currency conversion (only for active subscriptions)
-  const { totalMonthlyCost, formattedTotal } = useMemo(() => {
+  const { totalMonthlyCost: _totalMonthlyCost, formattedTotal } = useMemo(() => {
     let total = 0;
     for (const sub of activeSubscriptions) {
       // Extract numeric value from cost string

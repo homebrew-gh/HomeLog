@@ -249,7 +249,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const { config } = useAppContext();
   
   // Local storage for immediate persistence
@@ -273,7 +273,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // Fetch preferences from Nostr (background sync)
   // Local storage is used as the primary source for instant loading
   // Include relay updatedAt in query key so we re-fetch when relays change
-  const { data: remotePreferences, isLoading: isLoadingRemote, isFetched } = useQuery({
+  const { data: remotePreferences, isLoading: _isLoadingRemote, isFetched } = useQuery({
     queryKey: ['user-preferences', user?.pubkey, config.relayMetadata.updatedAt],
     queryFn: async (c) => {
       if (!user?.pubkey) return null;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, X, Cloud, RefreshCw, GripVertical, Lock, Globe, Settings, Upload, Check, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Plus, X, RefreshCw, Lock, Globe, Settings, Upload, Check, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useUserPreferences, DEFAULT_BLOSSOM_SERVERS, type BlossomServer } from '@/contexts/UserPreferencesContext';
+import { useUserPreferences, DEFAULT_BLOSSOM_SERVERS } from '@/contexts/UserPreferencesContext';
 import { useToast } from '@/hooks/useToast';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { BlossomUploader, NostrBuildUploader } from '@nostrify/nostrify/uploaders';
@@ -27,7 +27,7 @@ interface TestResult {
 async function checkServerConnectivity(url: string): Promise<boolean> {
   try {
     // Try to fetch the server root - Blossom servers typically respond to GET requests
-    const response = await fetch(url, {
+    const _response = await fetch(url, {
       method: 'HEAD',
       mode: 'no-cors', // Use no-cors mode to avoid CORS issues for connectivity check
     });

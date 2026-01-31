@@ -17,7 +17,7 @@ import {
   BadgeCheck,
   ShieldPlus,
   Image,
-  Infinity
+  Infinity as InfinityIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -217,7 +217,7 @@ export function WarrantyDetailDialog({ isOpen, onClose, warranty, onEdit, onDele
             {/* Warranty Duration */}
             {warranty.isLifetime ? (
               <div className="flex items-start gap-3">
-                <Infinity className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <InfinityIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Warranty Duration</p>
                   <p className="text-blue-600 dark:text-blue-400 font-medium">Lifetime Warranty</p>

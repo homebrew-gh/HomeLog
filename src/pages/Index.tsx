@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Wrench, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users, ChevronDown } from 'lucide-react';
+import { Package, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -103,7 +103,7 @@ const Index = () => {
 
   const { user } = useCurrentUser();
   const { isProfileLoading } = useLoggedInAccounts();
-  const { preferences, setActiveTab, isLoading: isPreferencesLoading } = useTabPreferences();
+  const { preferences, setActiveTab, isLoading: _isPreferencesLoading } = useTabPreferences();
   const { isSynced: isDataSynced } = useDataSyncStatus();
   
   // Apply color theme to document root
