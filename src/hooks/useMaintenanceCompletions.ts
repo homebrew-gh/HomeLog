@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { MAINTENANCE_COMPLETION_KIND, MAINTENANCE_KIND, type MaintenanceCompletion, type MaintenancePart } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 const ENCRYPTED_MARKER = 'nip44:';
 
@@ -118,21 +119,24 @@ async function parseEventsToCompletions(
   const deletionEvents = events.filter(e => e.kind === 5);
   const deletedIds = getDeletedCompletionIds(deletionEvents);
 
-  const completions: MaintenanceCompletion[] = [];
-  for (const event of completionEvents) {
-    const completion = event.content?.startsWith(ENCRYPTED_MARKER)
-      ? await parseCompletionEncrypted(event, (c) => decryptForCategory<MaintenanceCompletionData>(c))
-      : parseCompletionPlaintext(event);
-    if (completion && !deletedIds.has(completion.id)) {
-      completions.push(completion);
+  const results = await runWithConcurrencyLimit(
+    completionEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<MaintenanceCompletion | null> => {
+      const completion = event.content?.startsWith(ENCRYPTED_MARKER)
+        ? await parseCompletionEncrypted(event, (c) => decryptForCategory<MaintenanceCompletionData>(c))
+        : parseCompletionPlaintext(event);
+      if (completion && !deletedIds.has(completion.id)) return completion;
+      return null;
     }
-  }
+  );
 
   const parseDate = (dateStr: string) => {
     const parts = dateStr.split('/');
     if (parts.length !== 3) return 0;
     return new Date(parseInt(parts[2], 10), parseInt(parts[0], 10) - 1, parseInt(parts[1], 10)).getTime();
   };
+  const completions = results.filter((c): c is MaintenanceCompletion => c !== null);
   return completions.sort((a, b) => parseDate(b.completedDate) - parseDate(a.completedDate));
 }
 

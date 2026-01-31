@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_MATERIAL_KIND, PROJECT_KIND, type ProjectMaterial, type ExpenseCategory } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -118,33 +119,20 @@ async function parseEventsToMaterials(
   // Get the set of deleted material IDs
   const deletedIds = getDeletedMaterialIds(deletionEvents);
 
-  const materials: ProjectMaterial[] = [];
-  
-  for (const event of materialEvents) {
-    if (deletedIds.has(event.id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const material = await parseProjectMaterialEncrypted(
-        event,
-        (content) => decryptForCategory<ProjectMaterialData>(content)
-      );
-      if (material) {
-        materials.push(material);
+  const results = await runWithConcurrencyLimit(
+    materialEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<ProjectMaterial | null> => {
+      if (deletedIds.has(event.id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parseProjectMaterialEncrypted(event, (content) => decryptForCategory<ProjectMaterialData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const material = parseProjectMaterialPlaintext(event);
-      if (material) {
-        materials.push(material);
-      }
+      return parseProjectMaterialPlaintext(event);
     }
-  }
+  );
 
-  // Sort by category, then by name
   const categoryOrder = ['materials', 'labor', 'rentals', 'permits', 'tools', 'delivery', 'other'];
-  return materials.sort((a, b) => {
+  return results.filter((m): m is ProjectMaterial => m != null).sort((a, b) => {
     const catDiff = categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
     if (catDiff !== 0) return catDiff;
     return a.name.localeCompare(b.name);

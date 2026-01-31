@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { WARRANTY_KIND, type Warranty, type WarrantyDocument, type WarrantyLinkedType } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -132,33 +133,20 @@ async function parseEventsToWarranties(
   // Get the set of deleted warranty IDs
   const deletedIds = getDeletedWarrantyIds(deletionEvents, pubkey);
 
-  const warranties: Warranty[] = [];
-  
-  for (const event of warrantyEvents) {
-    const id = getTagValue(event, 'd');
-    if (!id || deletedIds.has(id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const warranty = await parseWarrantyEncrypted(
-        event,
-        (content) => decryptForCategory<WarrantyData>(content)
-      );
-      if (warranty) {
-        warranties.push(warranty);
+  const results = await runWithConcurrencyLimit(
+    warrantyEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<Warranty | null> => {
+      const id = getTagValue(event, 'd');
+      if (!id || deletedIds.has(id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parseWarrantyEncrypted(event, (content) => decryptForCategory<WarrantyData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const warranty = parseWarrantyPlaintext(event);
-      if (warranty) {
-        warranties.push(warranty);
-      }
+      return parseWarrantyPlaintext(event);
     }
-  }
+  );
 
-  // Sort by creation date (newest first)
-  return warranties.sort((a, b) => b.createdAt - a.createdAt);
+  return results.filter((w): w is Warranty => w != null).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function useWarranties() {

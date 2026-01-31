@@ -18,6 +18,7 @@ import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { APPLIANCE_KIND, type Appliance } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -121,33 +122,20 @@ async function parseEventsToAppliances(
   // Get the set of deleted appliance IDs
   const deletedIds = getDeletedApplianceIds(deletionEvents, pubkey);
 
-  const appliances: Appliance[] = [];
-  
-  for (const event of applianceEvents) {
-    const id = getTagValue(event, 'd');
-    if (!id || deletedIds.has(id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const appliance = await parseApplianceEncrypted(
-        event,
-        (content) => decryptForCategory<ApplianceData>(content)
-      );
-      if (appliance) {
-        appliances.push(appliance);
+  const results = await runWithConcurrencyLimit(
+    applianceEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<Appliance | null> => {
+      const id = getTagValue(event, 'd');
+      if (!id || deletedIds.has(id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parseApplianceEncrypted(event, (content) => decryptForCategory<ApplianceData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const appliance = parseAppliancePlaintext(event);
-      if (appliance) {
-        appliances.push(appliance);
-      }
+      return parseAppliancePlaintext(event);
     }
-  }
+  );
 
-  // Sort by creation date (newest first)
-  return appliances.sort((a, b) => b.createdAt - a.createdAt);
+  return results.filter((a): a is Appliance => a != null).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function useAppliances() {

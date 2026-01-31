@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { COMPANY_KIND, type Company, type Invoice } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -122,33 +123,20 @@ async function parseEventsToCompanies(
   // Get the set of deleted company IDs
   const deletedIds = getDeletedCompanyIds(deletionEvents, pubkey);
 
-  const companies: Company[] = [];
-  
-  for (const event of companyEvents) {
-    const id = getTagValue(event, 'd');
-    if (!id || deletedIds.has(id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const company = await parseCompanyEncrypted(
-        event,
-        (content) => decryptForCategory<CompanyData>(content)
-      );
-      if (company) {
-        companies.push(company);
+  const results = await runWithConcurrencyLimit(
+    companyEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<Company | null> => {
+      const id = getTagValue(event, 'd');
+      if (!id || deletedIds.has(id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parseCompanyEncrypted(event, (content) => decryptForCategory<CompanyData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const company = parseCompanyPlaintext(event);
-      if (company) {
-        companies.push(company);
-      }
+      return parseCompanyPlaintext(event);
     }
-  }
+  );
 
-  // Sort by creation date (newest first)
-  return companies.sort((a, b) => b.createdAt - a.createdAt);
+  return results.filter((c): c is Company => c != null).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function useCompanies() {

@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { SUBSCRIPTION_KIND, type Subscription, type BillingFrequency, type LinkedAssetType } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -104,33 +105,20 @@ async function parseEventsToSubscriptions(
   // Get the set of deleted subscription IDs
   const deletedIds = getDeletedSubscriptionIds(deletionEvents, pubkey);
 
-  const subscriptions: Subscription[] = [];
-  
-  for (const event of subscriptionEvents) {
-    const id = getTagValue(event, 'd');
-    if (!id || deletedIds.has(id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const subscription = await parseSubscriptionEncrypted(
-        event,
-        (content) => decryptForCategory<SubscriptionData>(content)
-      );
-      if (subscription) {
-        subscriptions.push(subscription);
+  const results = await runWithConcurrencyLimit(
+    subscriptionEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<Subscription | null> => {
+      const id = getTagValue(event, 'd');
+      if (!id || deletedIds.has(id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parseSubscriptionEncrypted(event, (content) => decryptForCategory<SubscriptionData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const subscription = parseSubscriptionPlaintext(event);
-      if (subscription) {
-        subscriptions.push(subscription);
-      }
+      return parseSubscriptionPlaintext(event);
     }
-  }
+  );
 
-  // Sort by creation date (newest first)
-  return subscriptions.sort((a, b) => b.createdAt - a.createdAt);
+  return results.filter((s): s is Subscription => s != null).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function useSubscriptions() {

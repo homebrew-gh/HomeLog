@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_ENTRY_KIND, PROJECT_KIND, type ProjectEntry } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -117,32 +118,19 @@ async function parseEventsToEntries(
   // Get the set of deleted entry IDs
   const deletedIds = getDeletedEntryIds(deletionEvents);
 
-  const entries: ProjectEntry[] = [];
-  
-  for (const event of entryEvents) {
-    if (deletedIds.has(event.id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const entry = await parseProjectEntryEncrypted(
-        event,
-        (content) => decryptForCategory<ProjectEntryData>(content)
-      );
-      if (entry) {
-        entries.push(entry);
+  const results = await runWithConcurrencyLimit(
+    entryEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<ProjectEntry | null> => {
+      if (deletedIds.has(event.id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parseProjectEntryEncrypted(event, (content) => decryptForCategory<ProjectEntryData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const entry = parseProjectEntryPlaintext(event);
-      if (entry) {
-        entries.push(entry);
-      }
+      return parseProjectEntryPlaintext(event);
     }
-  }
+  );
 
-  // Sort by entry date (newest first), then by creation date
-  return entries.sort((a, b) => {
+  return results.filter((e): e is ProjectEntry => e != null).sort((a, b) => {
     // Parse dates for comparison
     const dateA = new Date(a.entryDate).getTime();
     const dateB = new Date(b.entryDate).getTime();

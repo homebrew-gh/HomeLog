@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { VET_VISIT_KIND, PET_KIND, type VetVisit, type VetVisitType } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -114,33 +115,19 @@ async function parseEventsToVetVisits(
   // Get the set of deleted vet visit IDs
   const deletedIds = getDeletedVetVisitIds(deletionEvents);
 
-  const vetVisits: VetVisit[] = [];
-
-  for (const event of vetVisitEvents) {
-    // Skip if this event was deleted
-    if (deletedIds.has(event.id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const vetVisit = await parseVetVisitEncrypted(
-        event,
-        (content) => decryptForCategory<VetVisitData>(content)
-      );
-      if (vetVisit) {
-        vetVisits.push(vetVisit);
+  const results = await runWithConcurrencyLimit(
+    vetVisitEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<VetVisit | null> => {
+      if (deletedIds.has(event.id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parseVetVisitEncrypted(event, (content) => decryptForCategory<VetVisitData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const vetVisit = parseVetVisitPlaintext(event);
-      if (vetVisit) {
-        vetVisits.push(vetVisit);
-      }
+      return parseVetVisitPlaintext(event);
     }
-  }
+  );
 
-  // Sort by visit date (newest first)
-  return vetVisits.sort((a, b) => {
+  return results.filter((v): v is VetVisit => v != null).sort((a, b) => {
     // Parse MM/DD/YYYY dates for comparison
     const parseDate = (dateStr: string) => {
       const parts = dateStr.split('/');

@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { VEHICLE_KIND, type Vehicle } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -122,33 +123,20 @@ async function parseEventsToVehicles(
   // Get the set of deleted vehicle IDs
   const deletedIds = getDeletedVehicleIds(deletionEvents, pubkey);
 
-  const vehicles: Vehicle[] = [];
-  
-  for (const event of vehicleEvents) {
-    const id = getTagValue(event, 'd');
-    if (!id || deletedIds.has(id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const vehicle = await parseVehicleEncrypted(
-        event,
-        (content) => decryptForCategory<VehicleData>(content)
-      );
-      if (vehicle) {
-        vehicles.push(vehicle);
+  const results = await runWithConcurrencyLimit(
+    vehicleEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<Vehicle | null> => {
+      const id = getTagValue(event, 'd');
+      if (!id || deletedIds.has(id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parseVehicleEncrypted(event, (content) => decryptForCategory<VehicleData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const vehicle = parseVehiclePlaintext(event);
-      if (vehicle) {
-        vehicles.push(vehicle);
-      }
+      return parseVehiclePlaintext(event);
     }
-  }
+  );
 
-  // Sort by creation date (newest first)
-  return vehicles.sort((a, b) => b.createdAt - a.createdAt);
+  return results.filter((v): v is Vehicle => v != null).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function useVehicles() {

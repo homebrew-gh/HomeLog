@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_KIND, type Project } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -115,33 +116,20 @@ async function parseEventsToProjects(
   // Get the set of deleted project IDs
   const deletedIds = getDeletedProjectIds(deletionEvents, pubkey);
 
-  const projects: Project[] = [];
-  
-  for (const event of projectEvents) {
-    const id = getTagValue(event, 'd');
-    if (!id || deletedIds.has(id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const project = await parseProjectEncrypted(
-        event,
-        (content) => decryptForCategory<ProjectData>(content)
-      );
-      if (project) {
-        projects.push(project);
+  const results = await runWithConcurrencyLimit(
+    projectEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<Project | null> => {
+      const id = getTagValue(event, 'd');
+      if (!id || deletedIds.has(id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parseProjectEncrypted(event, (content) => decryptForCategory<ProjectData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const project = parseProjectPlaintext(event);
-      if (project) {
-        projects.push(project);
-      }
+      return parseProjectPlaintext(event);
     }
-  }
+  );
 
-  // Sort by creation date (newest first)
-  return projects.sort((a, b) => b.createdAt - a.createdAt);
+  return results.filter((p): p is Project => p != null).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function useProjects() {

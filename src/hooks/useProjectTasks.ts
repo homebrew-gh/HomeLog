@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_TASK_KIND, PROJECT_KIND, type ProjectTask } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -108,33 +109,20 @@ async function parseEventsToTasks(
   // Get the set of deleted task IDs
   const deletedIds = getDeletedTaskIds(deletionEvents);
 
-  const tasks: ProjectTask[] = [];
-  
-  for (const event of taskEvents) {
-    if (deletedIds.has(event.id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const task = await parseProjectTaskEncrypted(
-        event,
-        (content) => decryptForCategory<ProjectTaskData>(content)
-      );
-      if (task) {
-        tasks.push(task);
+  const results = await runWithConcurrencyLimit(
+    taskEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<ProjectTask | null> => {
+      if (deletedIds.has(event.id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parseProjectTaskEncrypted(event, (content) => decryptForCategory<ProjectTaskData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const task = parseProjectTaskPlaintext(event);
-      if (task) {
-        tasks.push(task);
-      }
+      return parseProjectTaskPlaintext(event);
     }
-  }
+  );
 
-  // Sort: incomplete first (by priority, then creation date), then completed (by completion date)
   const priorityOrder = { high: 0, medium: 1, low: 2, undefined: 3 };
-  return tasks.sort((a, b) => {
+  return results.filter((t): t is ProjectTask => t != null).sort((a, b) => {
     // Completed tasks go to the end
     if (a.isCompleted !== b.isCompleted) {
       return a.isCompleted ? 1 : -1;

@@ -8,6 +8,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PET_KIND, type Pet } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 // Encrypted content marker
 const ENCRYPTED_MARKER = 'nip44:';
@@ -120,33 +121,20 @@ async function parseEventsToPets(
   // Get the set of deleted pet IDs
   const deletedIds = getDeletedPetIds(deletionEvents, pubkey);
 
-  const pets: Pet[] = [];
-  
-  for (const event of petEvents) {
-    const id = getTagValue(event, 'd');
-    if (!id || deletedIds.has(id)) continue;
-
-    // Check if content is encrypted
-    if (event.content && event.content.startsWith(ENCRYPTED_MARKER)) {
-      // Decrypt and parse
-      const pet = await parsePetEncrypted(
-        event,
-        (content) => decryptForCategory<PetData>(content)
-      );
-      if (pet) {
-        pets.push(pet);
+  const results = await runWithConcurrencyLimit(
+    petEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<Pet | null> => {
+      const id = getTagValue(event, 'd');
+      if (!id || deletedIds.has(id)) return null;
+      if (event.content?.startsWith(ENCRYPTED_MARKER)) {
+        return parsePetEncrypted(event, (content) => decryptForCategory<PetData>(content));
       }
-    } else {
-      // Parse plaintext from tags
-      const pet = parsePetPlaintext(event);
-      if (pet) {
-        pets.push(pet);
-      }
+      return parsePetPlaintext(event);
     }
-  }
+  );
 
-  // Sort by creation date (newest first)
-  return pets.sort((a, b) => b.createdAt - a.createdAt);
+  return results.filter((p): p is Pet => p != null).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function usePets() {

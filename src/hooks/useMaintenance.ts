@@ -9,6 +9,7 @@ import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { MAINTENANCE_KIND, APPLIANCE_KIND, VEHICLE_KIND, COMPANY_KIND, type MaintenanceSchedule, type MaintenancePart } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
 const ENCRYPTED_MARKER = 'nip44:';
 
@@ -229,18 +230,21 @@ async function parseEventsToMaintenance(
   const deletedApplianceIds = getDeletedApplianceIds(deletionEvents, pubkey);
   const deletedVehicleIds = getDeletedVehicleIds(deletionEvents, pubkey);
 
-  const schedules: MaintenanceSchedule[] = [];
-  for (const event of maintenanceEvents) {
-    const schedule = event.content?.startsWith(ENCRYPTED_MARKER)
-      ? await parseMaintenanceEncrypted(event, (c) => decryptForCategory<MaintenanceScheduleData>(c))
-      : parseMaintenancePlaintext(event);
-    if (!schedule || deletedMaintenanceIds.has(schedule.id)) continue;
-    if (schedule.applianceId && deletedApplianceIds.has(schedule.applianceId)) continue;
-    if (schedule.vehicleId && deletedVehicleIds.has(schedule.vehicleId)) continue;
-    schedules.push(schedule);
-  }
+  const results = await runWithConcurrencyLimit(
+    maintenanceEvents,
+    DECRYPT_CONCURRENCY,
+    async (event): Promise<MaintenanceSchedule | null> => {
+      const schedule = event.content?.startsWith(ENCRYPTED_MARKER)
+        ? await parseMaintenanceEncrypted(event, (c) => decryptForCategory<MaintenanceScheduleData>(c))
+        : parseMaintenancePlaintext(event);
+      if (!schedule || deletedMaintenanceIds.has(schedule.id)) return null;
+      if (schedule.applianceId && deletedApplianceIds.has(schedule.applianceId)) return null;
+      if (schedule.vehicleId && deletedVehicleIds.has(schedule.vehicleId)) return null;
+      return schedule;
+    }
+  );
 
-  return schedules.sort((a, b) => b.createdAt - a.createdAt);
+  return results.filter((s): s is MaintenanceSchedule => s != null).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function useMaintenance() {
