@@ -155,7 +155,7 @@ export function GlobalSearchDialog({
   const hasResults = totalCount > 0;
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
+    <CommandDialog open={open} onOpenChange={onOpenChange} shouldFilter={false}>
       <CommandInput 
         placeholder="Search appliances, vehicles, companies..." 
         value={query}
