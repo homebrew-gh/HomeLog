@@ -3,8 +3,21 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { useEncryption } from './useEncryption';
+import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { MAINTENANCE_COMPLETION_KIND, MAINTENANCE_KIND, type MaintenanceCompletion, type MaintenancePart } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
+
+const ENCRYPTED_MARKER = 'nip44:';
+
+/** Sensitive completion data stored in encrypted content when encryption is on */
+interface MaintenanceCompletionData {
+  completedDate: string;
+  mileageAtCompletion?: string;
+  notes?: string;
+  parts?: MaintenancePart[];
+}
 
 // Helper to get tag value
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
@@ -24,20 +37,18 @@ function parsePartTags(event: NostrEvent): MaintenancePart[] {
     .filter(part => part.name);
 }
 
-// Parse a Nostr event into a MaintenanceCompletion object
-function parseCompletion(event: NostrEvent): MaintenanceCompletion | null {
+// Parse a Nostr event into a MaintenanceCompletion object (plaintext tags)
+function parseCompletionPlaintext(event: NostrEvent): MaintenanceCompletion | null {
   const id = event.id;
   const completedDate = getTagValue(event, 'completed_date');
   const mileageAtCompletion = getTagValue(event, 'mileage_at_completion');
   const notes = getTagValue(event, 'notes');
-  
-  // Get maintenance reference from 'a' tag
+
   const aTag = event.tags.find(([name]) => name === 'a')?.[1];
-  const maintenanceId = aTag?.split(':')[2]; // Format: kind:pubkey:d-tag
-  
+  const maintenanceId = aTag?.split(':')[2];
+
   if (!id || !completedDate || !maintenanceId) return null;
 
-  // Parse parts
   const parts = parsePartTags(event);
 
   return {
@@ -50,6 +61,36 @@ function parseCompletion(event: NostrEvent): MaintenanceCompletion | null {
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
+}
+
+// Parse encrypted completion from content; maintenance ref from plaintext 'a' tag
+async function parseCompletionEncrypted(
+  event: NostrEvent,
+  decryptFn: (content: string) => Promise<MaintenanceCompletionData>
+): Promise<MaintenanceCompletion | null> {
+  const id = event.id;
+  const aTag = event.tags.find(([name]) => name === 'a')?.[1];
+  const maintenanceId = aTag?.split(':')[2];
+
+  if (!id || !maintenanceId || !event.content?.startsWith(ENCRYPTED_MARKER)) return null;
+
+  try {
+    const data = await decryptFn(event.content);
+    if (!data.completedDate) return null;
+    return {
+      id,
+      maintenanceId,
+      completedDate: data.completedDate,
+      mileageAtCompletion: data.mileageAtCompletion,
+      notes: data.notes,
+      parts: data.parts?.length ? data.parts : undefined,
+      pubkey: event.pubkey,
+      createdAt: event.created_at,
+    };
+  } catch {
+    logger.warn('[MaintenanceCompletions] Failed to decrypt completion');
+    return null;
+  }
 }
 
 // Extract deleted completion IDs from kind 5 events
@@ -67,54 +108,46 @@ function getDeletedCompletionIds(deletionEvents: NostrEvent[]): Set<string> {
   return deletedIds;
 }
 
-// Parse events into maintenance completions
-function parseEventsToCompletions(events: NostrEvent[]): MaintenanceCompletion[] {
-  // Separate completion events from deletion events
+// Parse events into maintenance completions (handles both encrypted and plaintext)
+async function parseEventsToCompletions(
+  events: NostrEvent[],
+  decryptForCategory: <T>(content: string) => Promise<T>
+): Promise<MaintenanceCompletion[]> {
   const completionEvents = events.filter(e => e.kind === MAINTENANCE_COMPLETION_KIND);
   const deletionEvents = events.filter(e => e.kind === 5);
-  
-  // Get the set of deleted completion IDs
   const deletedIds = getDeletedCompletionIds(deletionEvents);
 
   const completions: MaintenanceCompletion[] = [];
   for (const event of completionEvents) {
-    const completion = parseCompletion(event);
-    // Only include completions that haven't been deleted
+    const completion = event.content?.startsWith(ENCRYPTED_MARKER)
+      ? await parseCompletionEncrypted(event, (c) => decryptForCategory<MaintenanceCompletionData>(c))
+      : parseCompletionPlaintext(event);
     if (completion && !deletedIds.has(completion.id)) {
       completions.push(completion);
     }
   }
 
-  // Sort by completed date (newest first)
-  return completions.sort((a, b) => {
-    // Parse MM/DD/YYYY dates for comparison
-    const parseDate = (dateStr: string) => {
-      const parts = dateStr.split('/');
-      if (parts.length !== 3) return 0;
-      return new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1])).getTime();
-    };
-    return parseDate(b.completedDate) - parseDate(a.completedDate);
-  });
+  const parseDate = (dateStr: string) => {
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return 0;
+    return new Date(parseInt(parts[2], 10), parseInt(parts[0], 10) - 1, parseInt(parts[1], 10)).getTime();
+  };
+  return completions.sort((a, b) => parseDate(b.completedDate) - parseDate(a.completedDate));
 }
 
 export function useMaintenanceCompletions() {
   const { user } = useCurrentUser();
+  const { decryptForCategory } = useEncryption();
 
-  // Main query - loads from cache only
-  // Background sync is handled centrally by useDataSyncStatus
   const query = useQuery({
     queryKey: ['maintenance-completions', user?.pubkey],
     queryFn: async () => {
       if (!user?.pubkey) return [];
 
-      // Load from cache (populated by useDataSyncStatus)
       const cachedEvents = await getCachedEvents([MAINTENANCE_COMPLETION_KIND, 5], user.pubkey);
-      
       if (cachedEvents.length > 0) {
-        const completions = parseEventsToCompletions(cachedEvents);
-        return completions;
+        return parseEventsToCompletions(cachedEvents, decryptForCategory);
       }
-
       return [];
     },
     enabled: !!user?.pubkey,
@@ -137,45 +170,51 @@ export function useMaintenanceCompletionActions() {
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
+  const { encryptForCategory, shouldEncrypt } = useEncryption();
+  const { isEncryptionEnabled } = useEncryptionSettings();
 
   const createCompletion = async (
-    maintenanceId: string, 
-    completedDate: string, 
+    maintenanceId: string,
+    completedDate: string,
     mileageAtCompletion?: string,
     notes?: string,
     parts?: MaintenancePart[]
   ) => {
     if (!user) throw new Error('Must be logged in');
 
+    const useEncryption = isEncryptionEnabled('maintenance') && shouldEncrypt('maintenance');
+
     const tags: string[][] = [
       ['a', `${MAINTENANCE_KIND}:${user.pubkey}:${maintenanceId}`, '', 'maintenance'],
-      ['alt', `Maintenance completed on ${completedDate}`],
-      ['completed_date', completedDate],
+      ['alt', useEncryption ? 'Encrypted Cypher Log maintenance completion' : `Maintenance completed on ${completedDate}`],
     ];
 
-    // Add optional mileage tag
-    if (mileageAtCompletion) {
-      tags.push(['mileage_at_completion', mileageAtCompletion]);
-    }
-
-    // Add optional notes tag
-    if (notes) {
-      tags.push(['notes', notes]);
-    }
-
-    // Add part tags
-    if (parts && parts.length > 0) {
-      for (const part of parts) {
-        const partTag = ['part', part.name];
-        if (part.partNumber) partTag.push(part.partNumber);
-        if (part.cost) partTag.push(part.cost);
-        tags.push(partTag);
+    let content = '';
+    if (useEncryption) {
+      const payload: MaintenanceCompletionData = {
+        completedDate,
+        mileageAtCompletion,
+        notes,
+        parts,
+      };
+      content = await encryptForCategory('maintenance', payload);
+    } else {
+      tags.push(['completed_date', completedDate]);
+      if (mileageAtCompletion) tags.push(['mileage_at_completion', mileageAtCompletion]);
+      if (notes) tags.push(['notes', notes]);
+      if (parts?.length) {
+        for (const part of parts) {
+          const partTag = ['part', part.name];
+          if (part.partNumber) partTag.push(part.partNumber);
+          if (part.cost) partTag.push(part.cost);
+          tags.push(partTag);
+        }
       }
     }
 
     const event = await publishEvent({
       kind: MAINTENANCE_COMPLETION_KIND,
-      content: '',
+      content,
       tags,
     });
 

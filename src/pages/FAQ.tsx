@@ -86,7 +86,7 @@ const EVENT_KINDS = [
       'Invoices with date, amount, description',
       'Notes',
     ],
-    encrypted: false,
+    encrypted: true,
   },
   {
     kind: 37004,
@@ -313,7 +313,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Is my data encrypted?',
-    answer: 'Yes! Cypher Log uses NIP-44 encryption for sensitive data like appliances, vehicles, pets, and maintenance records. This means your data is encrypted with your private key before being sent to relays. Only you can decrypt and read your data, even though it\'s stored on public relays. You can verify this in Settings > Data Encryption using the "Trust but Verify" feature.',
+    answer: 'Yes! Cypher Log uses NIP-44 encryption for all data categories by default: appliances, vehicles, pets, maintenance records, subscriptions, warranties, companies/service providers, and projects. Your data is encrypted with your private key before being sent to relays. Only you can decrypt and read it. You can turn encryption off per category in Settings > Data Encryption if desired, and verify encryption using the "Trust but Verify" feature.',
   },
   {
     question: 'What are relays?',

@@ -115,8 +115,8 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
       maintenance: true,
       subscriptions: true,
       warranties: true,
-      companies: false,
-      projects: false,
+      companies: true,
+      projects: true,
       pets: true,
     });
     setLocalCategoryRelayConfig({
@@ -302,7 +302,7 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
             Data Encryption Settings
           </DialogTitle>
           <DialogDescription>
-            Choose which data categories to encrypt with NIP-44. Encrypted data can only be read by you.
+            All data categories are encrypted by default with NIP-44. You can turn encryption off per category if desired. Encrypted data can only be read by you.
           </DialogDescription>
         </DialogHeader>
 
@@ -470,12 +470,12 @@ export function EncryptionSettingsDialog({ isOpen, onClose }: EncryptionSettings
 
           <Separator />
 
-          {/* Warning for unencrypted sensitive data */}
-          {(!settings.appliances || !settings.vehicles || !settings.maintenance || !settings.pets) && (
+          {/* Warning for unencrypted data */}
+          {Object.values(settings).some((v) => !v) && (
             <Alert variant="destructive" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
-                Some sensitive data categories are unencrypted. This data will be visible to anyone 
+                Some data categories are unencrypted. This data will be visible to anyone 
                 who can read your relays.
               </AlertDescription>
             </Alert>

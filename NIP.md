@@ -314,6 +314,15 @@ For example, if an appliance was purchased on 01/15/2024 and has a maintenance f
 - 10/15/2024
 - etc.
 
+### Encryption (NIP-44)
+
+When the maintenance category has encryption enabled in Cypher Log settings, sensitive data is stored in the `content` field as NIP-44 encrypted JSON. Only structural tags remain in plaintext:
+
+- **Plaintext tags (always):** `d`, `alt`, `a` (appliance/vehicle/company references only). These use UUIDs and do not reveal what is being maintained.
+- **Encrypted content (when encryption on):** JSON with `description`, `frequency`, `frequency_unit`, `home_feature`, `part_number`, `parts`, `mileage_interval`, `interval_type`, `isLogOnly`, `isArchived`.
+
+This prevents relay operators from inferring property (e.g. "oil change every 3 months", "HVAC filter") from maintenance events. Legacy events with plaintext tags are still read; new events use encrypted content when encryption is enabled.
+
 ---
 
 ## Kind 9413: Maintenance Completion
@@ -350,6 +359,15 @@ A regular event recording the completion of a maintenance task.
 - Completion events are regular events (not replaceable) so the full history is preserved
 - Completions are displayed chronologically under each maintenance item
 - For vehicle maintenance, recording mileage at completion helps track usage-based maintenance intervals
+
+### Encryption (NIP-44)
+
+When the maintenance category has encryption enabled, sensitive completion data is stored in the `content` field as NIP-44 encrypted JSON:
+
+- **Plaintext tags (always):** `a` (reference to maintenance schedule), `alt`. The `a` tag uses the maintenance UUID and does not reveal task details.
+- **Encrypted content (when encryption on):** JSON with `completedDate`, `mileageAtCompletion`, `notes`, `parts`.
+
+Legacy events with plaintext tags (`completed_date`, `notes`, `part`, etc.) are still read; new events use encrypted content when encryption is enabled.
 
 ---
 

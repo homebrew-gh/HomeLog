@@ -6,6 +6,8 @@ This document captures the findings from a comprehensive encryption and privacy 
 
 ## Current Encryption Status
 
+**App default:** Cypher Log encrypts all data categories by default (appliances, vehicles, maintenance, subscriptions, warranties, companies/service providers, projects, and pets). Users can turn encryption off per category in Settings if desired.
+
 ### What IS Encrypted (NIP-44)
 
 | Kind | Type | d-tag | Content |
@@ -17,22 +19,14 @@ This document captures the findings from a comprehensive encryption and privacy 
 | 38033 | Pets | Random UUID ✓ | Encrypted ✓ |
 | 7443 | Vet Visits | N/A (regular) | Encrypted ✓ |
 
-### What is NOT Encrypted (GAP FOUND)
+### Maintenance Events (kind 30229) and Completions (kind 9413) – Encryption Supported
 
-**Maintenance Events (kind 30229) and Completions (kind 9413)** store data in plaintext tags:
+When the maintenance category has **encryption enabled** in Settings, sensitive data for both kinds is stored in the `content` field as NIP-44 encrypted JSON. Only structural tags remain in plaintext (`d`, `a`, `alt` with UUIDs), so relay operators cannot infer what you maintain, how often, or what parts you use.
 
-| Tag | Example Value | Privacy Impact |
-|-----|---------------|----------------|
-| `description` | "Change oil" | Reveals maintenance type |
-| `frequency` | "3" | Reveals schedule |
-| `frequency_unit` | "months" | Reveals schedule |
-| `home_feature` | "HVAC System" | Reveals home features |
-| `part_number` | "ABC123" | Reveals specific parts |
-| `part` | "Oil Filter, XYZ789, $25" | Reveals parts AND costs |
-| `mileage_interval` | "5000" | Reveals vehicle usage |
-| `notes` | Freeform text | Could contain anything |
+- **Kind 30229 (schedules):** Encrypted content includes `description`, `frequency`, `frequency_unit`, `home_feature`, `part_number`, `parts`, `mileage_interval`, `interval_type`, `isLogOnly`, `isArchived`.
+- **Kind 9413 (completions):** Encrypted content includes `completedDate`, `mileageAtCompletion`, `notes`, `parts`.
 
-**Impact**: Relay operators can see what maintenance you perform, how often, what parts you buy, and your home features - even though your actual assets (vehicles, appliances) are encrypted.
+Legacy events that used plaintext tags are still read. New events use encrypted content when encryption is on for the maintenance category (default: on).
 
 ## Metadata Exposure
 
@@ -94,12 +88,9 @@ This is inherent to how Nostr works. Mitigations:
 
 ## Recommendations
 
-### Immediate (High Priority)
+### Implemented
 
-1. **Add encryption to maintenance events** - Close the plaintext gap
-   - Encrypt `description`, `part`, `notes` tags
-   - Consider encrypting `home_feature`
-   - Keep `d` tag and references as-is (already UUIDs)
+1. **Maintenance event encryption (kind 30229 and 9413)** – When encryption is enabled for the maintenance category, sensitive data is stored in encrypted content; only `d`, `a`, and `alt` tags remain in plaintext. See NIP.md for the encrypted content schema.
 
 ### Future Considerations
 
@@ -109,6 +100,6 @@ This is inherent to how Nostr works. Mitigations:
 
 ## Summary
 
-Cypher Log's current encryption is **mostly good** but has a **maintenance events gap**. The valuable assets (vehicles, appliances with VINs/prices) are properly encrypted with random UUID d-tags. However, maintenance descriptions and parts are plaintext, which could reveal information about what you own indirectly.
+Cypher Log defaults to **encryption on for all categories** (including companies and projects). The valuable assets (vehicles, appliances with VINs/prices, companies, projects, etc.) are encrypted with random UUID d-tags when encryption is enabled. **Maintenance events (kind 30229) and completions (kind 9413)** now support encryption: when the maintenance category has encryption enabled, sensitive fields are stored in NIP-44 encrypted content and only structural tags (d, a, alt) remain in plaintext, closing the previous data-leak gap.
 
-NIP-59 gift wrapping is **not recommended** due to complexity vs. benefit for the self-encryption use case. The priority should be encrypting maintenance events to close the existing gap.
+NIP-59 gift wrapping is **not recommended** due to complexity vs. benefit for the self-encryption use case.

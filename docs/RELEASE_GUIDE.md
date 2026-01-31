@@ -96,7 +96,7 @@ git push origin v1.0.0
 - Subscription and warranty tracking
 - Pet records with vet visit history
 - Project management with budgeting
-- NIP-44 encryption for sensitive data
+- NIP-44 encryption for all data categories by default
 
 ### Technical
 - Built on Nostr protocol

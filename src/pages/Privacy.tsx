@@ -452,7 +452,7 @@ export function Privacy() {
               <ul className="list-disc list-inside space-y-2 ml-2">
                 <li><strong>Data portability:</strong> Your data is stored in an open format and can be accessed by any Nostr client</li>
                 <li><strong>Relay choice:</strong> You choose which relays store your data</li>
-                <li><strong>Encryption control:</strong> You choose what data to encrypt</li>
+                <li><strong>Encryption control:</strong> All data categories are encrypted by default; you can turn encryption off per category if desired</li>
                 <li><strong>Identity ownership:</strong> You own your Nostr keys and can use them anywhere</li>
                 <li><strong>No account required:</strong> Cypher Log doesn't require creating an account with us - you just use your Nostr identity</li>
               </ul>

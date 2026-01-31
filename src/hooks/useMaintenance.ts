@@ -4,9 +4,27 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { useEncryption } from './useEncryption';
+import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { MAINTENANCE_KIND, APPLIANCE_KIND, VEHICLE_KIND, COMPANY_KIND, type MaintenanceSchedule, type MaintenancePart } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
+
+const ENCRYPTED_MARKER = 'nip44:';
+
+/** Sensitive maintenance data stored in encrypted content when encryption is on */
+interface MaintenanceScheduleData {
+  description: string;
+  frequency?: number;
+  frequencyUnit?: MaintenanceSchedule['frequencyUnit'];
+  homeFeature?: string;
+  partNumber?: string;
+  parts?: MaintenancePart[];
+  mileageInterval?: number;
+  intervalType?: MaintenanceSchedule['intervalType'];
+  isLogOnly?: boolean;
+  isArchived?: boolean;
+}
 
 // Helper to get tag value
 function getTagValue(event: NostrEvent, tagName: string): string | undefined {
@@ -26,8 +44,8 @@ function parsePartTags(event: NostrEvent): MaintenancePart[] {
     .filter(part => part.name);
 }
 
-// Parse a Nostr event into a MaintenanceSchedule object
-function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
+// Parse a Nostr event into a MaintenanceSchedule object (plaintext tags)
+function parseMaintenancePlaintext(event: NostrEvent): MaintenanceSchedule | null {
   const id = getTagValue(event, 'd');
   const description = getTagValue(event, 'description');
   const frequency = getTagValue(event, 'frequency');
@@ -54,16 +72,10 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
     }
   }
 
-  // Get home feature if present
   const homeFeature = getTagValue(event, 'home_feature');
-  
-  // Check if this is log-only maintenance
   const isLogOnly = getTagValue(event, 'is_log_only') === 'true';
 
-  // Must have at least one: applianceId, vehicleId, or homeFeature
   if (!id || !description || (!applianceId && !vehicleId && !homeFeature)) return null;
-
-  // For non-log-only maintenance, frequency is required
   if (!isLogOnly && (!frequency || !frequencyUnit)) return null;
 
   const validUnits = ['days', 'weeks', 'months', 'years'];
@@ -71,8 +83,6 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
 
   const mileageInterval = getTagValue(event, 'mileage_interval');
   const intervalType = getTagValue(event, 'interval_type');
-
-  // Parse parts
   const parts = parsePartTags(event);
 
   return {
@@ -93,6 +103,59 @@ function parseMaintenance(event: NostrEvent): MaintenanceSchedule | null {
     pubkey: event.pubkey,
     createdAt: event.created_at,
   };
+}
+
+// Parse encrypted maintenance from content; refs come from plaintext 'a' tags
+async function parseMaintenanceEncrypted(
+  event: NostrEvent,
+  decryptFn: (content: string) => Promise<MaintenanceScheduleData>
+): Promise<MaintenanceSchedule | null> {
+  const id = getTagValue(event, 'd');
+  if (!id || !event.content || !event.content.startsWith(ENCRYPTED_MARKER)) return null;
+
+  const aTags = event.tags.filter(([name]) => name === 'a');
+  let applianceId: string | undefined;
+  let vehicleId: string | undefined;
+  let companyId: string | undefined;
+
+  for (const aTag of aTags) {
+    const parts = aTag[1]?.split(':');
+    if (parts && parts.length >= 3) {
+      const kind = parseInt(parts[0], 10);
+      const refId = parts[2];
+      if (kind === APPLIANCE_KIND) applianceId = refId;
+      else if (kind === VEHICLE_KIND) vehicleId = refId;
+      else if (kind === COMPANY_KIND) companyId = refId;
+    }
+  }
+
+  try {
+    const data = await decryptFn(event.content);
+    if (!data.description || (!applianceId && !vehicleId && !data.homeFeature)) return null;
+    if (!data.isLogOnly && (!data.frequency || !data.frequencyUnit)) return null;
+
+    return {
+      id,
+      applianceId,
+      vehicleId,
+      homeFeature: data.homeFeature,
+      companyId,
+      description: data.description,
+      partNumber: data.partNumber,
+      parts: data.parts?.length ? data.parts : undefined,
+      frequency: data.frequency,
+      frequencyUnit: data.frequencyUnit,
+      mileageInterval: data.mileageInterval,
+      intervalType: data.intervalType,
+      isLogOnly: data.isLogOnly,
+      isArchived: data.isArchived,
+      pubkey: event.pubkey,
+      createdAt: event.created_at,
+    };
+  } catch {
+    logger.warn('[Maintenance] Failed to decrypt schedule');
+    return null;
+  }
 }
 
 // Extract deleted maintenance IDs from kind 5 events
@@ -152,35 +215,36 @@ function getDeletedVehicleIds(deletionEvents: NostrEvent[], pubkey: string): Set
   return deletedIds;
 }
 
-// Parse events into maintenance schedules
-function parseEventsToMaintenance(events: NostrEvent[], pubkey: string): MaintenanceSchedule[] {
-  // Separate maintenance events from deletion events
+// Parse events into maintenance schedules (handles both encrypted and plaintext)
+async function parseEventsToMaintenance(
+  events: NostrEvent[],
+  pubkey: string,
+  decryptForCategory: <T>(content: string) => Promise<T>
+): Promise<MaintenanceSchedule[]> {
   const maintenanceEvents = events.filter(e => e.kind === MAINTENANCE_KIND);
   const deletionEvents = events.filter(e => e.kind === 5);
 
-  // Get the set of deleted maintenance IDs, appliance IDs, and vehicle IDs
   const deletedMaintenanceIds = getDeletedMaintenanceIds(deletionEvents, pubkey);
   const deletedApplianceIds = getDeletedApplianceIds(deletionEvents, pubkey);
   const deletedVehicleIds = getDeletedVehicleIds(deletionEvents, pubkey);
 
   const schedules: MaintenanceSchedule[] = [];
   for (const event of maintenanceEvents) {
-    const schedule = parseMaintenance(event);
+    const schedule = event.content?.startsWith(ENCRYPTED_MARKER)
+      ? await parseMaintenanceEncrypted(event, (c) => decryptForCategory<MaintenanceScheduleData>(c))
+      : parseMaintenancePlaintext(event);
     if (!schedule || deletedMaintenanceIds.has(schedule.id)) continue;
-    
-    // Check if the linked appliance or vehicle has been deleted
     if (schedule.applianceId && deletedApplianceIds.has(schedule.applianceId)) continue;
     if (schedule.vehicleId && deletedVehicleIds.has(schedule.vehicleId)) continue;
-    
     schedules.push(schedule);
   }
 
-  // Sort by creation date (newest first)
   return schedules.sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function useMaintenance() {
   const { user } = useCurrentUser();
+  const { decryptForCategory } = useEncryption();
 
   // Main query - loads from cache only
   // Background sync is handled centrally by useDataSyncStatus
@@ -189,14 +253,10 @@ export function useMaintenance() {
     queryFn: async () => {
       if (!user?.pubkey) return [];
 
-      // Load from cache (populated by useDataSyncStatus)
       const cachedEvents = await getCachedEvents([MAINTENANCE_KIND, 5], user.pubkey);
-      
       if (cachedEvents.length > 0) {
-        const maintenance = parseEventsToMaintenance(cachedEvents, user.pubkey);
-        return maintenance;
+        return parseEventsToMaintenance(cachedEvents, user.pubkey, decryptForCategory);
       }
-
       return [];
     },
     enabled: !!user?.pubkey,
@@ -260,6 +320,8 @@ export function useMaintenanceActions() {
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
+  const { encryptForCategory, shouldEncrypt } = useEncryption();
+  const { isEncryptionEnabled } = useEncryptionSettings();
 
   const createMaintenance = async (data: Omit<MaintenanceSchedule, 'id' | 'pubkey' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
@@ -268,61 +330,65 @@ export function useMaintenanceActions() {
     }
 
     const id = crypto.randomUUID();
+    const useEncryption = isEncryptionEnabled('maintenance') && shouldEncrypt('maintenance');
+
     const tags: string[][] = [
       ['d', id],
-      ['alt', data.isLogOnly ? `Maintenance log: ${data.description}` : `Maintenance schedule: ${data.description}`],
-      ['description', data.description],
+      ['alt', useEncryption ? 'Encrypted Cypher Log maintenance data' : (data.isLogOnly ? `Maintenance log: ${data.description}` : `Maintenance schedule: ${data.description}`)],
     ];
 
-    // Add frequency tags only for scheduled (non-log-only) maintenance
-    if (!data.isLogOnly && data.frequency && data.frequencyUnit) {
-      tags.push(['frequency', data.frequency.toString()]);
-      tags.push(['frequency_unit', data.frequencyUnit]);
-    }
-
-    // Mark as log-only if applicable
-    if (data.isLogOnly) {
-      tags.push(['is_log_only', 'true']);
-    }
-
-    // Add reference to appliance or vehicle
     if (data.applianceId) {
       tags.push(['a', `${APPLIANCE_KIND}:${user.pubkey}:${data.applianceId}`, '', 'appliance']);
     }
     if (data.vehicleId) {
       tags.push(['a', `${VEHICLE_KIND}:${user.pubkey}:${data.vehicleId}`, '', 'vehicle']);
     }
-    // Add home feature if present
-    if (data.homeFeature) {
-      tags.push(['home_feature', data.homeFeature]);
-    }
-    // Add company reference if present
     if (data.companyId) {
       tags.push(['a', `${COMPANY_KIND}:${user.pubkey}:${data.companyId}`, '', 'company']);
     }
 
-    // Legacy single part number (for backwards compatibility)
-    if (data.partNumber) tags.push(['part_number', data.partNumber]);
-    
-    // Add part tags
-    if (data.parts && data.parts.length > 0) {
-      for (const part of data.parts) {
-        const partTag = ['part', part.name];
-        if (part.partNumber) partTag.push(part.partNumber);
-        if (part.cost) partTag.push(part.cost);
-        tags.push(partTag);
+    let content = '';
+    if (useEncryption) {
+      const payload: MaintenanceScheduleData = {
+        description: data.description,
+        frequency: data.frequency,
+        frequencyUnit: data.frequencyUnit,
+        homeFeature: data.homeFeature,
+        partNumber: data.partNumber,
+        parts: data.parts,
+        mileageInterval: data.mileageInterval,
+        intervalType: data.intervalType,
+        isLogOnly: data.isLogOnly,
+        isArchived: data.isArchived,
+      };
+      content = await encryptForCategory('maintenance', payload);
+    } else {
+      tags.push(['description', data.description]);
+      if (!data.isLogOnly && data.frequency != null && data.frequencyUnit) {
+        tags.push(['frequency', data.frequency.toString()]);
+        tags.push(['frequency_unit', data.frequencyUnit]);
       }
+      if (data.isLogOnly) tags.push(['is_log_only', 'true']);
+      if (data.homeFeature) tags.push(['home_feature', data.homeFeature]);
+      if (data.partNumber) tags.push(['part_number', data.partNumber]);
+      if (data.parts?.length) {
+        for (const part of data.parts) {
+          const partTag = ['part', part.name];
+          if (part.partNumber) partTag.push(part.partNumber);
+          if (part.cost) partTag.push(part.cost);
+          tags.push(partTag);
+        }
+      }
+      if (data.mileageInterval != null) {
+        tags.push(['mileage_interval', data.mileageInterval.toString()]);
+        if (data.intervalType) tags.push(['interval_type', data.intervalType]);
+      }
+      if (data.isArchived) tags.push(['is_archived', 'true']);
     }
-    
-    if (data.mileageInterval) {
-      tags.push(['mileage_interval', data.mileageInterval.toString()]);
-      if (data.intervalType) tags.push(['interval_type', data.intervalType]);
-    }
-    if (data.isArchived) tags.push(['is_archived', 'true']);
 
     const event = await publishEvent({
       kind: MAINTENANCE_KIND,
-      content: '',
+      content,
       tags,
     });
 
@@ -342,61 +408,65 @@ export function useMaintenanceActions() {
       throw new Error('Must have either applianceId, vehicleId, or homeFeature');
     }
 
+    const useEncryption = isEncryptionEnabled('maintenance') && shouldEncrypt('maintenance');
+
     const tags: string[][] = [
       ['d', id],
-      ['alt', data.isLogOnly ? `Maintenance log: ${data.description}` : `Maintenance schedule: ${data.description}`],
-      ['description', data.description],
+      ['alt', useEncryption ? 'Encrypted Cypher Log maintenance data' : (data.isLogOnly ? `Maintenance log: ${data.description}` : `Maintenance schedule: ${data.description}`)],
     ];
 
-    // Add frequency tags only for scheduled (non-log-only) maintenance
-    if (!data.isLogOnly && data.frequency && data.frequencyUnit) {
-      tags.push(['frequency', data.frequency.toString()]);
-      tags.push(['frequency_unit', data.frequencyUnit]);
-    }
-
-    // Mark as log-only if applicable
-    if (data.isLogOnly) {
-      tags.push(['is_log_only', 'true']);
-    }
-
-    // Add reference to appliance or vehicle
     if (data.applianceId) {
       tags.push(['a', `${APPLIANCE_KIND}:${user.pubkey}:${data.applianceId}`, '', 'appliance']);
     }
     if (data.vehicleId) {
       tags.push(['a', `${VEHICLE_KIND}:${user.pubkey}:${data.vehicleId}`, '', 'vehicle']);
     }
-    // Add home feature if present
-    if (data.homeFeature) {
-      tags.push(['home_feature', data.homeFeature]);
-    }
-    // Add company reference if present
     if (data.companyId) {
       tags.push(['a', `${COMPANY_KIND}:${user.pubkey}:${data.companyId}`, '', 'company']);
     }
 
-    // Legacy single part number (for backwards compatibility)
-    if (data.partNumber) tags.push(['part_number', data.partNumber]);
-    
-    // Add part tags
-    if (data.parts && data.parts.length > 0) {
-      for (const part of data.parts) {
-        const partTag = ['part', part.name];
-        if (part.partNumber) partTag.push(part.partNumber);
-        if (part.cost) partTag.push(part.cost);
-        tags.push(partTag);
+    let content = '';
+    if (useEncryption) {
+      const payload: MaintenanceScheduleData = {
+        description: data.description,
+        frequency: data.frequency,
+        frequencyUnit: data.frequencyUnit,
+        homeFeature: data.homeFeature,
+        partNumber: data.partNumber,
+        parts: data.parts,
+        mileageInterval: data.mileageInterval,
+        intervalType: data.intervalType,
+        isLogOnly: data.isLogOnly,
+        isArchived: data.isArchived,
+      };
+      content = await encryptForCategory('maintenance', payload);
+    } else {
+      tags.push(['description', data.description]);
+      if (!data.isLogOnly && data.frequency != null && data.frequencyUnit) {
+        tags.push(['frequency', data.frequency.toString()]);
+        tags.push(['frequency_unit', data.frequencyUnit]);
       }
+      if (data.isLogOnly) tags.push(['is_log_only', 'true']);
+      if (data.homeFeature) tags.push(['home_feature', data.homeFeature]);
+      if (data.partNumber) tags.push(['part_number', data.partNumber]);
+      if (data.parts?.length) {
+        for (const part of data.parts) {
+          const partTag = ['part', part.name];
+          if (part.partNumber) partTag.push(part.partNumber);
+          if (part.cost) partTag.push(part.cost);
+          tags.push(partTag);
+        }
+      }
+      if (data.mileageInterval != null) {
+        tags.push(['mileage_interval', data.mileageInterval.toString()]);
+        if (data.intervalType) tags.push(['interval_type', data.intervalType]);
+      }
+      if (data.isArchived) tags.push(['is_archived', 'true']);
     }
-    
-    if (data.mileageInterval) {
-      tags.push(['mileage_interval', data.mileageInterval.toString()]);
-      if (data.intervalType) tags.push(['interval_type', data.intervalType]);
-    }
-    if (data.isArchived) tags.push(['is_archived', 'true']);
 
     const event = await publishEvent({
       kind: MAINTENANCE_KIND,
-      content: '',
+      content,
       tags,
     });
 

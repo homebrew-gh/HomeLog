@@ -62,8 +62,7 @@ export type CachingRelayUrl = string | null;
 
 /**
  * Default encryption settings
- * - Appliances, vehicles, warranties, subscriptions, maintenance: encrypted by default (private data)
- * - Contractors, projects: plaintext by default (shareable in the future)
+ * All categories are encrypted by default. Users can turn encryption off per category if desired.
  */
 const DEFAULT_ENCRYPTION_SETTINGS: EncryptionSettings = {
   appliances: true,
@@ -71,8 +70,8 @@ const DEFAULT_ENCRYPTION_SETTINGS: EncryptionSettings = {
   maintenance: true,
   subscriptions: true,
   warranties: true,
-  companies: false,
-  projects: false,
+  companies: true,
+  projects: true,
   pets: true,
 };
 
@@ -122,13 +121,13 @@ export const CATEGORY_INFO: Record<EncryptableCategory, {
   },
   companies: {
     label: 'Companies/Services',
-    description: 'Service provider contacts - keep unencrypted for future sharing',
-    recommendEncryption: false,
+    description: 'Service provider contacts and business details',
+    recommendEncryption: true,
   },
   projects: {
     label: 'Projects',
-    description: 'Home improvement projects - keep unencrypted for future sharing',
-    recommendEncryption: false,
+    description: 'Home improvement projects with status, budget, and timeline',
+    recommendEncryption: true,
   },
   pets: {
     label: 'Pets & Animals',

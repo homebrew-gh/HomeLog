@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Cypher Log is a privacy-focused home management application built on Nostr. The application handles sensitive personal data (vehicle information, financial subscriptions, pet medical records, etc.) and implements NIP-44 encryption for data protection.
+Cypher Log is a privacy-focused home management application built on Nostr. The application handles sensitive personal data (vehicle information, financial subscriptions, pet medical records, companies, projects, etc.) and implements NIP-44 encryption for data protection. All data categories are encrypted by default; users can turn encryption off per category in Settings if desired.
 
 **Overall Assessment:** The application demonstrates good security practices for a client-side web application. Most issues identified are **minimal** or **moderate** in severity. There are no critical vulnerabilities that would allow direct data compromise, but several areas could be hardened before public release.
 
