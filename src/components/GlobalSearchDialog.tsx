@@ -7,6 +7,8 @@ import {
   CreditCard, 
   Shield, 
   Wrench,
+  PawPrint,
+  Hammer,
   Loader2
 } from 'lucide-react';
 import {
@@ -25,7 +27,9 @@ import type {
   Company, 
   Subscription, 
   Warranty, 
-  MaintenanceSchedule 
+  MaintenanceSchedule,
+  Pet,
+  Project,
 } from '@/lib/types';
 
 // Icons for each result type
@@ -36,6 +40,8 @@ const typeIcons: Record<SearchResultType, React.ReactNode> = {
   subscription: <CreditCard className="h-4 w-4" />,
   warranty: <Shield className="h-4 w-4" />,
   maintenance: <Wrench className="h-4 w-4" />,
+  pet: <PawPrint className="h-4 w-4" />,
+  project: <Hammer className="h-4 w-4" />,
 };
 
 // Labels for each result type
@@ -47,6 +53,8 @@ const typeLabels: Record<SearchResultType, string> = {
   subscription: 'Subscriptions',
   warranty: 'Warranties',
   maintenance: 'Maintenance',
+  pet: 'Pets',
+  project: 'Projects',
 };
 
 interface GlobalSearchDialogProps {
@@ -112,6 +120,12 @@ export function GlobalSearchDialog({
         break;
       case 'maintenance':
         onSelectMaintenance?.(result.item as MaintenanceSchedule);
+        break;
+      case 'pet':
+        navigate(`/pet/${result.id}`);
+        break;
+      case 'project':
+        navigate(`/project/${result.id}`);
         break;
     }
     onOpenChange(false);
@@ -215,6 +229,24 @@ export function GlobalSearchDialog({
                 {(results.appliances.length > 0 || results.vehicles.length > 0 || results.companies.length > 0 || results.subscriptions.length > 0 || results.warranties.length > 0) && <CommandSeparator />}
                 <CommandGroup heading={typeLabels.maintenance}>
                   {results.maintenance.slice(0, 5).map(renderResultItem)}
+                </CommandGroup>
+              </>
+            )}
+
+            {results.pets.length > 0 && (
+              <>
+                {(results.appliances.length > 0 || results.vehicles.length > 0 || results.companies.length > 0 || results.subscriptions.length > 0 || results.warranties.length > 0 || results.maintenance.length > 0) && <CommandSeparator />}
+                <CommandGroup heading={typeLabels.pet}>
+                  {results.pets.slice(0, 5).map(renderResultItem)}
+                </CommandGroup>
+              </>
+            )}
+
+            {results.projects.length > 0 && (
+              <>
+                {(results.appliances.length > 0 || results.vehicles.length > 0 || results.companies.length > 0 || results.subscriptions.length > 0 || results.warranties.length > 0 || results.maintenance.length > 0 || results.pets.length > 0) && <CommandSeparator />}
+                <CommandGroup heading={typeLabels.project}>
+                  {results.projects.slice(0, 5).map(renderResultItem)}
                 </CommandGroup>
               </>
             )}

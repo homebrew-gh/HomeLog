@@ -5,13 +5,17 @@ import { useCompanies } from './useCompanies';
 import { useSubscriptions } from './useSubscriptions';
 import { useWarranties } from './useWarranties';
 import { useMaintenance } from './useMaintenance';
+import { usePets } from './usePets';
+import { useProjects } from './useProjects';
 import type { 
   Appliance, 
   Vehicle, 
   Company, 
   Subscription, 
   Warranty, 
-  MaintenanceSchedule 
+  MaintenanceSchedule,
+  Pet,
+  Project,
 } from '@/lib/types';
 
 // Search result types - extensible for future data types
@@ -21,7 +25,9 @@ export type SearchResultType =
   | 'company' 
   | 'subscription' 
   | 'warranty' 
-  | 'maintenance';
+  | 'maintenance'
+  | 'pet'
+  | 'project';
 
 export interface SearchResult {
   type: SearchResultType;
@@ -29,7 +35,7 @@ export interface SearchResult {
   title: string;
   subtitle?: string;
   meta?: string;
-  item: Appliance | Vehicle | Company | Subscription | Warranty | MaintenanceSchedule;
+  item: Appliance | Vehicle | Company | Subscription | Warranty | MaintenanceSchedule | Pet | Project;
 }
 
 export interface GroupedSearchResults {
@@ -39,6 +45,8 @@ export interface GroupedSearchResults {
   subscriptions: SearchResult[];
   warranties: SearchResult[];
   maintenance: SearchResult[];
+  pets: SearchResult[];
+  projects: SearchResult[];
 }
 
 // Search helper - checks if any field contains the query
@@ -204,6 +212,61 @@ function searchMaintenance(maintenance: MaintenanceSchedule[], query: string): S
     }));
 }
 
+function searchPets(pets: Pet[], query: string): SearchResult[] {
+  return pets
+    .filter(p => !p.isArchived && matchesQuery(
+      query,
+      p.name,
+      p.petType,
+      p.species,
+      p.breed,
+      p.birthDate,
+      p.adoptionDate,
+      p.weight,
+      p.color,
+      p.microchipId,
+      p.licenseNumber,
+      p.vetClinic,
+      p.vetPhone,
+      p.allergies,
+      p.medications,
+      p.medicalConditions,
+      p.lastVetVisit,
+      p.notes
+    ))
+    .map(p => ({
+      type: 'pet' as const,
+      id: p.id,
+      title: p.name,
+      subtitle: [p.species, p.breed].filter(Boolean).join(' • '),
+      meta: p.petType,
+      item: p,
+    }));
+}
+
+function searchProjects(projects: Project[], query: string): SearchResult[] {
+  return projects
+    .filter(p => !p.isArchived && matchesQuery(
+      query,
+      p.name,
+      p.description,
+      p.startDate,
+      p.status,
+      p.budget,
+      p.completionDate,
+      p.targetCompletionDate,
+      p.notes
+    ))
+    .map(p => ({
+      type: 'project' as const,
+      id: p.id,
+      title: p.name,
+      subtitle: p.description,
+      meta: p.status,
+      item: p,
+    }));
+}
+
 /**
  * Global search hook that searches across all data types.
  * 
@@ -225,9 +288,12 @@ export function useGlobalSearch(query: string): {
   const { data: subscriptions = [], isLoading: subscriptionsLoading } = useSubscriptions();
   const { data: warranties = [], isLoading: warrantiesLoading } = useWarranties();
   const { data: maintenance = [], isLoading: maintenanceLoading } = useMaintenance();
+  const { data: pets = [], isLoading: petsLoading } = usePets();
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
 
   const isLoading = appliancesLoading || vehiclesLoading || companiesLoading || 
-                    subscriptionsLoading || warrantiesLoading || maintenanceLoading;
+                    subscriptionsLoading || warrantiesLoading || maintenanceLoading ||
+                    petsLoading || projectsLoading;
 
   const hasQuery = query.trim().length > 0;
 
@@ -240,6 +306,8 @@ export function useGlobalSearch(query: string): {
         subscriptions: [],
         warranties: [],
         maintenance: [],
+        pets: [],
+        projects: [],
       };
     }
 
@@ -252,8 +320,10 @@ export function useGlobalSearch(query: string): {
       subscriptions: searchSubscriptions(subscriptions, q),
       warranties: searchWarranties(warranties, q),
       maintenance: searchMaintenance(maintenance, q),
+      pets: searchPets(pets, q),
+      projects: searchProjects(projects, q),
     };
-  }, [query, hasQuery, appliances, vehicles, companies, subscriptions, warranties, maintenance]);
+  }, [query, hasQuery, appliances, vehicles, companies, subscriptions, warranties, maintenance, pets, projects]);
 
   const totalCount = useMemo(() => {
     return (
@@ -262,7 +332,9 @@ export function useGlobalSearch(query: string): {
       results.companies.length +
       results.subscriptions.length +
       results.warranties.length +
-      results.maintenance.length
+      results.maintenance.length +
+      results.pets.length +
+      results.projects.length
     );
   }, [results]);
 
@@ -292,6 +364,8 @@ export function useFlatSearchResults(query: string): {
       ...results.subscriptions,
       ...results.warranties,
       ...results.maintenance,
+      ...results.pets,
+      ...results.projects,
     ];
   }, [results]);
 
