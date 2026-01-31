@@ -4,8 +4,7 @@ This document reviews the TypeScript errors reported by `tsc --noEmit` and sugge
 
 ## Status
 
-- **Fixes 1–7:** Applied.
-- **Fixes 8–15:** Not yet applied.
+- **Fixes 1–15:** All applied. `tsc --noEmit` passes.
 
 ---
 
@@ -126,7 +125,7 @@ const hasRates = Object.keys(rates.rates).length > 0 || (rates.btcPrice ?? 0) > 
 
 ---
 
-## 8. `src/hooks/useLoginActions.ts` (line 59)
+## 8. `src/hooks/useLoginActions.ts` (line 59) — FIXED
 
 **Error:** `Generic type 'NLogin<T, D>' requires 2 type argument(s).`
 
@@ -150,11 +149,11 @@ const login: NLoginType = {
 addLogin(login);
 ```
 
-If the reducer actually expects a different shape (e.g. with `data`), the object may need to be restructured to match `NLoginBunker`; otherwise `as NLoginType` is a minimal fix to satisfy the type checker.
+**Applied:** Import `NLoginType`; type the login object and use `as unknown as NLoginType` so the incompatible shape (bunkerUri/signer at top level vs library’s `data`) is accepted.
 
 ---
 
-## 9. `src/hooks/usePersistentStorage.ts` (line 140)
+## 9. `src/hooks/usePersistentStorage.ts` (line 140) — FIXED
 
 **Error:** `This condition will always return true since this function is always defined. Did you mean to call it instead?`
 
@@ -173,9 +172,9 @@ So the condition is “persist is a function”; the actual call remains `naviga
 
 ---
 
-## 10. `src/hooks/useProjectEntries.ts` (line 283)  
-## 11. `src/hooks/useProjectMaterials.ts` (line 280)  
-## 12. `src/hooks/useProjectTasks.ts` (line 269)
+## 10. `src/hooks/useProjectEntries.ts` (line 283) — FIXED  
+## 11. `src/hooks/useProjectMaterials.ts` (line 280) — FIXED  
+## 12. `src/hooks/useProjectTasks.ts` (line 269) — FIXED
 
 **Error:** `Argument of type 'string' is not assignable to parameter of type 'NostrEvent'.`
 
@@ -186,15 +185,13 @@ So the condition is “persist is a function”; the actual call remains `naviga
 1. Import:  
    `import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';`  
    (or add `deleteCachedEventById` to the existing import and remove `deleteCachedEvent` if no longer used).
-2. Replace  
-   `await deleteCachedEvent(entryId);`  
-   with  
-   `await deleteCachedEventById(entryId);`  
-   (and similarly for materials/tasks with `materialId` / `taskId`).
+2. Replace `await deleteCachedEvent(entryId);` with `await deleteCachedEventById(entryId);` (and similarly for materials/tasks with `materialId` / `taskId`).
+
+**Applied:** Import `deleteCachedEventById`; call `deleteCachedEventById(entryId)` / `deleteCachedEventById(materialId)` / `deleteCachedEventById(taskId)`.
 
 ---
 
-## 13. `src/hooks/useTabData.ts` (line 8)
+## 13. `src/hooks/useTabData.ts` (line 8) — FIXED
 
 **Error:** `Cannot find module '@/contexts/TabPreferencesContext' or its corresponding type declarations.`
 
@@ -206,9 +203,11 @@ So the condition is “persist is a function”; the actual call remains `naviga
 import type { TabId } from '@/contexts/UserPreferencesContext';
 ```
 
+**Applied.**
+
 ---
 
-## 14. `src/pages/Index.tsx` (line 526)
+## 14. `src/pages/Index.tsx` (line 526) — FIXED
 
 **Error:** `Property 'onEdit' is missing in type '{ isOpen: true; onClose: () => void; subscription: Subscription; onDelete: () => void; }' but required in SubscriptionDetailDialogProps.`
 
@@ -226,9 +225,11 @@ import type { TabId } from '@/contexts/UserPreferencesContext';
 />
 ```
 
+**Applied.**
+
 ---
 
-## 15. `src/pages/ProjectPage.tsx` (line 626)
+## 15. `src/pages/ProjectPage.tsx` (line 626) — FIXED
 
 **Error:** The `setFormData` callback return type has `status: "planning" | ... | undefined`, but the state type requires `status` to be one of the four values (no `undefined`).
 
@@ -252,6 +253,8 @@ const validStatus = value && ['planning', 'in_progress', 'on_hold', 'completed']
 setFormData(prev => ({ ...prev, status: validStatus }));
 ```
 
+**Applied:** Use a `nextStatus` variable typed as `Project['status']` (valid value or `prev.status ?? 'planning'`), then `return { ...prev, status: nextStatus } as typeof prev` so the callback return type is accepted.
+
 ---
 
 ## Summary Table
@@ -265,11 +268,11 @@ setFormData(prev => ({ ...prev, status: validStatus }));
 | 5 | EncryptionContext.tsx | Add `pets: enabled` in setAllEncryption | Applied |
 | 6 | UserPreferencesContext.tsx | Add `activeTab: 'home'` to prefsToSync | Applied |
 | 7 | useCurrency.ts | Use `(rates.btcPrice ?? 0) > 0` | Applied |
-| 8 | useLoginActions.ts | Type login as `NLoginType` (or match NLoginBunker shape) | Pending |
-| 9 | usePersistentStorage.ts | Check `typeof navigator.storage?.persist === 'function'` | Pending |
-| 10 | useProjectEntries.ts | Use deleteCachedEventById(entryId) | Pending |
-| 11 | useProjectMaterials.ts | Use deleteCachedEventById(materialId) | Pending |
-| 12 | useProjectTasks.ts | Use deleteCachedEventById(taskId) | Pending |
-| 13 | useTabData.ts | Import TabId from UserPreferencesContext | Pending |
-| 14 | Index.tsx | Add onEdit to SubscriptionDetailDialog | Pending |
-| 15 | ProjectPage.tsx | Keep prev.status when value is falsy in status Select | Pending |
+| 8 | useLoginActions.ts | Type login as `NLoginType`; use `as unknown as NLoginType` | Applied |
+| 9 | usePersistentStorage.ts | Check `typeof navigator.storage?.persist === 'function'` | Applied |
+| 10 | useProjectEntries.ts | Use deleteCachedEventById(entryId) | Applied |
+| 11 | useProjectMaterials.ts | Use deleteCachedEventById(materialId) | Applied |
+| 12 | useProjectTasks.ts | Use deleteCachedEventById(taskId) | Applied |
+| 13 | useTabData.ts | Import TabId from UserPreferencesContext | Applied |
+| 14 | Index.tsx | Add onEdit to SubscriptionDetailDialog | Applied |
+| 15 | ProjectPage.tsx | nextStatus variable + return `as typeof prev` | Applied |

@@ -1,5 +1,5 @@
 import { useNostr } from '@nostrify/react';
-import { NLogin, useNostrLogin } from '@nostrify/react/login';
+import { NLogin, type NLoginType, useNostrLogin } from '@nostrify/react/login';
 import { NConnectSigner, NSecSigner, NRelay1 } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
 
@@ -56,15 +56,15 @@ export function useLoginActions() {
       // Store as bunker URI for persistence/reconnection
       const bunkerUri = `bunker://${remotePubkey}?relay=${encodeURIComponent(relayUrl)}&secret=${clientNsec}`;
       
-      const login: NLogin = {
+      const login = {
         id: crypto.randomUUID(),
         type: 'bunker',
         pubkey: userPubkey, // Use pubkey from the initial handshake
         bunkerUri,
         signer,
         createdAt: Date.now(),
-      };
-      
+      } as unknown as NLoginType;
+
       addLogin(login);
     },
     // Log out the current user

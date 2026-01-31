@@ -6,7 +6,7 @@ import { useNostrPublish } from './useNostrPublish';
 import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_ENTRY_KIND, PROJECT_KIND, type ProjectEntry } from '@/lib/types';
-import { cacheEvents, getCachedEvents, deleteCachedEvent } from '@/lib/eventCache';
+import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
 
 // Encrypted content marker
@@ -280,7 +280,7 @@ export function useProjectEntryActions() {
 
     if (event) {
       await cacheEvents([event]);
-      await deleteCachedEvent(entryId);
+      await deleteCachedEventById(entryId);
     }
 
     // Small delay to allow the deletion event to propagate

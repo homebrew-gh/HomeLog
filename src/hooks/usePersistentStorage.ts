@@ -137,7 +137,7 @@ export function usePersistentStorage() {
         const prefValue = localStorage.getItem(SAFE_STORAGE_KEYS.PERSISTENT_STORAGE_PREF);
         const prefEnabled = prefValue ? JSON.parse(prefValue) === true : false;
         
-        if (prefEnabled && navigator.storage?.persist) {
+        if (prefEnabled && typeof navigator.storage?.persist === 'function') {
           const alreadyPersisted = await navigator.storage.persisted();
           
           if (!alreadyPersisted) {

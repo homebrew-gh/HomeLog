@@ -6,7 +6,7 @@ import { useNostrPublish } from './useNostrPublish';
 import { useEncryption } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_TASK_KIND, PROJECT_KIND, type ProjectTask } from '@/lib/types';
-import { cacheEvents, getCachedEvents, deleteCachedEvent } from '@/lib/eventCache';
+import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
 
 // Encrypted content marker
@@ -266,7 +266,7 @@ export function useProjectTaskActions() {
 
     if (event) {
       await cacheEvents([event]);
-      await deleteCachedEvent(taskId);
+      await deleteCachedEventById(taskId);
     }
 
     await new Promise(resolve => setTimeout(resolve, 300));

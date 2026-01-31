@@ -527,6 +527,7 @@ const Index = () => {
           isOpen={!!viewingSubscription}
           onClose={() => setViewingSubscription(undefined)}
           subscription={viewingSubscription}
+          onEdit={() => {}}
           onDelete={() => setViewingSubscription(undefined)}
         />
       )}

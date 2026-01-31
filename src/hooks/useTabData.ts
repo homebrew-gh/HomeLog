@@ -5,7 +5,7 @@ import { useCompanies } from './useCompanies';
 import { useSubscriptions } from './useSubscriptions';
 import { useWarranties } from './useWarranties';
 import { usePets } from './usePets';
-import type { TabId } from '@/contexts/TabPreferencesContext';
+import type { TabId } from '@/contexts/UserPreferencesContext';
 
 export interface TabDataInfo {
   hasData: boolean;

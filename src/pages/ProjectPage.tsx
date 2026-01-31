@@ -623,7 +623,13 @@ function EditProjectDialog({
               <Label htmlFor="status">Status</Label>
               <Select
                 value={formData.status}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as Project['status'] }))}
+                onValueChange={(value) => setFormData(prev => {
+                  const nextStatus: Project['status'] =
+                    value && ['planning', 'in_progress', 'on_hold', 'completed'].includes(value)
+                      ? (value as Project['status'])
+                      : (prev.status ?? 'planning');
+                  return { ...prev, status: nextStatus } as typeof prev;
+                })}
               >
                 <SelectTrigger id="status">
                   <SelectValue placeholder="Select status" />
