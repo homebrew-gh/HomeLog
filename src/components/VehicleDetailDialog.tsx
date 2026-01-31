@@ -15,6 +15,7 @@ import {
   Shield,
   CreditCard,
   Hash,
+  MapPin,
   Plane,
   Ship,
   Tractor,
@@ -252,7 +253,7 @@ export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete
             )}
 
             {/* Purchase Info */}
-            {(vehicle.purchaseDate || vehicle.purchasePrice) && (
+            {(vehicle.purchaseDate || vehicle.purchasePrice || vehicle.purchaseLocation) && (
               <>
                 <Separator />
                 {vehicle.purchaseDate && (
@@ -270,6 +271,15 @@ export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Purchase Price</p>
                       <p>{vehicle.purchasePrice}</p>
+                    </div>
+                  </div>
+                )}
+                {vehicle.purchaseLocation && (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Where Bought</p>
+                      <p>{vehicle.purchaseLocation}</p>
                     </div>
                   </div>
                 )}

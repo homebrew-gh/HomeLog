@@ -45,6 +45,7 @@ function parseVehiclePlaintext(event: NostrEvent): Vehicle | null {
     year: getTagValue(event, 'year'),
     purchaseDate: getTagValue(event, 'purchase_date'),
     purchasePrice: getTagValue(event, 'purchase_price'),
+    purchaseLocation: getTagValue(event, 'purchase_location'),
     licensePlate: getTagValue(event, 'license_plate'),
     mileage: getTagValue(event, 'mileage'),
     fuelType: getTagValue(event, 'fuel_type'),
@@ -221,6 +222,7 @@ export function useVehicleActions() {
       if (data.year) tags.push(['year', data.year]);
       if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
       if (data.purchasePrice) tags.push(['purchase_price', data.purchasePrice]);
+      if (data.purchaseLocation) tags.push(['purchase_location', data.purchaseLocation]);
       if (data.licensePlate) tags.push(['license_plate', data.licensePlate]);
       if (data.mileage) tags.push(['mileage', data.mileage]);
       if (data.fuelType) tags.push(['fuel_type', data.fuelType]);
@@ -286,6 +288,7 @@ export function useVehicleActions() {
       if (data.year) tags.push(['year', data.year]);
       if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
       if (data.purchasePrice) tags.push(['purchase_price', data.purchasePrice]);
+      if (data.purchaseLocation) tags.push(['purchase_location', data.purchaseLocation]);
       if (data.licensePlate) tags.push(['license_plate', data.licensePlate]);
       if (data.mileage) tags.push(['mileage', data.mileage]);
       if (data.fuelType) tags.push(['fuel_type', data.fuelType]);

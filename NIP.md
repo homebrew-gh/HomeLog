@@ -76,6 +76,7 @@ An addressable event representing a vehicle (car, truck, boat, plane, farm machi
     ["year", "<year>"],
     ["purchase_date", "<MM/DD/YYYY>"],
     ["purchase_price", "<price>"],
+    ["purchase_location", "<where vehicle was bought>"],
     ["license_plate", "<plate>"],
     ["mileage", "<mileage>"],
     ["fuel_type", "<fuel type>"],
@@ -108,6 +109,7 @@ An addressable event representing a vehicle (car, truck, boat, plane, farm machi
 | `year` | No | Model year |
 | `purchase_date` | No | Purchase date in MM/DD/YYYY format |
 | `purchase_price` | No | Purchase price |
+| `purchase_location` | No | Where the vehicle was bought (dealer, private party, etc.) |
 | `license_plate` | No | License plate number |
 | `mileage` | No | Current mileage |
 | `fuel_type` | No | Fuel type (gasoline, diesel, electric, etc.) |

@@ -46,6 +46,7 @@ export interface Vehicle {
   year?: string;
   purchaseDate?: string; // MM/DD/YYYY format
   purchasePrice?: string;
+  purchaseLocation?: string; // Where the vehicle was bought (dealer, private party, etc.)
   // Vehicle-specific fields
   licensePlate?: string;
   mileage?: string;

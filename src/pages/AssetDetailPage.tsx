@@ -811,6 +811,16 @@ function VehicleDetailContent({ id }: { id: string }) {
                   </div>
                 </div>
               )}
+
+              {vehicle.purchaseLocation && (
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Where Bought</p>
+                    <p>{vehicle.purchaseLocation}</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </section>

@@ -91,6 +91,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
     year: '',
     purchaseDate: '',
     purchasePrice: '',
+    purchaseLocation: '',
     licensePlate: '',
     mileage: '',
     fuelType: '',
@@ -137,6 +138,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           year: vehicle.year || '',
           purchaseDate: vehicle.purchaseDate || '',
           purchasePrice: vehicle.purchasePrice || '',
+          purchaseLocation: vehicle.purchaseLocation || '',
           licensePlate: vehicle.licensePlate || '',
           mileage: vehicle.mileage || '',
           fuelType: vehicle.fuelType || '',
@@ -167,6 +169,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           year: '',
           purchaseDate: '',
           purchasePrice: '',
+          purchaseLocation: '',
           licensePlate: '',
           mileage: '',
           fuelType: '',
@@ -735,6 +738,17 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
               value={formData.purchasePrice}
               onChange={(e) => setFormData(prev => ({ ...prev, purchasePrice: e.target.value }))}
               placeholder="$0.00"
+            />
+          </div>
+
+          {/* Where Bought */}
+          <div className="space-y-2">
+            <Label htmlFor="purchaseLocation">Where Bought</Label>
+            <Input
+              id="purchaseLocation"
+              value={formData.purchaseLocation}
+              onChange={(e) => setFormData(prev => ({ ...prev, purchaseLocation: e.target.value }))}
+              placeholder="e.g., ABC Motors, private party"
             />
           </div>
 
