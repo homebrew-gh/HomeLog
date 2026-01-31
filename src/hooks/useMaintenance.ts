@@ -245,11 +245,14 @@ async function parseEventsToMaintenance(
 export function useMaintenance() {
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
+  const { isEncryptionEnabled } = useEncryptionSettings();
 
-  // Main query - loads from cache only
-  // Background sync is handled centrally by useDataSyncStatus
+  const canLoadMaintenance =
+    !!user?.pubkey &&
+    (!isEncryptionEnabled('maintenance') || !!user?.signer?.nip44);
+
   const query = useQuery({
-    queryKey: ['maintenance', user?.pubkey],
+    queryKey: ['maintenance', user?.pubkey, canLoadMaintenance],
     queryFn: async () => {
       if (!user?.pubkey) return [];
 
@@ -259,7 +262,7 @@ export function useMaintenance() {
       }
       return [];
     },
-    enabled: !!user?.pubkey,
+    enabled: canLoadMaintenance,
     staleTime: Infinity, // Data comes from IndexedDB cache, no need to refetch
     gcTime: Infinity, // Keep in memory for the session
     refetchOnWindowFocus: false,

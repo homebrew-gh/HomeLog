@@ -138,9 +138,14 @@ async function parseEventsToCompletions(
 export function useMaintenanceCompletions() {
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
+  const { isEncryptionEnabled } = useEncryptionSettings();
+
+  const canLoadCompletions =
+    !!user?.pubkey &&
+    (!isEncryptionEnabled('maintenance') || !!user?.signer?.nip44);
 
   const query = useQuery({
-    queryKey: ['maintenance-completions', user?.pubkey],
+    queryKey: ['maintenance-completions', user?.pubkey, canLoadCompletions],
     queryFn: async () => {
       if (!user?.pubkey) return [];
 
@@ -150,7 +155,7 @@ export function useMaintenanceCompletions() {
       }
       return [];
     },
-    enabled: !!user?.pubkey,
+    enabled: canLoadCompletions,
     staleTime: Infinity, // Data comes from IndexedDB cache, no need to refetch
     gcTime: Infinity, // Keep in memory for the session
     refetchOnWindowFocus: false,

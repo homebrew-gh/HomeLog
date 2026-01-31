@@ -152,27 +152,25 @@ async function parseEventsToAppliances(
 export function useAppliances() {
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
+  const { isEncryptionEnabled } = useEncryptionSettings();
 
-  // Main query - loads from cache only
-  // Background sync is handled centrally by useDataSyncStatus
+  const canLoadAppliances =
+    !!user?.pubkey &&
+    (!isEncryptionEnabled('appliances') || !!user?.signer?.nip44);
+
   const query = useQuery({
-    queryKey: ['appliances', user?.pubkey],
+    queryKey: ['appliances', user?.pubkey, canLoadAppliances],
     queryFn: async () => {
-      if (!user?.pubkey) {
-        return [];
-      }
+      if (!user?.pubkey) return [];
 
-      // Load from cache (populated by useDataSyncStatus)
       const cachedEvents = await getCachedEvents([APPLIANCE_KIND, 5], user.pubkey);
-      
       if (cachedEvents.length > 0) {
         const appliances = await parseEventsToAppliances(cachedEvents, user.pubkey, decryptForCategory);
         return appliances;
       }
-
       return [];
     },
-    enabled: !!user?.pubkey,
+    enabled: canLoadAppliances,
     staleTime: Infinity, // Data comes from IndexedDB cache, no need to refetch
     gcTime: Infinity, // Keep in memory for the session
     refetchOnWindowFocus: false,

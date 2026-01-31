@@ -153,27 +153,31 @@ async function parseEventsToVehicles(
 export function useVehicles() {
   const { user } = useCurrentUser();
   const { decryptForCategory } = useEncryption();
+  const { isEncryptionEnabled } = useEncryptionSettings();
 
-  // Main query - loads from cache only
-  // Background sync is handled centrally by useDataSyncStatus
+  // When vehicles encryption is on, wait for signer (NIP-44) before running the query
+  // so we never try to decrypt before the signer is ready
+  const canLoadVehicles =
+    !!user?.pubkey &&
+    (!isEncryptionEnabled('vehicles') || !!user?.signer?.nip44);
+
   const query = useQuery({
-    queryKey: ['vehicles', user?.pubkey],
+    queryKey: ['vehicles', user?.pubkey, canLoadVehicles],
     queryFn: async () => {
-      if (!user?.pubkey) {
-        return [];
-      }
+      if (!user?.pubkey) return [];
 
-      // Load from cache (populated by useDataSyncStatus)
-      const cachedEvents = await getCachedEvents([VEHICLE_KIND, 5], user.pubkey);
-      
-      if (cachedEvents.length > 0) {
+      try {
+        const cachedEvents = await getCachedEvents([VEHICLE_KIND, 5], user.pubkey);
+        if (cachedEvents.length === 0) return [];
+
         const vehicles = await parseEventsToVehicles(cachedEvents, user.pubkey, decryptForCategory);
         return vehicles;
+      } catch (error) {
+        logger.error('[Vehicles] Failed to load vehicles:', error);
+        return [];
       }
-
-      return [];
     },
-    enabled: !!user?.pubkey,
+    enabled: canLoadVehicles,
     staleTime: Infinity, // Data comes from IndexedDB cache, no need to refetch
     gcTime: Infinity, // Keep in memory for the session
     refetchOnWindowFocus: false,
