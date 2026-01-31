@@ -3,7 +3,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { useEncryption } from './useEncryption';
+import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { MAINTENANCE_COMPLETION_KIND, MAINTENANCE_KIND, type MaintenanceCompletion, type MaintenancePart } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
@@ -87,7 +87,8 @@ async function parseCompletionEncrypted(
       pubkey: event.pubkey,
       createdAt: event.created_at,
     };
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) throw error;
     logger.warn('[MaintenanceCompletions] Failed to decrypt completion');
     return null;
   }

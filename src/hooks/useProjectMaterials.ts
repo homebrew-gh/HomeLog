@@ -3,7 +3,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { useEncryption } from './useEncryption';
+import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_MATERIAL_KIND, PROJECT_KIND, type ProjectMaterial, type ExpenseCategory } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
@@ -85,6 +85,7 @@ async function parseProjectMaterialEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
+    if (isAbortError(error)) throw error;
     logger.error('[ProjectMaterials] Failed to decrypt material');
     return null;
   }

@@ -3,7 +3,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { useEncryption } from './useEncryption';
+import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { VEHICLE_KIND, type Vehicle } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
@@ -84,6 +84,7 @@ async function parseVehicleEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
+    if (isAbortError(error)) throw error;
     logger.error('[Vehicles] Failed to decrypt vehicle');
     return null;
   }

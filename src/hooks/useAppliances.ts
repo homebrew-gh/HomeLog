@@ -14,7 +14,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 import { logger } from '@/lib/logger';
-import { useEncryption } from './useEncryption';
+import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { APPLIANCE_KIND, type Appliance } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
@@ -83,6 +83,7 @@ async function parseApplianceEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
+    if (isAbortError(error)) throw error;
     logger.error('[Appliances] Failed to decrypt appliance');
     return null;
   }

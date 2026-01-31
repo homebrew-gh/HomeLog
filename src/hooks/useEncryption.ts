@@ -9,6 +9,13 @@ import { logger } from '@/lib/logger';
  */
 const ENCRYPTED_MARKER = 'nip44:';
 
+/** True if the error is from a cancelled operation (e.g. React Query abort, unmount). */
+export function isAbortError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') return true;
+  if (error instanceof Error && /signal has been aborted|aborted/i.test(error.message)) return true;
+  return false;
+}
+
 /**
  * Error thrown when encryption is required but unavailable or fails
  * This prevents silent fallback to plaintext storage
@@ -88,11 +95,11 @@ export function useEncryption() {
     }
 
     try {
-      // Remove marker and decrypt
       const encryptedData = content.slice(ENCRYPTED_MARKER.length);
       const decrypted = await user.signer.nip44.decrypt(user.pubkey, encryptedData);
       return decrypted;
     } catch (error) {
+      if (isAbortError(error)) throw error;
       logger.error('[Encryption] Failed to decrypt:', error);
       throw new Error('Failed to decrypt content. The data may be corrupted or encrypted with a different key.');
     }
@@ -115,6 +122,7 @@ export function useEncryption() {
     try {
       return JSON.parse(decrypted) as T;
     } catch (error) {
+      if (isAbortError(error)) throw error;
       logger.error('[Encryption] Failed to parse decrypted JSON');
       throw new Error('Failed to parse decrypted data. The content may be corrupted.');
     }

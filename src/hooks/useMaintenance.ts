@@ -4,7 +4,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { useEncryption } from './useEncryption';
+import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { MAINTENANCE_KIND, APPLIANCE_KIND, VEHICLE_KIND, COMPANY_KIND, type MaintenanceSchedule, type MaintenancePart } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
@@ -152,7 +152,8 @@ async function parseMaintenanceEncrypted(
       pubkey: event.pubkey,
       createdAt: event.created_at,
     };
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) throw error;
     logger.warn('[Maintenance] Failed to decrypt schedule');
     return null;
   }

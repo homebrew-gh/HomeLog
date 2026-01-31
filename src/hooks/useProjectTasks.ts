@@ -3,7 +3,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { useEncryption } from './useEncryption';
+import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_TASK_KIND, PROJECT_KIND, type ProjectTask } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
@@ -75,6 +75,7 @@ async function parseProjectTaskEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
+    if (isAbortError(error)) throw error;
     logger.error('[ProjectTasks] Failed to decrypt task');
     return null;
   }

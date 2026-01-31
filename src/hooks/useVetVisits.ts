@@ -3,7 +3,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { useEncryption } from './useEncryption';
+import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { VET_VISIT_KIND, PET_KIND, type VetVisit, type VetVisitType } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
@@ -81,6 +81,7 @@ async function parseVetVisitEncrypted(
       createdAt: event.created_at,
     };
   } catch (error) {
+    if (isAbortError(error)) throw error;
     logger.error('[VetVisits] Failed to decrypt vet visit');
     return null;
   }
