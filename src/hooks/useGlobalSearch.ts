@@ -55,7 +55,9 @@ function searchAppliances(appliances: Appliance[], query: string): SearchResult[
       query,
       a.model,
       a.manufacturer,
-      a.room
+      a.room,
+      a.purchaseDate,
+      a.price
     ))
     .map(a => ({
       type: 'appliance' as const,
@@ -77,7 +79,20 @@ function searchVehicles(vehicles: Vehicle[], query: string): SearchResult[] {
       v.year,
       v.licensePlate,
       v.vehicleType,
-      v.notes
+      v.notes,
+      v.purchaseDate,
+      v.purchasePrice,
+      v.purchaseLocation,
+      v.mileage,
+      v.fuelType,
+      v.registrationExpiry,
+      v.hullId,
+      v.registrationNumber,
+      v.engineHours,
+      v.tailNumber,
+      v.hobbsTime,
+      v.serialNumber,
+      v.warrantyExpiry
     ))
     .map(v => ({
       type: 'vehicle' as const,
@@ -98,7 +113,14 @@ function searchCompanies(companies: Company[], query: string): SearchResult[] {
       c.serviceType,
       c.phone,
       c.email,
-      c.notes
+      c.notes,
+      c.address,
+      c.city,
+      c.state,
+      c.zipCode,
+      c.website,
+      c.licenseNumber,
+      c.insuranceInfo
     ))
     .map(c => ({
       type: 'company' as const,
@@ -117,7 +139,11 @@ function searchSubscriptions(subscriptions: Subscription[], query: string): Sear
       s.name,
       s.subscriptionType,
       s.companyName,
-      s.notes
+      s.notes,
+      s.linkedAssetName,
+      s.cost,
+      s.currency,
+      s.billingFrequency
     ))
     .map(s => ({
       type: 'subscription' as const,
@@ -138,7 +164,13 @@ function searchWarranties(warranties: Warranty[], query: string): SearchResult[]
       w.description,
       w.companyName,
       w.linkedItemName,
-      w.notes
+      w.notes,
+      w.purchaseDate,
+      w.purchasePrice,
+      w.registrationNumber,
+      w.registrationNotes,
+      w.extendedWarrantyProvider,
+      w.extendedWarrantyNotes
     ))
     .map(w => ({
       type: 'warranty' as const,
@@ -150,14 +182,18 @@ function searchWarranties(warranties: Warranty[], query: string): SearchResult[]
     }));
 }
 
+// Flatten maintenance parts into searchable strings
+function getMaintenanceSearchStrings(m: MaintenanceSchedule): (string | undefined)[] {
+  const partStrings = m.parts?.flatMap(p => [p.name, p.partNumber, p.cost].filter(Boolean)) ?? [];
+  const frequencyStr = m.frequency != null && m.frequencyUnit
+    ? `${m.frequency} ${m.frequencyUnit}`
+    : undefined;
+  return [m.description, m.partNumber, m.homeFeature, frequencyStr, ...partStrings];
+}
+
 function searchMaintenance(maintenance: MaintenanceSchedule[], query: string): SearchResult[] {
   return maintenance
-    .filter(m => !m.isArchived && matchesQuery(
-      query,
-      m.description,
-      m.partNumber,
-      m.homeFeature
-    ))
+    .filter(m => !m.isArchived && matchesQuery(query, ...getMaintenanceSearchStrings(m)))
     .map(m => ({
       type: 'maintenance' as const,
       id: m.id,
