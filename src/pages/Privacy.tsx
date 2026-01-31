@@ -9,7 +9,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 export function Privacy() {
   useSeoMeta({
     title: 'Privacy Policy - Cypher Log',
-    description: 'Privacy policy for Cypher Log - a decentralized home management application built on Nostr.',
+    description: 'Privacy policy for Cypher Log - a decentralized home management application built on top of the Nostr protocol.',
   });
 
   const lastUpdated = 'January 30, 2026';
