@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Plus, Upload, X, FileText, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Star, FileUp, Bitcoin, ExternalLink } from 'lucide-react';
+import { Plus, Upload, X, FileText, ChevronDown, ChevronUp, AlertCircle, Trash2, MoreVertical, Star, FileUp, Bitcoin, ExternalLink, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

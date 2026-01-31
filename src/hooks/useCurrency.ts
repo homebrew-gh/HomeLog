@@ -53,7 +53,7 @@ export function useCurrency() {
   };
 
   // Check if we have valid rates
-  const hasRates = Object.keys(rates.rates).length > 0 || rates.btcPrice > 0;
+  const hasRates = Object.keys(rates.rates).length > 0 || (rates.btcPrice ?? 0) > 0;
 
   // Get last update time as readable string
   const lastUpdated = useMemo(() => {

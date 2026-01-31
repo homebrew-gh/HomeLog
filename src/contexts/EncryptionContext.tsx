@@ -223,6 +223,7 @@ export function EncryptionProvider({ children }: { children: ReactNode }) {
       warranties: enabled,
       companies: enabled,
       projects: enabled,
+      pets: enabled,
     });
   }, [setSettings]);
 

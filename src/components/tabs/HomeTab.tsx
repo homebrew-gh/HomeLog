@@ -661,7 +661,8 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     let bestDropIndex: number | null = null;
     
     if (hoveredWidgetIndex !== null && hoveredRect !== null) {
-      const midY = hoveredRect.top + hoveredRect.height / 2;
+      const rect: DOMRect = hoveredRect;
+      const midY = rect.top + rect.height / 2;
       // Determine if we should insert before or after the hovered widget
       if (clientY < midY) {
         bestDropIndex = hoveredWidgetIndex;

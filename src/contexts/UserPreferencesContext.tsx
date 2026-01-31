@@ -434,8 +434,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
           // exchangeRates are cached API data that can be re-fetched on any device
           const { activeTab: _activeTab, exchangeRates: _exchangeRates, blossomServers, ...restPrefs } = preferences;
           
-          // Prepare preferences for storage
-          const prefsToSync: StoredPreferences = { ...restPrefs };
+          // Prepare preferences for storage (activeTab excluded from sync; use default for type)
+          const prefsToSync: StoredPreferences = { ...restPrefs, activeTab: 'home' };
           
           // Encrypt blossomServers if user has NIP-44 support and there are servers to encrypt
           if (blossomServers && blossomServers.length > 0) {

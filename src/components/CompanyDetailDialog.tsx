@@ -89,7 +89,7 @@ export function CompanyDetailDialog({ isOpen, onClose, company, onEdit, onDelete
 
   // Format full address
   const formatAddress = () => {
-    const parts = [];
+    const parts: string[] = [];
     if (company.address) parts.push(company.address);
     const cityStateZip = [
       company.city,

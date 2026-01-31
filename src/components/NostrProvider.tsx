@@ -91,7 +91,7 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   }
 
   return (
-    <NostrContext.Provider value={{ nostr: pool.current }}>
+    <NostrContext.Provider value={{ nostr: pool.current } as unknown as React.ComponentProps<typeof NostrContext.Provider>['value']}>
       {children}
     </NostrContext.Provider>
   );
