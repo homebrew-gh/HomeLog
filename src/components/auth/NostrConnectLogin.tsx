@@ -279,13 +279,16 @@ export function NostrConnectLogin({
 
   return (
     <div className="space-y-4">
-      {/* Info about NostrConnect */}
-      <div className="p-3 bg-muted/50 rounded-lg space-y-2">
-        <p className="text-xs text-muted-foreground">
-          Scan this QR code with your Nostr signer app (like <a href="https://nsec.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">nsec.app</a>, <a href="https://github.com/greenart7c3/Amber" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Amber</a>, or another NIP-46 compatible signer).
+      {/* Info about NostrConnect – alert style so users don't expect it to work reliably */}
+      <div className="p-3 rounded-lg space-y-2 border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40">
+        <p className="text-xs text-amber-900 dark:text-amber-200">
+          Scan this QR code with your Nostr signer app (like <a href="https://nsec.app" target="_blank" rel="noopener noreferrer" className="text-amber-700 dark:text-amber-300 hover:underline font-medium">nsec.app</a>, <a href="https://github.com/greenart7c3/Amber" target="_blank" rel="noopener noreferrer" className="text-amber-700 dark:text-amber-300 hover:underline font-medium">Amber</a>, or another NIP-46 compatible signer).
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-amber-900 dark:text-amber-200">
           Both devices talk through Nostr relays (not directly). Keep your signer app open and connected to the same relay for the first load; profile and data may take a bit longer than with a local key.
+        </p>
+        <p className="text-xs text-amber-900 dark:text-amber-200">
+          Because Cypher Log stores your data encrypted, remote signers (e.g. Amber) can have trouble loading your profile and data—timeouts and failed loads are common. For the most reliable experience, use a local key (nsec) or a browser extension.
         </p>
       </div>
 
