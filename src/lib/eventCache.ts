@@ -24,6 +24,12 @@ interface CacheMeta {
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
+function isClosedDatabaseError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'InvalidStateError') return true;
+  if (error instanceof Error && /closed|closing/i.test(error.message)) return true;
+  return false;
+}
+
 /**
  * Open or create the IndexedDB database
  */
@@ -64,6 +70,23 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 /**
+ * Run an operation with the DB. If the DB was closed (e.g. by another tab or eviction),
+ * clear the cached connection and retry once so concurrent callers get a fresh connection.
+ */
+async function withDB<T>(op: (db: IDBDatabase) => Promise<T>): Promise<T> {
+  const db = await openDB();
+  try {
+    return await op(db);
+  } catch (error) {
+    if (isClosedDatabaseError(error)) {
+      dbPromise = null;
+      return openDB().then((freshDb) => op(freshDb));
+    }
+    throw error;
+  }
+}
+
+/**
  * Generate a unique cache key for an event
  */
 function getCacheKey(event: NostrEvent): string {
@@ -83,19 +106,19 @@ export async function cacheEvents(events: NostrEvent[]): Promise<void> {
   if (events.length === 0) return;
 
   try {
-    const db = await openDB();
-    const tx = db.transaction(EVENTS_STORE, 'readwrite');
-    const store = tx.objectStore(EVENTS_STORE);
+    await withDB((db) => {
+      const tx = db.transaction(EVENTS_STORE, 'readwrite');
+      const store = tx.objectStore(EVENTS_STORE);
 
-    for (const event of events) {
-      const cacheKey = getCacheKey(event);
-      // Store the event with its cache key
-      store.put({ ...event, cacheKey });
-    }
+      for (const event of events) {
+        const cacheKey = getCacheKey(event);
+        store.put({ ...event, cacheKey });
+      }
 
-    return new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+      return new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
     });
   } catch (error) {
     console.error('[EventCache] Failed to cache events:', error);
@@ -107,32 +130,34 @@ export async function cacheEvents(events: NostrEvent[]): Promise<void> {
  */
 export async function getCachedEvents(kinds: number[], pubkey: string): Promise<NostrEvent[]> {
   try {
-    const db = await openDB();
-    const tx = db.transaction(EVENTS_STORE, 'readonly');
-    const store = tx.objectStore(EVENTS_STORE);
-    const index = store.index('kindPubkey');
+    return await withDB((db) => {
+      const tx = db.transaction(EVENTS_STORE, 'readonly');
+      const store = tx.objectStore(EVENTS_STORE);
+      const index = store.index('kindPubkey');
 
-    const events: NostrEvent[] = [];
+      const events: NostrEvent[] = [];
 
-    // Query for each kind
-    for (const kind of kinds) {
-      const request = index.getAll([kind, pubkey]);
-      
-      await new Promise<void>((resolve, reject) => {
-        request.onsuccess = () => {
-          const results = request.result || [];
-          // Remove the cacheKey property before returning
-          for (const result of results) {
-            const { cacheKey, ...event } = result;
-            events.push(event as NostrEvent);
+      const run = (): Promise<NostrEvent[]> =>
+        new Promise((resolve, reject) => {
+          let pending = kinds.length;
+          if (pending === 0) return resolve(events);
+
+          for (const kind of kinds) {
+            const request = index.getAll([kind, pubkey]);
+            request.onsuccess = () => {
+              const results = request.result || [];
+              for (const result of results) {
+                const { cacheKey: _k, ...event } = result;
+                events.push(event as NostrEvent);
+              }
+              if (--pending === 0) resolve(events);
+            };
+            request.onerror = () => reject(request.error);
           }
-          resolve();
-        };
-        request.onerror = () => reject(request.error);
-      });
-    }
+        });
 
-    return events;
+      return run();
+    });
   } catch (error) {
     console.error('[EventCache] Failed to get cached events:', error);
     return [];
@@ -144,16 +169,14 @@ export async function getCachedEvents(kinds: number[], pubkey: string): Promise<
  */
 export async function deleteCachedEvent(event: NostrEvent): Promise<void> {
   try {
-    const db = await openDB();
-    const tx = db.transaction(EVENTS_STORE, 'readwrite');
-    const store = tx.objectStore(EVENTS_STORE);
-    const cacheKey = getCacheKey(event);
-    
-    store.delete(cacheKey);
-
-    return new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+    await withDB((db) => {
+      const tx = db.transaction(EVENTS_STORE, 'readwrite');
+      const store = tx.objectStore(EVENTS_STORE);
+      store.delete(getCacheKey(event));
+      return new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
     });
   } catch (error) {
     console.error('[EventCache] Failed to delete cached event:', error);
@@ -186,15 +209,14 @@ export async function deleteCachedEventByAddress(kind: number, pubkey: string, d
  */
 export async function deleteCachedEventById(eventId: string): Promise<void> {
   try {
-    const db = await openDB();
-    const tx = db.transaction(EVENTS_STORE, 'readwrite');
-    const store = tx.objectStore(EVENTS_STORE);
-    
-    store.delete(eventId);
-
-    return new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+    await withDB((db) => {
+      const tx = db.transaction(EVENTS_STORE, 'readwrite');
+      const store = tx.objectStore(EVENTS_STORE);
+      store.delete(eventId);
+      return new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
     });
   } catch (error) {
     console.error('[EventCache] Failed to delete cached event by id:', error);
@@ -238,18 +260,17 @@ export async function clearCacheForPubkey(pubkey: string): Promise<void> {
  */
 export async function getLastSyncTime(cacheKey: string): Promise<number | null> {
   try {
-    const db = await openDB();
-    const tx = db.transaction(META_STORE, 'readonly');
-    const store = tx.objectStore(META_STORE);
-    
-    const request = store.get(cacheKey);
-    
-    return new Promise((resolve, reject) => {
-      request.onsuccess = () => {
-        const meta = request.result as CacheMeta | undefined;
-        resolve(meta?.lastSyncedAt || null);
-      };
-      request.onerror = () => reject(request.error);
+    return await withDB((db) => {
+      const tx = db.transaction(META_STORE, 'readonly');
+      const store = tx.objectStore(META_STORE);
+      const request = store.get(cacheKey);
+      return new Promise<number | null>((resolve, reject) => {
+        request.onsuccess = () => {
+          const meta = request.result as CacheMeta | undefined;
+          resolve(meta?.lastSyncedAt ?? null);
+        };
+        request.onerror = () => reject(request.error);
+      });
     });
   } catch (error) {
     console.error('[EventCache] Failed to get last sync time:', error);
@@ -288,15 +309,14 @@ export async function updateLastSyncTime(cacheKey: string, pubkey: string): Prom
  */
 export async function clearAllCache(): Promise<void> {
   try {
-    const db = await openDB();
-    const tx = db.transaction([EVENTS_STORE, META_STORE], 'readwrite');
-    
-    tx.objectStore(EVENTS_STORE).clear();
-    tx.objectStore(META_STORE).clear();
-
-    return new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+    await withDB((db) => {
+      const tx = db.transaction([EVENTS_STORE, META_STORE], 'readwrite');
+      tx.objectStore(EVENTS_STORE).clear();
+      tx.objectStore(META_STORE).clear();
+      return new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
     });
   } catch (error) {
     console.error('[EventCache] Failed to clear all cache:', error);
