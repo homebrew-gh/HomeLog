@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
+import { useNostrLogin } from '@nostrify/react/login';
 import { useCurrentUser } from './useCurrentUser';
 import { useAppContext } from './useAppContext';
 import { useEffect, useState, useRef } from 'react';
@@ -23,6 +24,11 @@ import { logger } from '@/lib/logger';
 
 // Timeout for new users - if no data is found quickly, assume new user
 const NEW_USER_FAST_TIMEOUT_MS = 3000;
+// Remote signers (NostrConnect/Amber) need longer: requests go relay → signer → relay
+const BUNKER_NEW_USER_TIMEOUT_MS = 15000;
+const BUNKER_SYNC_TIMEOUT_MS = 30000;
+// If NostrSync hasn't set relay list for this user after this long, run sync anyway (use current config)
+const RELAY_LIST_WAIT_TIMEOUT_MS = 4000;
 
 // Cache result type for reuse
 interface CacheCheckResult {
@@ -53,15 +59,35 @@ interface CacheCheckResult {
  */
 export function useDataSyncStatus() {
   const { nostr } = useNostr();
+  const { logins } = useNostrLogin();
   const { user } = useCurrentUser();
   const { config } = useAppContext();
   const queryClient = useQueryClient();
+  const isBunker = logins[0]?.type === 'bunker';
   const hasInvalidated = useRef(false);
-  
+  const relayListReady = config.relayListSyncedForPubkey === user?.pubkey;
+  const [relayListWaitTimedOut, setRelayListWaitTimedOut] = useState(false);
+
+  // Wait for NostrSync to load user's relay list (NIP-65) before querying; otherwise we'd query default relays without knowing if user's data is there
+  useEffect(() => {
+    if (!user?.pubkey) {
+      setRelayListWaitTimedOut(false);
+      return;
+    }
+    if (relayListReady) {
+      setRelayListWaitTimedOut(false);
+      return;
+    }
+    const t = setTimeout(() => setRelayListWaitTimedOut(true), RELAY_LIST_WAIT_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, [user?.pubkey, relayListReady]);
+
+  const canRunSync = !!user?.pubkey && (relayListReady || relayListWaitTimedOut);
+
   // Track whether we've checked the cache (this happens instantly before relay sync)
   const [cacheChecked, setCacheChecked] = useState(false);
   const [cacheResult, setCacheResult] = useState<CacheCheckResult | null>(null);
-  
+
   // Reset invalidation flag when user or relays change
   useEffect(() => {
     hasInvalidated.current = false;
@@ -133,9 +159,9 @@ export function useDataSyncStatus() {
   }, [user?.pubkey]);
 
   // Main sync query - fetches all data types in one efficient request
-  // Include relay updatedAt in query key so we re-fetch when relays change
+  // Only runs after user's relay list (NIP-65) has been loaded, or after timeout fallback
   const { data: syncStatus, isLoading: isSyncing } = useQuery({
-    queryKey: ['data-sync-status', user?.pubkey, config.relayMetadata.updatedAt],
+    queryKey: ['data-sync-status', user?.pubkey, config.relayMetadata.updatedAt, isBunker, canRunSync],
     queryFn: async ({ signal }) => {
       if (!user?.pubkey) {
         return { 
@@ -164,9 +190,11 @@ export function useDataSyncStatus() {
       // Reuse cache check result from state instead of re-reading IndexedDB
       const hasAnyCachedData = cacheResult?.hasAny ?? false;
 
-      // Use a shorter timeout for new users (no cache) to avoid long waits
-      // when there's nothing to fetch from relays
-      const timeoutMs = hasAnyCachedData ? 20000 : NEW_USER_FAST_TIMEOUT_MS;
+      // Use a shorter timeout for new users (no cache) to avoid long waits when there's nothing to fetch.
+      // Remote signers (NostrConnect/Amber) need longer: relay round-trips are slower.
+      const timeoutMs = isBunker
+        ? (hasAnyCachedData ? BUNKER_SYNC_TIMEOUT_MS : BUNKER_NEW_USER_TIMEOUT_MS)
+        : (hasAnyCachedData ? 20000 : NEW_USER_FAST_TIMEOUT_MS);
 
       try {
         logger.log('[DataSync] Starting relay query, timeout:', timeoutMs, 'ms');
@@ -301,7 +329,7 @@ export function useDataSyncStatus() {
         };
       }
     },
-    enabled: !!user?.pubkey && cacheChecked, // Only run after cache check completes
+    enabled: canRunSync && !!user?.pubkey && cacheChecked, // Run after relay list loaded (or timeout) and cache check completes
     staleTime: 30000, // Re-fetch after 30 seconds to catch relay changes
     gcTime: Infinity, // Keep in memory for the session
     refetchOnWindowFocus: false,

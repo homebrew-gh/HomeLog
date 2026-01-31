@@ -22,6 +22,7 @@ export function NostrSync() {
   useEffect(() => {
     if (!user) {
       lastSyncedPubkey.current = null;
+      updateConfig((c) => ({ ...c, relayListSyncedForPubkey: null }));
       return;
     }
 
@@ -30,6 +31,8 @@ export function NostrSync() {
       return;
     }
     lastSyncedPubkey.current = user.pubkey;
+    // Clear so data sync waits until we've loaded this user's relay list
+    updateConfig((c) => ({ ...c, relayListSyncedForPubkey: null }));
 
     const syncRelaysFromNostr = async () => {
       const pubkey = user.pubkey;
@@ -106,6 +109,9 @@ export function NostrSync() {
         }
       } catch (error) {
         console.warn('[NostrSync] Failed to sync relays from Nostr (using cache):', error);
+      } finally {
+        // Signal that relay list has been attempted for this user so data sync can proceed (with user's relays or defaults)
+        updateConfig((c) => ({ ...c, relayListSyncedForPubkey: pubkey }));
       }
     };
 

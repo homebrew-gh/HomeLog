@@ -14,6 +14,8 @@ export interface AppConfig {
   theme: Theme;
   /** NIP-65 relay list metadata */
   relayMetadata: RelayMetadata;
+  /** Set to current user pubkey after NIP-65 relay list has been loaded for that user; used so data sync waits for user's relays before querying */
+  relayListSyncedForPubkey?: string | null;
 }
 
 export interface AppContextType {

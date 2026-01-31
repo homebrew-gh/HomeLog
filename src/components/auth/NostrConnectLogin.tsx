@@ -280,9 +280,12 @@ export function NostrConnectLogin({
   return (
     <div className="space-y-4">
       {/* Info about NostrConnect */}
-      <div className="p-3 bg-muted/50 rounded-lg">
+      <div className="p-3 bg-muted/50 rounded-lg space-y-2">
         <p className="text-xs text-muted-foreground">
           Scan this QR code with your Nostr signer app (like <a href="https://nsec.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">nsec.app</a>, <a href="https://github.com/greenart7c3/Amber" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Amber</a>, or another NIP-46 compatible signer).
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Both devices talk through Nostr relays (not directly). Keep your signer app open and connected to the same relay for the first load; profile and data may take a bit longer than with a local key.
         </p>
       </div>
 
