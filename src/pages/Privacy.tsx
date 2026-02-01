@@ -12,7 +12,7 @@ export function Privacy() {
     description: 'Privacy policy for Cypher Log - a decentralized home management application built on top of the Nostr protocol.',
   });
 
-  const lastUpdated = 'January 30, 2026';
+  const lastUpdated = 'January 31, 2026';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-sky-100 dark:from-slate-900 dark:to-slate-800 tool-pattern-bg">
@@ -193,8 +193,8 @@ export function Privacy() {
               <ul className="list-disc list-inside space-y-1 ml-2">
                 <li>Tab configuration, display settings, theme preferences</li>
                 <li>Custom room names, vehicle types, subscription types</li>
-                <li>Encryption settings per data category</li>
                 <li>Relay configuration and preferences</li>
+                <li>Private relay list (stored encrypted in NIP-78)</li>
                 <li>Currency preferences</li>
               </ul>
             </CardContent>
@@ -210,25 +210,23 @@ export function Privacy() {
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
               <p>
-                Cypher Log offers NIP-44 encryption to protect your data. However, <strong>encryption is not a guarantee of security</strong>.
+                Cypher Log uses NIP-44 encryption for all data categories by default. However, <strong>encryption is not a guarantee of security</strong>.
               </p>
-              <p className="font-medium text-slate-800 dark:text-slate-200">Categories Encrypted by Default:</p>
+              <p className="font-medium text-slate-800 dark:text-slate-200">All Data Categories Encrypted:</p>
               <ul className="list-disc list-inside space-y-1 ml-2 mb-3">
-                <li>Home items ("My Stuff")</li>
-                <li>Vehicles</li>
-                <li>Maintenance schedules and completions</li>
-                <li>Subscriptions</li>
-                <li>Warranties</li>
-                <li>Pets and vet visits</li>
-              </ul>
-              <p className="font-medium text-slate-800 dark:text-slate-200">Categories NOT Encrypted by Default:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2 mb-3">
-                <li>Companies/Service Providers (for potential future sharing features)</li>
-                <li>Projects (for potential future sharing features)</li>
+                <li>Home items ("My Stuff"), vehicles, maintenance, subscriptions, warranties</li>
+                <li>Pets and vet visits, companies/service providers, projects and project entries/tasks/materials</li>
               </ul>
               <p>
-                You can configure encryption settings per category in the app's Privacy & Security settings.
+                Data sent to <strong>public relays</strong> is always NIP-44 encrypted. Data sent to relays you mark as <strong>private</strong> is stored in plaintext on that relay only (see Private Relays below).
               </p>
+              <p className="font-medium text-slate-800 dark:text-slate-200">Private Relays:</p>
+              <ul className="list-disc list-inside space-y-2 ml-2 mb-3">
+                <li>You can mark relays as "private" in Settings &gt; Manage Relays. Data sent to private relays is stored in <strong>plaintext</strong> on that relay—only for self-hosted or fully trusted relays.</li>
+                <li>Private relay URLs are stored <strong>encrypted</strong> in your app preferences (NIP-78) and are <strong>never</strong> included in your public relay list (NIP-65).</li>
+                <li>Only <strong>wss://</strong> (secure WebSocket) relays can be marked private so traffic is encrypted in transit.</li>
+                <li>When you mark a relay private, you must confirm that you understand the data will be stored in plaintext on that relay.</li>
+              </ul>
               <p className="font-medium text-slate-800 dark:text-slate-200">Encryption Limitations:</p>
               <ul className="list-disc list-inside space-y-2 ml-2 mb-3">
                 <li><strong>Requires compatible signer:</strong> Encryption requires a Nostr signer that supports NIP-44. If your signer doesn't support NIP-44, encryption will fail.</li>
@@ -236,17 +234,17 @@ export function Privacy() {
                 <li><strong>Key compromise:</strong> If your Nostr private key is compromised, all encrypted data can be decrypted by whoever has your key.</li>
                 <li><strong>Metadata visible:</strong> Even with encrypted content, event metadata (timestamps, event kind, public key) is visible to relay operators.</li>
               </ul>
-              <p className="font-medium text-slate-800 dark:text-slate-200">Blossom Server Configuration:</p>
+              <p className="font-medium text-slate-800 dark:text-slate-200">Blossom Server &amp; Private Relay Configuration:</p>
               <ul className="list-disc list-inside space-y-2 ml-2 mb-3">
-                <li><strong>Your Blossom server URLs are encrypted</strong> using NIP-44 before being stored on Nostr relays</li>
-                <li>This protects private server addresses (like your home NAS) from being visible on public relays</li>
-                <li>Only you can decrypt and see your configured server URLs</li>
+                <li><strong>Your Blossom server URLs and private relay list are encrypted</strong> using NIP-44 before being stored on Nostr relays</li>
+                <li>This protects private server addresses and private relay URLs from being visible on public relays</li>
+                <li>Only you can decrypt and see your configured server URLs and private relay list</li>
                 <li>Requires a signer that supports NIP-44 encryption</li>
               </ul>
               <p className="font-medium text-slate-800 dark:text-slate-200">Data NOT Encrypted (by design):</p>
               <ul className="list-disc list-inside space-y-2 ml-2">
-                <li><strong>Relay list (NIP-65):</strong> Public so other Nostr clients can discover you</li>
-                <li><strong>App preferences:</strong> Tab configuration, display settings, custom type lists (but NOT Blossom server URLs - those are encrypted)</li>
+                <li><strong>Relay list (NIP-65):</strong> Public so other Nostr clients can discover you (private relays are excluded from NIP-65)</li>
+                <li><strong>App preferences:</strong> Tab configuration, display settings, custom type lists (Blossom URLs and private relay list are encrypted)</li>
                 <li><strong>Profile data:</strong> If you create a profile, it follows standard Nostr conventions</li>
                 <li><strong>Uploaded files:</strong> Files uploaded to Blossom servers are NOT encrypted and are publicly accessible via their URLs</li>
               </ul>
@@ -269,7 +267,8 @@ export function Privacy() {
               <ul className="list-disc list-inside space-y-2 ml-2 mb-4">
                 <li>Your data is published to the Nostr relays you have configured</li>
                 <li>You can add, remove, or change relays at any time</li>
-                <li>Default relays are provided, but you can use your own private relays for additional privacy</li>
+                <li>Relays you mark as "private" receive plaintext copies of your data; all other relays receive NIP-44 encrypted data</li>
+                <li>Private relay URLs are stored encrypted in your app preferences (NIP-78) and are excluded from your public relay list (NIP-65)</li>
                 <li>Relay operators may have their own data retention policies</li>
                 <li>Cypher Log has no control over relay operators or their policies</li>
               </ul>
@@ -452,7 +451,7 @@ export function Privacy() {
               <ul className="list-disc list-inside space-y-2 ml-2">
                 <li><strong>Data portability:</strong> Your data is stored in an open format and can be accessed by any Nostr client</li>
                 <li><strong>Relay choice:</strong> You choose which relays store your data</li>
-                <li><strong>Encryption control:</strong> All data categories are encrypted by default; you can turn encryption off per category if desired</li>
+                <li><strong>Encryption:</strong> All data categories are encrypted on public relays; data on relays you mark as private is stored in plaintext on that relay only</li>
                 <li><strong>Identity ownership:</strong> You own your Nostr keys and can use them anywhere</li>
                 <li><strong>No account required:</strong> Cypher Log doesn't require creating an account with us - you just use your Nostr identity</li>
               </ul>

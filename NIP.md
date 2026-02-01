@@ -976,4 +976,62 @@ Valid visit type values:
 
 ### Privacy Considerations
 
-Vet visit records may contain sensitive information about pet health and medical history. Users should consider enabling encryption for the "pets" data category when using the application. Vet visit data inherits the encryption settings from the pet data category.
+Vet visit records may contain sensitive information about pet health and medical history. All Cypher Log data categories (including pets and vet visits) are encrypted by default on public relays; data on relays marked as private is stored in plaintext on that relay only.
+
+---
+
+## Private Relays and Dual Publish (Cypher Log)
+
+Cypher Log extends standard Nostr usage with **private relays**: relays you mark as private receive **plaintext** copies of your data (for self-hosted or trusted use), while all other relays receive **NIP-44 encrypted** copies. Private relay URLs are stored encrypted in app preferences and are excluded from your public relay list.
+
+### NIP-78: Private Relay List
+
+- The NIP-78 app data event (kind 30078, identifier `cypherlog/preferences`) may include a field **`privateRelays`**.
+- When present, `privateRelays` is **NIP-44 encrypted to self** (same pattern as Blossom server URLs). Public relays store the event but cannot read the list.
+- Value when decrypted: a JSON array of relay URLs (e.g. `["wss://my.relay.example"]`).
+- Only **wss://** URLs are allowed as private; **ws://** URLs are filtered out on load and cannot be marked private in the UI.
+
+### NIP-65: Relay List (Kind 10002)
+
+- When publishing kind 10002, Cypher Log **excludes** any relay that is in the user's private relay list.
+- Only "public" relays (relays not in `privateRelays`) are included in the NIP-65 event.
+- This keeps private relay URLs out of the public relay list so other clients cannot discover them from NIP-65.
+
+### Relay List Merge and Order
+
+- The full relay list used for reading and writing is: **private relays first**, then public relays (from NIP-65 / app config), deduplicated by URL.
+- Private relays are preferred for event fetching so the app can use plaintext when available.
+
+### Dual Publish (Plain to Private, Encrypted to Public)
+
+- When the user has at least one private relay (wss://) and at least one public relay:
+  - For addressable/replaceable data that is encrypted, Cypher Log publishes **two** versions of the same logical entity:
+    - **Plaintext** version → sent only to private relays.
+    - **NIP-44 encrypted** version → sent only to public relays.
+  - Same kind, pubkey, d-tag, and created_at; different event IDs.
+- When there are no private relays, only the encrypted version is published to the pool (current single-publish behavior).
+- When there are only private relays (no public), only the plaintext version is published to those relays.
+
+### Read Path: Deduplication
+
+- Events are deduplicated by **logical key** before parsing:
+  - Addressable events: `(kind, pubkey, d-tag)`.
+  - Replaceable events: `(kind, pubkey)`.
+  - Other kinds: `(kind, pubkey, created_at)` or event id as appropriate.
+- When multiple events exist for the same logical key (plain and encrypted copies), the app **prefers plaintext** (content that does not start with the NIP-44 marker) to avoid unnecessary decryption.
+- This dedupe runs in the sync/cache layer before domain parsing.
+
+### Delete Path: Sibling Deletion (NIP-09)
+
+- When the user deletes an item, Cypher Log publishes a kind 5 (NIP-09) deletion event.
+- To remove **both** the plaintext copy (on private relays) and the encrypted copy (on public relays), the app:
+  1. Queries **private** relay set for events with the same (kind, pubkey, d-tag) [or replaceable key].
+  2. Queries **public** relay set for the same.
+  3. Collects all event IDs from both result sets.
+  4. Publishes one kind 5 event with an `e` tag for each of these IDs (and the usual `a` tag for the address), so all copies are requested for deletion.
+
+### WSS-Only Restriction for Private Relays
+
+- A relay can be marked private only if its URL uses **wss://** (secure WebSocket).
+- **ws://** URLs cannot be marked private in the UI (switch disabled, with tooltip explaining wss:// is required).
+- If stored data ever contains a ws:// URL in the private relay list, it is cleared on load (filtered out) so plaintext is never sent over an unencrypted transport for "private" relays.

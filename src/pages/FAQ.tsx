@@ -263,9 +263,9 @@ const EVENT_KINDS = [
     category: 'Standard (Replaceable)',
     icon: Wifi,
     color: 'purple',
-    description: 'Publishes your preferred relay list so other Nostr clients can find where to reach you. This is a standard Nostr event used across the ecosystem.',
+    description: 'Publishes your preferred relay list so other Nostr clients can find where to reach you. Private relays are excluded—only public relay URLs are included. This is a standard Nostr event used across the ecosystem.',
     dataStored: [
-      'List of relay URLs',
+      'List of public relay URLs (private relays excluded)',
       'Read/write permissions for each relay',
     ],
     encrypted: false,
@@ -276,13 +276,14 @@ const EVENT_KINDS = [
     category: 'Standard (Addressable)',
     icon: Settings,
     color: 'slate',
-    description: 'Stores your Cypher Log preferences including active tabs, view modes, custom categories, and media server configuration. Synced across devices.',
+    description: 'Stores your Cypher Log preferences including active tabs, view modes, custom categories, media server configuration, and (encrypted) private relay list. Synced across devices.',
     dataStored: [
       'Active tabs configuration',
       'View mode preferences',
       'Custom room names',
       'Custom type categories',
       'Blossom media server configuration',
+      'Private relay list (NIP-44 encrypted)',
       'Currency preferences',
     ],
     encrypted: false,
@@ -293,7 +294,7 @@ const EVENT_KINDS = [
     category: 'Standard (Regular)',
     icon: Database,
     color: 'red',
-    description: 'Published when you delete any item. Requests that relays remove the referenced events.',
+    description: 'Published when you delete any item. Requests that relays remove the referenced events. When using private relays, Cypher Log includes all sibling event IDs (plain and encrypted copies) so both are removed.',
     dataStored: [
       'Reference to deleted event(s)',
       'Deletion reason (optional)',
@@ -313,11 +314,19 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Is my data encrypted?',
-    answer: 'Yes! Cypher Log uses NIP-44 encryption for all data categories by default: appliances, vehicles, pets, maintenance records, subscriptions, warranties, companies/service providers, and projects. Your data is encrypted with your private key before being sent to relays. Only you can decrypt and read it. You can turn encryption off per category in Settings > Data Encryption if desired, and verify encryption using the "Trust but Verify" feature.',
+    answer: 'Yes! Cypher Log uses NIP-44 encryption for all data categories: appliances, vehicles, pets, maintenance records, subscriptions, warranties, companies/service providers, and projects. Your data is encrypted with your private key before being sent to public relays. Only you can decrypt and read it. If you mark a relay as "private" in relay settings, data sent to that relay is stored in plaintext (so you can read it directly on a self-hosted or trusted relay); data on all other relays remains encrypted.',
   },
   {
     question: 'What are relays?',
-    answer: 'Relays are servers that store and distribute Nostr events (data). You can connect to multiple relays for redundancy. Public relays are open to everyone, while private relays restrict access. For maximum privacy, consider using a private relay for your Cypher Log data.',
+    answer: 'Relays are servers that store and distribute Nostr events (data). You can connect to multiple relays for redundancy. Public relays are open to everyone. You can also mark relays as "private" in Cypher Log: private relays are prioritized for reads, receive plaintext copies of your data (for self-hosted or trusted use), and are never published in your public relay list (NIP-65). Private relays must use wss:// (secure WebSocket) so traffic is encrypted in transit.',
+  },
+  {
+    question: 'What are private relays?',
+    answer: 'In Cypher Log you can mark a relay as "private" in Settings > Manage Relays. Data sent to private relays is stored in plaintext (so the relay operator or you, if self-hosted, can read it). Data on all other relays stays NIP-44 encrypted. Private relay URLs are stored encrypted in your app preferences (NIP-78) and are never included in your public relay list (NIP-65). Only wss:// relays can be marked private. When you mark a relay private, you must confirm that you understand the data will be stored in plaintext on that relay.',
+  },
+  {
+    question: 'What\'s the difference between paid and private relays?',
+    answer: 'A paid relay is one you pay to use (e.g. subscription or usage-based). A private relay in Cypher Log is a relay you mark as "private" in Settings > Manage Relays—it receives plaintext copies of your data and is excluded from your public relay list. Paid relays are not necessarily private: many paid relays are still "public" in the sense that your relay list (NIP-65) may include them and your data is sent to them encrypted. Before assuming a relay is private or trustworthy, check the relay\'s policy: who can read data, whether they log or share data, and how they handle deletion. Only mark a relay as private in Cypher Log if you trust it with plaintext data (e.g. self-hosted or a relay with a clear privacy policy you accept).',
   },
   {
     question: 'Can I use Cypher Log on multiple devices?',
