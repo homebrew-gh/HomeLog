@@ -333,6 +333,14 @@ const FAQ_ITEMS = [
     answer: 'Yes! Because your data is stored on Nostr relays (not locally), you can access your Cypher Log from any device. Just log in with the same Nostr identity (via browser extension, Amber on Android, or other signing methods).',
   },
   {
+    question: 'How do I use my Start9 or self-hosted Nostr relay?',
+    answer: 'Start9 Nostr RS Relay (and other standard Nostr relays) work with Cypher Log with no special setup. Get your relay\'s WebSocket URL from the service (e.g. StartOS Nostr Properties), then add it in Settings > Manage Relays. For Start9: whitelist your pubkey (hex) in the relay config first; copy the URL from Nostr Properties; add it in Cypher Log. If you use the LAN URL (wss://...local), trust your server\'s Root CA in your browser so TLS works. You can mark wss:// relays as private if you control them. See docs/START9_NOSTR_RELAY.md in the repo for step-by-step Start9 instructions.',
+  },
+  {
+    question: 'How do I use my Umbrel Nostr relay?',
+    answer: 'Umbrel\'s official Nostr Relay app (nostr-rs-relay) works with Cypher Log like any other relay. Add the WebSocket URL in Settings > Manage Relays—e.g. ws://umbrel:4848 with Tailscale (MagicDNS), or ws://umbrel.local:4848 / ws://<Umbrel-IP>:4848 on your local network. Browsers block ws:// from HTTPS pages, so if you use Cypher Log from the normal HTTPS site, the connection may be blocked; it works when using the app from HTTP or localhost. You cannot mark ws:// relays as Private in Cypher Log (wss:// required). See docs/UMBREL_NOSTR_RELAY.md for details.',
+  },
+  {
     question: 'What happens if a relay goes offline?',
     answer: 'If you\'re connected to multiple relays, your data will still be available from the other relays. This is why it\'s recommended to use at least 2-3 relays. Cypher Log shows connection status indicators (green/red) in the relay management settings.',
   },

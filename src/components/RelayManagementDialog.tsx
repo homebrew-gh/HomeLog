@@ -102,6 +102,26 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                         nostr-relay (self-hosted)
                         <ExternalLink className="h-3 w-3" />
                       </a>
+                      <span className="text-slate-300 dark:text-slate-600">•</span>
+                      <a 
+                        href="https://docs.start9.com/service-guides/nostr/nostr-rs-relay.html" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 hover:underline"
+                      >
+                        Start9 Nostr RS Relay
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                      <span className="text-slate-300 dark:text-slate-600">•</span>
+                      <a 
+                        href="https://apps.umbrel.com/app/nostr-relay" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 hover:underline"
+                      >
+                        Umbrel Nostr Relay
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
                     </div>
                   </div>
                 </div>

@@ -15,8 +15,6 @@ import { SubscriptionTypeManagementDialog } from '@/components/SubscriptionTypeM
 import { HomeFeatureManagementDialog } from '@/components/HomeFeatureManagementDialog';
 import { WarrantyTypeManagementDialog } from '@/components/WarrantyTypeManagementDialog';
 import { PetTypeManagementDialog } from '@/components/PetTypeManagementDialog';
-import { EncryptionSettingsDialog } from '@/components/EncryptionSettingsDialog';
-import { SHOW_ENCRYPTION_SETTINGS_UI } from '@/contexts/EncryptionContext';
 import { StorageSettingsDialog } from '@/components/StorageSettingsDialog';
 import { DisplaySettingsDialog } from '@/components/DisplaySettingsDialog';
 import { CurrencySettingsDialog } from '@/components/CurrencySettingsDialog';
@@ -240,10 +238,6 @@ const Index = () => {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Privacy & Security</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setEncryptionSettingsOpen(true)}>
-                      <Shield className="h-4 w-4 mr-2" />
-                      Data Encryption
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setStorageSettingsOpen(true)}>
                       <HardDrive className="h-4 w-4 mr-2" />
                       Browser Storage
@@ -466,13 +460,6 @@ const Index = () => {
         isOpen={subscriptionTypeManagementOpen}
         onClose={() => setSubscriptionTypeManagementOpen(false)}
       />
-
-      {SHOW_ENCRYPTION_SETTINGS_UI && (
-        <EncryptionSettingsDialog
-          isOpen={encryptionSettingsOpen}
-          onClose={() => setEncryptionSettingsOpen(false)}
-        />
-      )}
 
       <StorageSettingsDialog
         isOpen={storageSettingsOpen}
