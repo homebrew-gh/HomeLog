@@ -54,14 +54,52 @@ Reconnection-triggered backfill is a nice future improvement once relay connecti
 - **Rate limiting:** Throttle decryption and publish (e.g. limit concurrency with `pLimit` or similar, small delay between batches) so remote signers and relays aren’t hammered.
 - **Errors:** If private relay publish fails for some events, we can retry on next run (same `lastBackfillAt`); or store “last successful backfill per relay” for finer retry. Start simple: one `lastBackfillAt`, retry full window on next run if needed.
 
+## Pending sync count (UI indicator)
+
+To show the user that a sync would be useful, the UI can display **how many events** are on public relays but not yet on the private relay.
+
+### How to compute the count
+
+1. **Same window:** Use the same time window as backfill (e.g. since `lastBackfillAt`, or last 7 days for the indicator). Same kinds and `authors: [user.pubkey]`.
+2. **Query public relays:** Fetch events from the **public** relay group (same filter). Dedupe by **logical key** (reuse `getLogicalKey` from eventCache: `kind:pubkey` for replaceable, `kind:pubkey:d` for addressable). Call this set **publicKeys**.
+3. **Query private relay(s):** Fetch events from the **private** relay group with the same filter. Dedupe by logical key. Call this set **privateKeys**.
+4. **Count to sync:** Logical keys that exist on public but not on private: `toSyncKeys = publicKeys \ privateKeys`; `pendingSyncCount = toSyncKeys.size`.
+
+No decryption is needed for the count; only relay queries and logical-key comparison.
+
+### When to run the count
+
+- **On demand:** When the user opens **Relay Management** (or the Relays tab), run the count query so they see the number next to the Sync button. Use TanStack Query with a key like `['private-relay-pending-sync', user.pubkey, lastBackfillAt]` and `staleTime` (e.g. 2–5 minutes) so opening the dialog again within that window doesn't re-query.
+- **Optional:** When the app is open and the user has private relays, run the count periodically (e.g. every 10–15 min) and cache the result; then a small indicator (e.g. badge on Settings or "Manage Relays" menu item) can show the count so the user sees that a sync would be useful without opening the dialog. Don't run too often to avoid hammering relays.
+
+If the **private relay is unreachable**, the private-side query may timeout. Options: show "Sync status unavailable (private relay unreachable)", or show only "Up to X events on other relays" (count from public only, with a note that the exact number depends on what's already on the private relay).
+
+### Where to show it in the UI
+
+- **Relay Management dialog (Relays tab):** When the user has at least one private relay, show a card or line above the relay list: *"You have **N** events on your other relays that are not yet on your private relay. Sync now for a full backup."* with a **Sync to private relay** button. If count is 0, optionally show *"Your private relay is up to date."*
+- **Sync button:** Badge or inline count on the button: *"Sync to private relay (N)"* or *"Sync to private relay"* with a small badge when count > 0.
+- **Optional menu badge:** On the hamburger/settings entry that opens Relay Management, show a small badge when `pendingSyncCount > 0` so the user sees that a sync would be useful without opening the dialog.
+
+The hook `usePrivateRelayBackfill()` can expose `pendingSyncCount` (from a TanStack Query that runs the count logic above) in addition to `runBackfill`, `lastBackfillAt`, `isRunning`, and `error`. The Sync button can be enabled when `pendingSyncCount > 0` (or when the user wants to run a manual "full" sync anyway); the UI shows the count as above.
+
 ## Where to Implement
 
 - **New hook:** `usePrivateRelayBackfill()` that:
   - Reads user, private relays, public relays, signer, preferences.
   - Exposes `runBackfill(options?: { since?: number; manual?: boolean })` and optionally `lastBackfillAt`, `isRunning`, `error`.
+  - Exposes **pending sync count** via a query: same kinds + author, since `lastBackfillAt` (or last 7 days); query public and private relay groups, diff by logical key, return count. Cached with TanStack Query (e.g. key `['private-relay-pending-sync', user.pubkey, lastBackfillAt]`, staleTime 2–5 min).
   - Called by a small **background trigger** (e.g. `useEffect` + `setInterval` when app is open and user has private relays) and by a manual “Sync to private relay(s)” button.
 - **Persistence:** `lastBackfillAt` in localStorage (key e.g. `cypherlog-backfill-last`) or in NIP-78 (encrypted) so it survives devices if desired. Start with localStorage.
-- **UI:** Settings or Relay Management: one button “Sync my data to private relay(s)” that calls `runBackfill({ since: sevenDaysAgo, manual: true })` and shows toast or small progress.
+- **UI:** Relay Management (Relays tab): when user has private relay(s), show pending sync count and one button “Sync my data to private relay(s)” that calls `runBackfill({ since: sevenDaysAgo, manual: true })` and shows toast or small progress.
+
+## Privacy & Security placement
+
+The private relay backfill feature can be exposed under **Privacy & Security** in the hamburger menu in addition to Relay Management. Users who think in terms of "backup" and "privacy" would find "sync to private relay" and "pending sync count" in a place that matches that mental model.
+
+- **Option A – New menu item:** Under "Privacy & Security", add an item such as "Private relay backup" that opens a small dialog or inline section: short explanation, pending sync count, "Sync to private relay" button, and optionally "Manage relays" link. The same `usePrivateRelayBackfill()` hook (and pending-count query) would power this; Relay Management would still have the full relay list and the same Sync action.
+- **Option B – Dedicated page:** Add a route (e.g. `/privacy-security`) that aggregates Browser Storage, Private relay backup, Import/Export, and links to Relay Management and Privacy Policy. Backfill would be one section with the same hook and count.
+
+Implementation: when the user has at least one private relay, show the pending sync count and a "Sync to private relay" button; if the user has no private relay, show a short line such as "Add and mark a relay as private in Manage relays to sync a backup there," with a link to Relay Management.
 
 ## Summary
 
