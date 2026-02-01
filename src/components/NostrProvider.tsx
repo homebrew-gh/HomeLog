@@ -1,9 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { createContext, useEffect, useMemo, useRef, useState } from 'react';
 import { NostrEvent, NostrFilter, NPool, NRelay1 } from '@nostrify/nostrify';
 import { NostrContext } from '@nostrify/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
+
+/** Setter for private relay URLs; synced from UserPreferencesProvider when preferences load */
+export const SetPrivateRelayUrlsContext = createContext<((urls: string[]) => void) | null>(null);
 
 interface NostrProviderProps {
   children: React.ReactNode;
@@ -15,19 +18,34 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   const { cachingRelay } = useEncryptionSettings();
 
   const queryClient = useQueryClient();
+  const [privateRelayUrls, setPrivateRelayUrls] = useState<string[]>([]);
+
+  // Full relay list with private relays first (preferred for reads)
+  const mergedRelays = useMemo(() => {
+    const privateSet = new Set(privateRelayUrls);
+    const relays = config.relayMetadata.relays;
+    return [...relays].sort((a, b) => {
+      const aPrivate = privateSet.has(a.url);
+      const bPrivate = privateSet.has(b.url);
+      if (aPrivate && !bPrivate) return -1;
+      if (!aPrivate && bPrivate) return 1;
+      return 0;
+    });
+  }, [config.relayMetadata.relays, privateRelayUrls]);
 
   // Create NPool instance only once
   const pool = useRef<NPool | undefined>(undefined);
 
-  // Use refs so the pool always has the latest data
-  const relayMetadata = useRef(config.relayMetadata);
+  // Refs so the pool always has the latest data
+  const relayMetadataRef = useRef({ relays: mergedRelays });
   const cachingRelayRef = useRef(cachingRelay);
 
-  // Invalidate Nostr queries when relay metadata changes
+  relayMetadataRef.current = { relays: mergedRelays };
+
+  // Invalidate Nostr queries when merged relay list changes
   useEffect(() => {
-    relayMetadata.current = config.relayMetadata;
     queryClient.invalidateQueries({ queryKey: ['nostr'] });
-  }, [config.relayMetadata, queryClient]);
+  }, [mergedRelays, queryClient]);
 
   // Update caching relay ref when it changes
   useEffect(() => {
@@ -36,10 +54,9 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
     queryClient.invalidateQueries({ queryKey: ['nostr'] });
   }, [cachingRelay, queryClient]);
 
-  // Initialize NPool only once
+  // Initialize NPool only once (uses ref so it always sees latest mergedRelays)
   if (!pool.current) {
-    console.log('[NostrProvider] Initializing NPool with relays:', relayMetadata.current.relays);
-    
+    console.log('[NostrProvider] Initializing NPool');
     pool.current = new NPool({
       open(url: string) {
         console.log('[NostrProvider] Opening relay connection:', url);
@@ -47,53 +64,33 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
       },
       reqRouter(filters: NostrFilter[]) {
         const routes = new Map<string, NostrFilter[]>();
+        const { relays } = relayMetadataRef.current;
+        const readRelays = relays.filter((r) => r.read).map((r) => r.url);
 
-        // Get all read relays
-        const readRelays = relayMetadata.current.relays
-          .filter(r => r.read)
-          .map(r => r.url);
-
-        // If a caching relay is set and it's in the read list, prioritize it by putting it first
-        // The caching relay will be queried alongside other relays for faster initial response
         const currentCachingRelay = cachingRelayRef.current;
         let orderedRelays = [...readRelays];
-        
         if (currentCachingRelay && readRelays.includes(currentCachingRelay)) {
-          // Move caching relay to the front of the list
-          orderedRelays = [
-            currentCachingRelay,
-            ...readRelays.filter(url => url !== currentCachingRelay)
-          ];
-          console.log('[NostrProvider] Prioritizing caching relay:', currentCachingRelay);
+          orderedRelays = [currentCachingRelay, ...readRelays.filter((url) => url !== currentCachingRelay)];
         }
-
-        // console.log('[NostrProvider] Routing query to read relays:', orderedRelays);
-
         for (const url of orderedRelays) {
           routes.set(url, filters);
         }
-
         return routes;
       },
       eventRouter(_event: NostrEvent) {
-        // Get write relays from metadata
-        const writeRelays = relayMetadata.current.relays
-          .filter(r => r.write)
-          .map(r => r.url);
-
-        const allRelays = new Set<string>(writeRelays);
-
-        console.log('[NostrProvider] Routing event to write relays:', [...allRelays]);
-
-        return [...allRelays];
+        const { relays } = relayMetadataRef.current;
+        const writeRelays = relays.filter((r) => r.write).map((r) => r.url);
+        return [...new Set(writeRelays)];
       },
     });
   }
 
   return (
-    <NostrContext.Provider value={{ nostr: pool.current } as unknown as React.ComponentProps<typeof NostrContext.Provider>['value']}>
-      {children}
-    </NostrContext.Provider>
+    <SetPrivateRelayUrlsContext.Provider value={setPrivateRelayUrls}>
+      <NostrContext.Provider value={{ nostr: pool.current } as unknown as React.ComponentProps<typeof NostrContext.Provider>['value']}>
+        {children}
+      </NostrContext.Provider>
+    </SetPrivateRelayUrlsContext.Provider>
   );
 };
 

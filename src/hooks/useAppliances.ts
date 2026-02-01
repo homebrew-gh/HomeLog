@@ -11,9 +11,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
 
+import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { useAppContext } from '@/hooks/useAppContext';
+import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { logger } from '@/lib/logger';
+import { isRelayUrlSecure } from '@/lib/relay';
+import { getSiblingEventIdsForDeletion } from '@/lib/relayDeletion';
 import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { APPLIANCE_KIND, type Appliance } from '@/lib/types';
@@ -176,8 +181,11 @@ export function useApplianceById(id: string | undefined) {
 
 export function useApplianceActions() {
   const { user } = useCurrentUser();
+  const { nostr } = useNostr();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
+  const { config } = useAppContext();
+  const { preferences } = useUserPreferences();
   const { encryptForCategory, shouldEncrypt } = useEncryption();
   const { isEncryptionEnabled } = useEncryptionSettings();
 
@@ -195,8 +203,9 @@ export function useApplianceActions() {
 
     let content = '';
 
+    let dualPublish: { plainContent: string } | undefined;
     if (useEncryption && shouldEncrypt('appliances')) {
-      // Store data in encrypted content
+      // Store data in encrypted content; optional plain copy to private relays
       const applianceData: ApplianceData = {
         model: data.model,
         manufacturer: data.manufacturer,
@@ -207,6 +216,7 @@ export function useApplianceActions() {
         manualUrl: data.manualUrl,
       };
       content = await encryptForCategory('appliances', applianceData);
+      dualPublish = { plainContent: JSON.stringify(applianceData) };
     } else {
       // Store data in plaintext tags (legacy format)
       tags.push(['model', data.model]);
@@ -223,6 +233,7 @@ export function useApplianceActions() {
       kind: APPLIANCE_KIND,
       content,
       tags,
+      ...(dualPublish && { dualPublish }),
     });
 
     // Cache the new event immediately
@@ -249,8 +260,8 @@ export function useApplianceActions() {
 
     let content = '';
 
+    let dualPublish: { plainContent: string } | undefined;
     if (useEncryption && shouldEncrypt('appliances')) {
-      // Store data in encrypted content
       const applianceData: ApplianceData = {
         model: data.model,
         manufacturer: data.manufacturer,
@@ -261,8 +272,8 @@ export function useApplianceActions() {
         manualUrl: data.manualUrl,
       };
       content = await encryptForCategory('appliances', applianceData);
+      dualPublish = { plainContent: JSON.stringify(applianceData) };
     } else {
-      // Store data in plaintext tags (legacy format)
       tags.push(['model', data.model]);
       if (data.manufacturer) tags.push(['manufacturer', data.manufacturer]);
       if (data.purchaseDate) tags.push(['purchase_date', data.purchaseDate]);
@@ -277,6 +288,7 @@ export function useApplianceActions() {
       kind: APPLIANCE_KIND,
       content,
       tags,
+      ...(dualPublish && { dualPublish }),
     });
 
     // Cache the updated event immediately
@@ -303,25 +315,38 @@ export function useApplianceActions() {
   const deleteAppliance = async (id: string) => {
     if (!user) throw new Error('Must be logged in');
 
-    // Publish a deletion request (kind 5)
+    const privateRelayUrls = (preferences.privateRelays ?? []).filter(isRelayUrlSecure);
+    const publicRelayUrls = config.relayMetadata.relays
+      .filter((r) => !privateRelayUrls.includes(r.url))
+      .map((r) => r.url);
+
+    const siblingIds =
+      privateRelayUrls.length > 0 || publicRelayUrls.length > 0
+        ? await getSiblingEventIdsForDeletion(
+            nostr.group(privateRelayUrls),
+            nostr.group(publicRelayUrls),
+            APPLIANCE_KIND,
+            user.pubkey,
+            id,
+            AbortSignal.timeout(5000)
+          )
+        : []; // Fallback: no relays (shouldn't happen)
+
+    const tags: string[][] = [['a', `${APPLIANCE_KIND}:${user.pubkey}:${id}`]];
+    for (const eventId of siblingIds) tags.push(['e', eventId]);
+
     const event = await publishEvent({
       kind: 5,
       content: 'Deleted appliance',
-      tags: [
-        ['a', `${APPLIANCE_KIND}:${user.pubkey}:${id}`],
-      ],
+      tags,
     });
 
-    // Cache the deletion event and remove the appliance from cache
     if (event) {
       await cacheEvents([event]);
       await deleteCachedEventByAddress(APPLIANCE_KIND, user.pubkey, id);
     }
 
-    // Small delay to allow the deletion event to propagate to relays
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Force refetch to get updated data including the deletion event
+    await new Promise((resolve) => setTimeout(resolve, 500));
     await queryClient.refetchQueries({ queryKey: ['appliances'] });
     await queryClient.refetchQueries({ queryKey: ['maintenance'] });
   };

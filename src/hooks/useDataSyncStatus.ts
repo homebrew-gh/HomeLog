@@ -19,7 +19,7 @@ import {
   PROJECT_MATERIAL_KIND,
   VET_VISIT_KIND,
 } from '@/lib/types';
-import { cacheEvents, getCachedEvents } from '@/lib/eventCache';
+import { cacheEvents, dedupeEventsByLogicalKey, getCachedEvents } from '@/lib/eventCache';
 import { logger } from '@/lib/logger';
 
 // Timeout for new users - if no data is found quickly, assume new user
@@ -222,9 +222,10 @@ export function useDataSyncStatus() {
 
         logger.log('[DataSync] Query complete, events synced:', events.length > 0);
 
-        // Cache all events for other hooks to use
+        // Cache all events for other hooks to use (dedupe plain vs encrypted copies)
         if (events.length > 0) {
-          await cacheEvents(events);
+          const deduped = dedupeEventsByLogicalKey(events);
+          await cacheEvents(deduped);
           
           // Invalidate all data queries so they re-read from the now-populated cache
           // when they next become active (i.e., when the dashboard renders)

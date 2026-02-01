@@ -23,6 +23,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useToast } from '@/hooks/useToast';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
+import { isRelayUrlSecure } from '@/lib/relay';
 
 interface Relay {
   url: string;
@@ -74,6 +75,7 @@ export function RelayListManager() {
   const [relayStatuses, setRelayStatuses] = useState<Record<string, RelayStatus>>({});
   const [isCheckingAll, setIsCheckingAll] = useState(false);
   const [relayToRemove, setRelayToRemove] = useState<string | null>(null);
+  const [relayToMarkPrivate, setRelayToMarkPrivate] = useState<{ url: string } | null>(null);
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use a ref to track config relays for the interval callback to avoid recreating it
@@ -232,7 +234,9 @@ export function RelayListManager() {
   };
 
   const publishNIP65RelayList = (relayList: Relay[]) => {
-    const tags = relayList.map(relay => {
+    // NIP-65 must exclude private relays (they are stored encrypted in NIP-78 only)
+    const publicRelays = relayList.filter((r) => !isPrivateRelay(r.url));
+    const tags = publicRelays.map(relay => {
       if (relay.read && relay.write) {
         return ['r', relay.url];
       } else if (relay.read) {
@@ -412,18 +416,38 @@ export function RelayListManager() {
                     
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor={`private-${relay.url}`} className="text-sm cursor-pointer flex items-center gap-1">
-                          <Lock className="h-3 w-3" />
-                          Private Relay
-                        </Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Label
+                              htmlFor={`private-${relay.url}`}
+                              className={`text-sm flex items-center gap-1 ${isRelayUrlSecure(relay.url) ? 'cursor-pointer' : 'cursor-not-allowed text-muted-foreground'}`}
+                            >
+                              <Lock className="h-3 w-3" />
+                              Private Relay
+                            </Label>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="text-xs max-w-[200px]">
+                            {isRelayUrlSecure(relay.url)
+                              ? 'Prioritized for sensitive data. Data on private relays is stored in plaintext—only for self-hosted or trusted relays.'
+                              : 'Private relays require wss:// so traffic is encrypted. Use a secure relay URL to mark as private.'}
+                          </TooltipContent>
+                        </Tooltip>
                         <p className="text-[10px] text-muted-foreground">
-                          Prioritized for sensitive data
+                          {isRelayUrlSecure(relay.url) ? 'Prioritized for sensitive data' : 'wss:// required'}
                         </p>
                       </div>
                       <Switch
                         id={`private-${relay.url}`}
                         checked={isPrivate}
-                        onCheckedChange={(checked) => setPrivateRelay(relay.url, checked)}
+                        disabled={!isRelayUrlSecure(relay.url)}
+                        onCheckedChange={(checked) => {
+                          if (!isRelayUrlSecure(relay.url)) return;
+                          if (checked) {
+                            setRelayToMarkPrivate({ url: relay.url });
+                          } else {
+                            setPrivateRelay(relay.url, false);
+                          }
+                        }}
                         className="data-[state=checked]:bg-amber-500 scale-75"
                       />
                     </div>
@@ -481,6 +505,38 @@ export function RelayListManager() {
           Log in to sync your relay list with Nostr
         </p>
       )}
+
+      {/* Mark Relay Private – Warning & I understand */}
+      <AlertDialog open={!!relayToMarkPrivate} onOpenChange={(open) => !open && setRelayToMarkPrivate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark relay as private?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Data sent to private relays is stored in <strong>plaintext</strong> on that relay. Only use private for self-hosted or fully trusted relays.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  You must trust the relay operator and its security. If you understand and want to mark this relay as private, click &quot;I understand&quot;.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (relayToMarkPrivate) {
+                  setPrivateRelay(relayToMarkPrivate.url, true);
+                  setRelayToMarkPrivate(null);
+                }
+              }}
+            >
+              I understand
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Remove Relay Confirmation Dialog */}
       <AlertDialog open={!!relayToRemove} onOpenChange={(open) => !open && setRelayToRemove(null)}>

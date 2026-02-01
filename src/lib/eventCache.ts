@@ -86,6 +86,41 @@ async function withDB<T>(op: (db: IDBDatabase) => Promise<T>): Promise<T> {
   }
 }
 
+/** NIP-44 encrypted content marker; plaintext preferred when deduping */
+const ENCRYPTED_CONTENT_MARKER = 'nip44:';
+
+/**
+ * Logical key for deduplication: same key = same logical entity (plain + encrypted copies).
+ * Replaceable: (kind, pubkey). Addressable: (kind, pubkey, d). Regular: event id (no dedupe).
+ */
+function getLogicalKey(event: NostrEvent): string {
+  if (event.kind >= 30000) {
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+    return `${event.kind}:${event.pubkey}:${dTag}`;
+  }
+  if (event.kind >= 10000 && event.kind < 20000) {
+    return `${event.kind}:${event.pubkey}`;
+  }
+  return event.id;
+}
+
+/**
+ * Dedupe events by logical key, preferring plaintext so we avoid unnecessary decryption.
+ * Use before caching when dual-publish produces both plain (on private) and encrypted (on public) copies.
+ */
+export function dedupeEventsByLogicalKey(events: NostrEvent[]): NostrEvent[] {
+  const byKey = new Map<string, NostrEvent>();
+  for (const event of events) {
+    const key = getLogicalKey(event);
+    const existing = byKey.get(key);
+    const isPlain = !event.content?.startsWith(ENCRYPTED_CONTENT_MARKER);
+    if (!existing || (isPlain && existing.content?.startsWith(ENCRYPTED_CONTENT_MARKER))) {
+      byKey.set(key, event);
+    }
+  }
+  return [...byKey.values()];
+}
+
 /**
  * Generate a unique cache key for an event
  */

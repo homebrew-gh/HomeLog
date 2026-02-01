@@ -16,6 +16,7 @@ import { HomeFeatureManagementDialog } from '@/components/HomeFeatureManagementD
 import { WarrantyTypeManagementDialog } from '@/components/WarrantyTypeManagementDialog';
 import { PetTypeManagementDialog } from '@/components/PetTypeManagementDialog';
 import { EncryptionSettingsDialog } from '@/components/EncryptionSettingsDialog';
+import { SHOW_ENCRYPTION_SETTINGS_UI } from '@/contexts/EncryptionContext';
 import { StorageSettingsDialog } from '@/components/StorageSettingsDialog';
 import { DisplaySettingsDialog } from '@/components/DisplaySettingsDialog';
 import { CurrencySettingsDialog } from '@/components/CurrencySettingsDialog';
@@ -466,10 +467,12 @@ const Index = () => {
         onClose={() => setSubscriptionTypeManagementOpen(false)}
       />
 
-      <EncryptionSettingsDialog
-        isOpen={encryptionSettingsOpen}
-        onClose={() => setEncryptionSettingsOpen(false)}
-      />
+      {SHOW_ENCRYPTION_SETTINGS_UI && (
+        <EncryptionSettingsDialog
+          isOpen={encryptionSettingsOpen}
+          onClose={() => setEncryptionSettingsOpen(false)}
+        />
+      )}
 
       <StorageSettingsDialog
         isOpen={storageSettingsOpen}

@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useRef, useCallback, useState, type ReactNode } from 'react';
+import { SetPrivateRelayUrlsContext } from '@/components/NostrProvider';
 import { useNostr } from '@nostrify/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useAppContext } from '@/hooks/useAppContext';
+import { isRelayUrlSecure } from '@/lib/relay';
 
 // NIP-78: Application-specific data
 const APP_DATA_KIND = 30078;
@@ -124,15 +126,18 @@ export interface UserPreferences {
   projectsViewMode: 'list' | 'card';
   // Blossom media servers
   blossomServers: BlossomServer[];
+  // Private relay URLs (synced encrypted to NIP-78; not in NIP-65)
+  privateRelays: string[];
   // Version for future migrations
   version: number;
 }
 
 /**
- * Type for preferences as stored on Nostr (blossomServers may be encrypted string)
+ * Type for preferences as stored on Nostr (blossomServers, privateRelays may be encrypted string)
  */
-interface StoredPreferences extends Omit<UserPreferences, 'blossomServers'> {
+interface StoredPreferences extends Omit<UserPreferences, 'blossomServers' | 'privateRelays'> {
   blossomServers?: BlossomServer[] | string; // Can be array (legacy) or encrypted string
+  privateRelays?: string[] | string; // Can be array (legacy) or encrypted string
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -164,6 +169,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   petsViewMode: 'card',
   projectsViewMode: 'card',
   blossomServers: DEFAULT_BLOSSOM_SERVERS,
+  privateRelays: [],
   version: 1,
 };
 
@@ -235,6 +241,8 @@ interface UserPreferencesContextType {
   getEnabledBlossomServers: () => string[];
   getPrivateBlossomServers: () => string[];
   hasPrivateBlossomServer: () => boolean;
+  // Private relay list (synced encrypted to NIP-78; excluded from NIP-65)
+  setPrivateRelay: (url: string, isPrivate: boolean) => void;
   // Color theme actions
   setColorTheme: (theme: ColorTheme) => void;
   // Currency actions
@@ -243,7 +251,7 @@ interface UserPreferencesContextType {
   setExchangeRates: (rates: StoredExchangeRates) => void;
 }
 
-const UserPreferencesContext = createContext<UserPreferencesContextType | null>(null);
+export const UserPreferencesContext = createContext<UserPreferencesContextType | null>(null);
 
 export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const { nostr } = useNostr();
@@ -332,11 +340,33 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
               console.log('[UserPreferences] Loaded unencrypted blossomServers (legacy)');
             }
           }
-          
+
+          // Decrypt privateRelays if encrypted
+          let privateRelays: string[] = [];
+          if (storedPrefs.privateRelays) {
+            if (typeof storedPrefs.privateRelays === 'string' && storedPrefs.privateRelays.startsWith(ENCRYPTED_BLOSSOM_MARKER)) {
+              if (user.signer.nip44) {
+                try {
+                  const encryptedData = storedPrefs.privateRelays.slice(ENCRYPTED_BLOSSOM_MARKER.length);
+                  const decrypted = await user.signer.nip44.decrypt(user.pubkey, encryptedData);
+                  privateRelays = JSON.parse(decrypted) as string[];
+                  console.log('[UserPreferences] Decrypted privateRelays from relay');
+                } catch (decryptError) {
+                  console.warn('[UserPreferences] Failed to decrypt privateRelays:', decryptError);
+                }
+              }
+            } else if (Array.isArray(storedPrefs.privateRelays)) {
+              privateRelays = storedPrefs.privateRelays;
+            }
+          }
+          // Only allow wss:// as private; clear private flag for ws:// on load
+          privateRelays = privateRelays.filter(isRelayUrlSecure);
+
           // Reconstruct full preferences
           const preferences: UserPreferences = {
             ...storedPrefs,
             blossomServers,
+            privateRelays,
           } as UserPreferences;
           
           console.log('[UserPreferences] Loaded preferences from relay');
@@ -432,7 +462,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
           // Exclude transient UI state (activeTab) and large cached data (exchangeRates) from Nostr sync
           // activeTab is transient UI state that doesn't need to be synced across devices
           // exchangeRates are cached API data that can be re-fetched on any device
-          const { activeTab: _activeTab, exchangeRates: _exchangeRates, blossomServers, ...restPrefs } = preferences;
+          const { activeTab: _activeTab, exchangeRates: _exchangeRates, blossomServers, privateRelays, ...restPrefs } = preferences;
           
           // Prepare preferences for storage (activeTab excluded from sync; use default for type)
           const prefsToSync: StoredPreferences = { ...restPrefs, activeTab: 'home' };
@@ -456,6 +486,22 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
               console.log('[UserPreferences] No NIP-44 support, storing blossomServers unencrypted');
               prefsToSync.blossomServers = blossomServers;
             }
+          }
+
+          // Encrypt privateRelays so public relays cannot see private relay URLs
+          if (privateRelays && privateRelays.length > 0 && user.signer.nip44) {
+            try {
+              const encryptedPrivateRelays = await user.signer.nip44.encrypt(
+                user.pubkey,
+                JSON.stringify(privateRelays)
+              );
+              prefsToSync.privateRelays = ENCRYPTED_BLOSSOM_MARKER + encryptedPrivateRelays;
+              console.log('[UserPreferences] Encrypted privateRelays for relay storage');
+            } catch (encryptError) {
+              console.warn('[UserPreferences] Failed to encrypt privateRelays, omitting from sync:', encryptError);
+            }
+          } else if (privateRelays && privateRelays.length > 0) {
+            prefsToSync.privateRelays = privateRelays;
           }
           
           await publishEvent({
@@ -998,6 +1044,16 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     return servers.some(s => s.enabled && s.isPrivate);
   }, [localPreferences.blossomServers]);
 
+  const setPrivateRelay = useCallback((url: string, isPrivate: boolean) => {
+    updatePreferences((prev) => {
+      const list = prev.privateRelays ?? [];
+      if (isPrivate) {
+        return list.includes(url) ? prev : { ...prev, privateRelays: [...list, url] };
+      }
+      return { ...prev, privateRelays: list.filter(u => u !== url) };
+    });
+  }, [updatePreferences]);
+
   // Color theme action
   const setColorTheme = useCallback((theme: ColorTheme) => {
     updatePreferences((prev) => ({
@@ -1073,8 +1129,15 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     petsViewMode: localPreferences.petsViewMode || 'card',
     projectsViewMode: localPreferences.projectsViewMode || 'card',
     blossomServers: normalizedBlossomServers,
+    privateRelays: localPreferences.privateRelays ?? [],
     version: localPreferences.version || 1,
   };
+
+  // Sync private relay URLs to NostrProvider so the pool uses private-first order
+  const setPrivateRelayUrls = useContext(SetPrivateRelayUrlsContext);
+  useEffect(() => {
+    setPrivateRelayUrls?.(normalizedPreferences.privateRelays ?? []);
+  }, [normalizedPreferences.privateRelays, setPrivateRelayUrls]);
 
   // For returning users with cleared browser cache:
   // We need to wait for Nostr sync to complete before showing the dashboard.
@@ -1146,6 +1209,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         getEnabledBlossomServers,
         getPrivateBlossomServers,
         hasPrivateBlossomServer,
+        setPrivateRelay,
         setColorTheme,
         setEntryCurrency,
         setDisplayCurrency,
