@@ -69,7 +69,7 @@ export function checkSessionOnStartup(): void {
     // Set the session marker for this browser session
     sessionStorage.setItem(SESSION_ACTIVE_KEY, 'true');
     
-  } catch (error) {
+  } catch {
     // Only log errors in production since they indicate real problems
     console.error('[SessionGuard] Error checking session');
     // On error, set session marker to avoid issues

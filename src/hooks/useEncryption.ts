@@ -163,7 +163,7 @@ export function useEncryption() {
     // Parse plaintext JSON with error handling
     try {
       return JSON.parse(content) as T;
-    } catch (error) {
+    } catch {
       logger.error('[Encryption] Failed to parse plaintext JSON');
       throw new Error('Failed to parse data. The content may be malformed.');
     }
