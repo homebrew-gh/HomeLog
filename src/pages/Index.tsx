@@ -127,7 +127,7 @@ const Index = () => {
   const [homeFeatureManagementOpen, setHomeFeatureManagementOpen] = useState(false);
   const [warrantyTypeManagementOpen, setWarrantyTypeManagementOpen] = useState(false);
   const [petTypeManagementOpen, setPetTypeManagementOpen] = useState(false);
-  const [encryptionSettingsOpen, setEncryptionSettingsOpen] = useState(false);
+  const [_encryptionSettingsOpen, _setEncryptionSettingsOpen] = useState(false);
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const [currencySettingsOpen, setCurrencySettingsOpen] = useState(false);

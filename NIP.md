@@ -239,6 +239,56 @@ Note: This kind was previously called "Contractor/Service Provider" and has been
 
 ---
 
+## Kind 37005: Company Work Log
+
+A regular event (kind 37005) representing a single record of work done by a company or service provider. Used to log jobs, service visits, and invoices with description, price, completion date (or date range), notes, and optional invoice upload.
+
+### Format
+
+```json
+{
+  "kind": 37005,
+  "content": "<optional encrypted JSON when using encryption>",
+  "tags": [
+    ["a", "37003:<pubkey>:<company-d-tag>", "", "company"],
+    ["company_id", "<company d-tag>"],
+    ["alt", "<human-readable description or 'Encrypted Cypher Log company work log'>"],
+    ["description", "<brief description of work done>"],
+    ["total_price", "<e.g. $150.00>"],
+    ["completed_date", "<MM/DD/YYYY>"],
+    ["completed_date_start", "<MM/DD/YYYY>"],
+    ["completed_date_end", "<MM/DD/YYYY>"],
+    ["notes", "<notes>"],
+    ["invoice_url", "<url to uploaded invoice>"]
+  ]
+}
+```
+
+When encryption is enabled for the companies category, the event `content` contains NIP-44 encrypted JSON with the same logical fields; only the `alt` and reference tags remain in plaintext.
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `a` | Yes | Reference to the company (kind 37003) in the form `37003:<pubkey>:<company-d-tag>` |
+| `company_id` | Yes | Company d-tag (same as in the `a` tag) |
+| `alt` | Yes | Human-readable description (NIP-31) or "Encrypted Cypher Log company work log" when encrypted |
+| `description` | Yes (plaintext) / in content (encrypted) | Brief description of the work done |
+| `total_price` | No | Total price (e.g., "$150.00") |
+| `completed_date` | No* | Single completion date in MM/DD/YYYY when work was done on one day |
+| `completed_date_start` | No* | Start of date range in MM/DD/YYYY when work spanned multiple days |
+| `completed_date_end` | No* | End of date range in MM/DD/YYYY. Use with `completed_date_start`; mutually exclusive with `completed_date` for a single date. |
+| `notes` | No | Additional notes |
+| `invoice_url` | No | URL to uploaded invoice/receipt (e.g., from Blossom) |
+
+\* Either `completed_date` or both `completed_date_start` and `completed_date_end` should be provided to indicate when the work was completed.
+
+### Storage
+
+Kind 37005 is a regular event (1000–9999 range). Relays store all events; multiple work log events per company are expected. Clients query by `authors: [pubkey]` and filter or index by `company_id` to show work history per company.
+
+---
+
 ## Kind 30229: Maintenance Schedule
 
 An addressable event representing a maintenance schedule for an appliance or vehicle.

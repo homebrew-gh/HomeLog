@@ -318,10 +318,33 @@ export interface Company {
   createdAt: number;
 }
 
+/** Work log entry: work done by a company (service completed, price, date, notes, invoice) */
+export interface CompanyWorkLog {
+  id: string;
+  companyId: string;
+  /** Brief description of work done */
+  description: string;
+  /** Total price (e.g. "$150.00") */
+  totalPrice?: string;
+  /** Single completion date (MM/DD/YYYY) when not a range */
+  completedDate?: string;
+  /** Start of date range (MM/DD/YYYY) when work spanned multiple days */
+  completedDateStart?: string;
+  /** End of date range (MM/DD/YYYY) */
+  completedDateEnd?: string;
+  notes?: string;
+  /** URL to uploaded invoice/receipt */
+  invoiceUrl?: string;
+  pubkey: string;
+  createdAt: number;
+}
+
 // Kind numbers for our custom events
 export const APPLIANCE_KIND = 32627;
 export const VEHICLE_KIND = 32628;
 export const COMPANY_KIND = 37003;
+/** Company Work Log: work done by a company (description, price, date/range, notes, invoice) */
+export const COMPANY_WORK_LOG_KIND = 37005;
 export const MAINTENANCE_KIND = 30229;
 export const MAINTENANCE_COMPLETION_KIND = 9413;
 export const SUBSCRIPTION_KIND = 37004;

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import {
@@ -34,6 +35,9 @@ import {
   Star,
   ScrollText,
   ExternalLink,
+  Plus,
+  ClipboardList,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -47,8 +51,11 @@ import { useMaintenance, useMaintenanceByAppliance, useMaintenanceByVehicle, use
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { useWarranties, useWarrantiesByApplianceId, useWarrantiesByVehicleId, useWarrantiesByCompanyId, formatWarrantyTimeRemaining, isWarrantyExpired, isWarrantyExpiringSoon } from '@/hooks/useWarranties';
 import { useCompanyById, useCompanies } from '@/hooks/useCompanies';
+import { useCompanyWorkLogsByCompanyId, useCompanyWorkLogActions } from '@/hooks/useCompanyWorkLogs';
 import { useSubscriptionsByCompanyId, useSubscriptions } from '@/hooks/useSubscriptions';
-import { FUEL_TYPES, type MaintenanceSchedule, type Warranty, type Company, type Subscription } from '@/lib/types';
+import { FUEL_TYPES, type MaintenanceSchedule, type Warranty, type Company, type Subscription, type CompanyWorkLog } from '@/lib/types';
+import { CompanyWorkLogDialog } from '@/components/CompanyWorkLogDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import NotFound from './NotFound';
 
 // Get icon based on vehicle type
@@ -1159,6 +1166,17 @@ function HomeFeatureDetailContent({ featureName }: { featureName: string }) {
   );
 }
 
+// Format work log date for display (single date or range)
+function formatWorkLogDate(log: CompanyWorkLog): string {
+  if (log.completedDate) return log.completedDate;
+  if (log.completedDateStart && log.completedDateEnd) {
+    return `${log.completedDateStart} – ${log.completedDateEnd}`;
+  }
+  if (log.completedDateStart) return log.completedDateStart;
+  if (log.completedDateEnd) return log.completedDateEnd;
+  return '';
+}
+
 // Company Detail Content
 function CompanyDetailContent({ id }: { id: string }) {
   const navigate = useNavigate();
@@ -1167,8 +1185,14 @@ function CompanyDetailContent({ id }: { id: string }) {
   const maintenance = useMaintenanceByCompanyId(id);
   const warranties = useWarrantiesByCompanyId(id);
   const subscriptions = useSubscriptionsByCompanyId(id);
+  const workLogs = useCompanyWorkLogsByCompanyId(id);
+  const { deleteWorkLog } = useCompanyWorkLogActions();
   const { data: allAppliances = [] } = useAppliances();
   const { data: allVehicles = [] } = useVehicles();
+
+  const [workLogDialogOpen, setWorkLogDialogOpen] = useState(false);
+  const [editingWorkLog, setEditingWorkLog] = useState<CompanyWorkLog | null>(null);
+  const [deletingWorkLogId, setDeletingWorkLogId] = useState<string | null>(null);
 
   // Get linked appliances and vehicles from maintenance schedules
   const linkedApplianceIds = [...new Set(maintenance.filter(m => m.applianceId).map(m => m.applianceId!))];
@@ -1232,12 +1256,24 @@ function CompanyDetailContent({ id }: { id: string }) {
                 </div>
               </div>
             </div>
-            <Button variant="outline" asChild>
-              <Link to="/?tab=companies">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingWorkLog(null);
+                  setWorkLogDialogOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Log work</span>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/?tab=companies">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -1338,6 +1374,108 @@ function CompanyDetailContent({ id }: { id: string }) {
                     <p>{company.insuranceInfo}</p>
                   </div>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Work history */}
+        <section>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className="h-5 w-5 text-primary" />
+                  Work history
+                </CardTitle>
+                <CardDescription>
+                  Log work done by this company and view past jobs
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditingWorkLog(null);
+                  setWorkLogDialogOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Log work
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {workLogs.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>No work logged yet.</p>
+                  <p className="text-sm mt-1">Click &quot;Log work&quot; to record a job or service.</p>
+                </div>
+              ) : (
+                <ul className="space-y-4">
+                  {workLogs.map((log) => (
+                    <li
+                      key={log.id}
+                      className="p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p className="font-medium">{log.description}</p>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
+                            {log.totalPrice && (
+                              <span className="flex items-center gap-1">
+                                <DollarSign className="h-3.5 w-3.5" />
+                                {log.totalPrice}
+                              </span>
+                            )}
+                            {formatWorkLogDate(log) && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {formatWorkLogDate(log)}
+                              </span>
+                            )}
+                          </div>
+                          {log.notes && (
+                            <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{log.notes}</p>
+                          )}
+                          {log.invoiceUrl && (
+                            <div className="mt-2">
+                              <BlossomDocumentLink
+                                href={log.invoiceUrl}
+                                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                              >
+                                <FileText className="h-4 w-4" />
+                                View invoice
+                              </BlossomDocumentLink>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingWorkLog(log);
+                              setWorkLogDialogOpen(true);
+                            }}
+                            aria-label="Edit work log"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeletingWorkLogId(log.id)}
+                            aria-label="Delete work log"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </CardContent>
           </Card>
@@ -1550,6 +1688,42 @@ function CompanyDetailContent({ id }: { id: string }) {
           </section>
         )}
       </main>
+
+      <CompanyWorkLogDialog
+        isOpen={workLogDialogOpen}
+        onClose={() => {
+          setWorkLogDialogOpen(false);
+          setEditingWorkLog(null);
+        }}
+        companyId={id}
+        companyName={company.name}
+        workLog={editingWorkLog}
+      />
+
+      <AlertDialog open={!!deletingWorkLogId} onOpenChange={() => setDeletingWorkLogId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete work log?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this work log. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (deletingWorkLogId) {
+                  await deleteWorkLog(deletingWorkLogId);
+                  setDeletingWorkLogId(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

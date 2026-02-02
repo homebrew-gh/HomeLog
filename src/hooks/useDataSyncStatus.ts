@@ -9,6 +9,7 @@ import {
   VEHICLE_KIND, 
   MAINTENANCE_KIND, 
   COMPANY_KIND, 
+  COMPANY_WORK_LOG_KIND,
   SUBSCRIPTION_KIND,
   WARRANTY_KIND,
   MAINTENANCE_COMPLETION_KIND,
@@ -36,6 +37,7 @@ interface CacheCheckResult {
   vehicles: number;
   maintenance: number;
   companies: number;
+  companyWorkLogs: number;
   subscriptions: number;
   warranties: number;
   completions: number;
@@ -105,11 +107,12 @@ export function useDataSyncStatus() {
     const checkCache = async () => {
       logger.log('[DataSync] Checking IndexedDB cache');
       
-      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedSubscriptions, cachedWarranties, cachedCompletions, cachedPets, cachedProjects, cachedProjectEntries, cachedProjectTasks, cachedProjectMaterials, cachedVetVisits] = await Promise.all([
+      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedCompanyWorkLogs, cachedSubscriptions, cachedWarranties, cachedCompletions, cachedPets, cachedProjects, cachedProjectEntries, cachedProjectTasks, cachedProjectMaterials, cachedVetVisits] = await Promise.all([
         getCachedEvents([APPLIANCE_KIND], user.pubkey),
         getCachedEvents([VEHICLE_KIND], user.pubkey),
         getCachedEvents([MAINTENANCE_KIND], user.pubkey),
         getCachedEvents([COMPANY_KIND], user.pubkey),
+        getCachedEvents([COMPANY_WORK_LOG_KIND], user.pubkey),
         getCachedEvents([SUBSCRIPTION_KIND], user.pubkey),
         getCachedEvents([WARRANTY_KIND], user.pubkey),
         getCachedEvents([MAINTENANCE_COMPLETION_KIND], user.pubkey),
@@ -126,6 +129,7 @@ export function useDataSyncStatus() {
         vehicles: cachedVehicles.length,
         maintenance: cachedMaintenance.length,
         companies: cachedCompanies.length,
+        companyWorkLogs: cachedCompanyWorkLogs.length,
         subscriptions: cachedSubscriptions.length,
         warranties: cachedWarranties.length,
         completions: cachedCompletions.length,
@@ -139,6 +143,7 @@ export function useDataSyncStatus() {
           cachedVehicles.length > 0 ||
           cachedMaintenance.length > 0 ||
           cachedCompanies.length > 0 ||
+          cachedCompanyWorkLogs.length > 0 ||
           cachedSubscriptions.length > 0 ||
           cachedWarranties.length > 0 ||
           cachedCompletions.length > 0 ||
@@ -173,6 +178,7 @@ export function useDataSyncStatus() {
             vehicles: { synced: false, count: 0 },
             maintenance: { synced: false, count: 0 },
             companies: { synced: false, count: 0 },
+            companyWorkLogs: { synced: false, count: 0 },
             subscriptions: { synced: false, count: 0 },
             warranties: { synced: false, count: 0 },
             completions: { synced: false, count: 0 },
@@ -237,6 +243,7 @@ export function useDataSyncStatus() {
             queryClient.invalidateQueries({ queryKey: ['vehicles'] });
             queryClient.invalidateQueries({ queryKey: ['maintenance'] });
             queryClient.invalidateQueries({ queryKey: ['companies'] });
+            queryClient.invalidateQueries({ queryKey: ['company-work-logs'] });
             queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
             queryClient.invalidateQueries({ queryKey: ['warranties'] });
             queryClient.invalidateQueries({ queryKey: ['maintenance-completions'] });
@@ -254,6 +261,7 @@ export function useDataSyncStatus() {
         const vehicleCount = events.filter(e => e.kind === VEHICLE_KIND).length;
         const maintenanceCount = events.filter(e => e.kind === MAINTENANCE_KIND).length;
         const companyCount = events.filter(e => e.kind === COMPANY_KIND).length;
+        const companyWorkLogCount = events.filter(e => e.kind === COMPANY_WORK_LOG_KIND).length;
         const subscriptionCount = events.filter(e => e.kind === SUBSCRIPTION_KIND).length;
         const warrantyCount = events.filter(e => e.kind === WARRANTY_KIND).length;
         const completionCount = events.filter(e => e.kind === MAINTENANCE_COMPLETION_KIND).length;
@@ -272,6 +280,7 @@ export function useDataSyncStatus() {
             vehicles: { synced: true, count: vehicleCount },
             maintenance: { synced: true, count: maintenanceCount },
             companies: { synced: true, count: companyCount },
+            companyWorkLogs: { synced: true, count: companyWorkLogCount },
             subscriptions: { synced: true, count: subscriptionCount },
             warranties: { synced: true, count: warrantyCount },
             completions: { synced: true, count: completionCount },
@@ -295,6 +304,7 @@ export function useDataSyncStatus() {
               vehicles: { synced: true, count: cacheResult.vehicles },
               maintenance: { synced: true, count: cacheResult.maintenance },
               companies: { synced: true, count: cacheResult.companies },
+              companyWorkLogs: { synced: true, count: cacheResult.companyWorkLogs },
               subscriptions: { synced: true, count: cacheResult.subscriptions },
               warranties: { synced: true, count: cacheResult.warranties },
               completions: { synced: true, count: cacheResult.completions },
@@ -317,6 +327,7 @@ export function useDataSyncStatus() {
             vehicles: { synced: true, count: 0 },
             maintenance: { synced: true, count: 0 },
             companies: { synced: true, count: 0 },
+            companyWorkLogs: { synced: true, count: 0 },
             subscriptions: { synced: true, count: 0 },
             warranties: { synced: true, count: 0 },
             completions: { synced: true, count: 0 },
@@ -350,6 +361,7 @@ export function useDataSyncStatus() {
       vehicles: { synced: false, count: 0 },
       maintenance: { synced: false, count: 0 },
       companies: { synced: false, count: 0 },
+      companyWorkLogs: { synced: false, count: 0 },
       subscriptions: { synced: false, count: 0 },
       warranties: { synced: false, count: 0 },
       completions: { synced: false, count: 0 },
