@@ -1265,7 +1265,7 @@ function CompanyDetailContent({ id }: { id: string }) {
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Log work</span>
+                <span className="hidden sm:inline">Log Work</span>
               </Button>
               <Button variant="outline" asChild>
                 <Link to="/?tab=companies">
@@ -1379,14 +1379,14 @@ function CompanyDetailContent({ id }: { id: string }) {
           </Card>
         </section>
 
-        {/* Work history */}
+        {/* Work History */}
         <section>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <ClipboardList className="h-5 w-5 text-primary" />
-                  Work history
+                  Work History
                 </CardTitle>
                 <CardDescription>
                   Log work done by this company and view past jobs
@@ -1401,7 +1401,7 @@ function CompanyDetailContent({ id }: { id: string }) {
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Log work
+                Log Work
               </Button>
             </CardHeader>
             <CardContent>
@@ -1409,7 +1409,7 @@ function CompanyDetailContent({ id }: { id: string }) {
                 <div className="py-8 text-center text-muted-foreground">
                   <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-50" />
                   <p>No work logged yet.</p>
-                  <p className="text-sm mt-1">Click &quot;Log work&quot; to record a job or service.</p>
+                  <p className="text-sm mt-1">Click &quot;Log Work&quot; to record a job or service.</p>
                 </div>
               ) : (
                 <ul className="space-y-4">
