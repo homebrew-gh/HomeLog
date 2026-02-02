@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Plus, Trash2, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useWarrantyTypes } from '@/hooks/useWarrantyTypes';
+import { useWarranties } from '@/hooks/useWarranties';
 import { toast } from '@/hooks/useToast';
 
 interface WarrantyTypeManagementDialogProps {
@@ -21,7 +23,9 @@ export function WarrantyTypeManagementDialog({ isOpen, onClose }: WarrantyTypeMa
     removeType,
     restoreDefaultWarrantyType,
   } = useWarrantyTypes();
+  const { data: warranties = [] } = useWarranties();
   const [newType, setNewType] = useState('');
+  const [typeWithWarranties, setTypeWithWarranties] = useState<{ name: string; count: number } | null>(null);
 
   const handleAddType = () => {
     const trimmed = newType.trim();
@@ -67,8 +71,13 @@ export function WarrantyTypeManagementDialog({ isOpen, onClose }: WarrantyTypeMa
   };
 
   const handleRemoveType = (type: string) => {
-    // TODO: When warranties feature is implemented, check if any warranties use this type
-    // For now, allow removal since warranties aren't implemented yet
+    const warrantiesWithType = warranties.filter(w => w.warrantyType === type);
+
+    if (warrantiesWithType.length > 0) {
+      setTypeWithWarranties({ name: type, count: warrantiesWithType.length });
+      return;
+    }
+
     removeType(type);
     toast({
       title: 'Type removed',
@@ -216,6 +225,31 @@ export function WarrantyTypeManagementDialog({ isOpen, onClose }: WarrantyTypeMa
           </Button>
         </div>
       </DialogContent>
+
+      {/* Warning dialog for types with warranties */}
+      <AlertDialog open={!!typeWithWarranties} onOpenChange={() => setTypeWithWarranties(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Cannot Delete Type
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                The type &quot;{typeWithWarranties?.name}&quot; is still in use by {typeWithWarranties?.count} warrant{typeWithWarranties?.count !== 1 ? 'ies' : 'y'}.
+              </p>
+              <p>
+                To delete this type, please first delete or change the type of all warranties using this type.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setTypeWithWarranties(null)}>
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

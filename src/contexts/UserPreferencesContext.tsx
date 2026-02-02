@@ -678,8 +678,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // Room actions
   const addCustomRoom = useCallback((room: string) => {
     updatePreferences((prev) => {
-      const currentCustomRooms = prev.customRooms || [];
-      const currentHiddenRooms = prev.hiddenDefaultRooms || [];
+      const currentCustomRooms = Array.isArray(prev.customRooms) ? prev.customRooms : [];
+      const currentHiddenRooms = Array.isArray(prev.hiddenDefaultRooms) ? prev.hiddenDefaultRooms : [];
       if (currentCustomRooms.includes(room)) return prev;
       return {
         ...prev,
@@ -718,8 +718,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // Vehicle type actions
   const addCustomVehicleType = useCallback((type: string) => {
     updatePreferences((prev) => {
-      const currentCustomTypes = prev.customVehicleTypes || [];
-      const currentHiddenTypes = prev.hiddenDefaultVehicleTypes || [];
+      const currentCustomTypes = Array.isArray(prev.customVehicleTypes) ? prev.customVehicleTypes : [];
+      const currentHiddenTypes = Array.isArray(prev.hiddenDefaultVehicleTypes) ? prev.hiddenDefaultVehicleTypes : [];
       if (currentCustomTypes.includes(type)) return prev;
       return {
         ...prev,
@@ -773,7 +773,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const removeCustomCompanyType = useCallback((type: string) => {
     updatePreferences((prev) => ({
       ...prev,
-      customCompanyTypes: (prev.customCompanyTypes || []).filter(t => t !== type),
+      customCompanyTypes: Array.isArray(prev.customCompanyTypes) ? prev.customCompanyTypes.filter(t => t !== type) : [],
     }));
   }, [updatePreferences]);
 
@@ -798,8 +798,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // Subscription type actions
   const addCustomSubscriptionType = useCallback((type: string) => {
     updatePreferences((prev) => {
-      const currentCustomTypes = prev.customSubscriptionTypes || [];
-      const currentHiddenTypes = prev.hiddenDefaultSubscriptionTypes || [];
+      const currentCustomTypes = Array.isArray(prev.customSubscriptionTypes) ? prev.customSubscriptionTypes : [];
+      const currentHiddenTypes = Array.isArray(prev.hiddenDefaultSubscriptionTypes) ? prev.hiddenDefaultSubscriptionTypes : [];
       if (currentCustomTypes.includes(type)) return prev;
       return {
         ...prev,
@@ -813,7 +813,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const removeCustomSubscriptionType = useCallback((type: string) => {
     updatePreferences((prev) => ({
       ...prev,
-      customSubscriptionTypes: (prev.customSubscriptionTypes || []).filter(t => t !== type),
+      customSubscriptionTypes: Array.isArray(prev.customSubscriptionTypes) ? prev.customSubscriptionTypes.filter(t => t !== type) : [],
     }));
   }, [updatePreferences]);
 
@@ -853,7 +853,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const removeCustomHomeFeature = useCallback((feature: string) => {
     updatePreferences((prev) => ({
       ...prev,
-      customHomeFeatures: (prev.customHomeFeatures || []).filter(f => f !== feature),
+      customHomeFeatures: Array.isArray(prev.customHomeFeatures) ? prev.customHomeFeatures.filter(f => f !== feature) : [],
     }));
   }, [updatePreferences]);
 
@@ -878,8 +878,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // Warranty type actions
   const addCustomWarrantyType = useCallback((type: string) => {
     updatePreferences((prev) => {
-      const currentCustomTypes = prev.customWarrantyTypes || [];
-      const currentHiddenTypes = prev.hiddenDefaultWarrantyTypes || [];
+      const currentCustomTypes = Array.isArray(prev.customWarrantyTypes) ? prev.customWarrantyTypes : [];
+      const currentHiddenTypes = Array.isArray(prev.hiddenDefaultWarrantyTypes) ? prev.hiddenDefaultWarrantyTypes : [];
       if (currentCustomTypes.includes(type)) return prev;
       return {
         ...prev,
@@ -918,8 +918,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // Pet type actions
   const addCustomPetType = useCallback((type: string) => {
     updatePreferences((prev) => {
-      const currentCustomTypes = prev.customPetTypes || [];
-      const currentHiddenTypes = prev.hiddenDefaultPetTypes || [];
+      const currentCustomTypes = Array.isArray(prev.customPetTypes) ? prev.customPetTypes : [];
+      const currentHiddenTypes = Array.isArray(prev.hiddenDefaultPetTypes) ? prev.hiddenDefaultPetTypes : [];
       if (currentCustomTypes.includes(type)) return prev;
       return {
         ...prev,
@@ -933,7 +933,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const removeCustomPetType = useCallback((type: string) => {
     updatePreferences((prev) => ({
       ...prev,
-      customPetTypes: (prev.customPetTypes || []).filter(t => t !== type),
+      customPetTypes: Array.isArray(prev.customPetTypes) ? prev.customPetTypes.filter(t => t !== type) : [],
     }));
   }, [updatePreferences]);
 
@@ -1112,20 +1112,20 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     entryCurrency: localPreferences.entryCurrency || 'USD',
     displayCurrency: localPreferences.displayCurrency || 'USD',
     exchangeRates: localPreferences.exchangeRates,
-    customRooms: localPreferences.customRooms || [],
-    hiddenDefaultRooms: localPreferences.hiddenDefaultRooms || [],
-    customVehicleTypes: localPreferences.customVehicleTypes || [],
-    hiddenDefaultVehicleTypes: localPreferences.hiddenDefaultVehicleTypes || [],
-    customCompanyTypes: localPreferences.customCompanyTypes || [],
-    hiddenDefaultCompanyTypes: localPreferences.hiddenDefaultCompanyTypes || [],
-    customSubscriptionTypes: localPreferences.customSubscriptionTypes || [],
-    hiddenDefaultSubscriptionTypes: localPreferences.hiddenDefaultSubscriptionTypes || [],
-    customHomeFeatures: localPreferences.customHomeFeatures || [],
-    hiddenDefaultHomeFeatures: localPreferences.hiddenDefaultHomeFeatures || [],
-    customWarrantyTypes: localPreferences.customWarrantyTypes || [],
-    hiddenDefaultWarrantyTypes: localPreferences.hiddenDefaultWarrantyTypes || [],
-    customPetTypes: localPreferences.customPetTypes || [],
-    hiddenDefaultPetTypes: localPreferences.hiddenDefaultPetTypes || [],
+    customRooms: Array.isArray(localPreferences.customRooms) ? localPreferences.customRooms : [],
+    hiddenDefaultRooms: Array.isArray(localPreferences.hiddenDefaultRooms) ? localPreferences.hiddenDefaultRooms : [],
+    customVehicleTypes: Array.isArray(localPreferences.customVehicleTypes) ? localPreferences.customVehicleTypes : [],
+    hiddenDefaultVehicleTypes: Array.isArray(localPreferences.hiddenDefaultVehicleTypes) ? localPreferences.hiddenDefaultVehicleTypes : [],
+    customCompanyTypes: Array.isArray(localPreferences.customCompanyTypes) ? localPreferences.customCompanyTypes : [],
+    hiddenDefaultCompanyTypes: Array.isArray(localPreferences.hiddenDefaultCompanyTypes) ? localPreferences.hiddenDefaultCompanyTypes : [],
+    customSubscriptionTypes: Array.isArray(localPreferences.customSubscriptionTypes) ? localPreferences.customSubscriptionTypes : [],
+    hiddenDefaultSubscriptionTypes: Array.isArray(localPreferences.hiddenDefaultSubscriptionTypes) ? localPreferences.hiddenDefaultSubscriptionTypes : [],
+    customHomeFeatures: Array.isArray(localPreferences.customHomeFeatures) ? localPreferences.customHomeFeatures : [],
+    hiddenDefaultHomeFeatures: Array.isArray(localPreferences.hiddenDefaultHomeFeatures) ? localPreferences.hiddenDefaultHomeFeatures : [],
+    customWarrantyTypes: Array.isArray(localPreferences.customWarrantyTypes) ? localPreferences.customWarrantyTypes : [],
+    hiddenDefaultWarrantyTypes: Array.isArray(localPreferences.hiddenDefaultWarrantyTypes) ? localPreferences.hiddenDefaultWarrantyTypes : [],
+    customPetTypes: Array.isArray(localPreferences.customPetTypes) ? localPreferences.customPetTypes : [],
+    hiddenDefaultPetTypes: Array.isArray(localPreferences.hiddenDefaultPetTypes) ? localPreferences.hiddenDefaultPetTypes : [],
     petsViewMode: localPreferences.petsViewMode || 'card',
     projectsViewMode: localPreferences.projectsViewMode || 'card',
     blossomServers: normalizedBlossomServers,

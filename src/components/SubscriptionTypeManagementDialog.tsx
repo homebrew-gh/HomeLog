@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Plus, Trash2, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useSubscriptionTypes } from '@/hooks/useSubscriptionTypes';
+import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { toast } from '@/hooks/useToast';
 
 interface SubscriptionTypeManagementDialogProps {
@@ -21,7 +23,9 @@ export function SubscriptionTypeManagementDialog({ isOpen, onClose }: Subscripti
     removeType,
     restoreDefaultSubscriptionType,
   } = useSubscriptionTypes();
+  const { data: subscriptions = [] } = useSubscriptions();
   const [newType, setNewType] = useState('');
+  const [typeWithSubscriptions, setTypeWithSubscriptions] = useState<{ name: string; count: number } | null>(null);
 
   const handleAddType = () => {
     const trimmed = newType.trim();
@@ -67,8 +71,13 @@ export function SubscriptionTypeManagementDialog({ isOpen, onClose }: Subscripti
   };
 
   const handleRemoveType = (type: string) => {
-    // Note: Unlike vehicles/appliances, subscriptions don't exist yet as data,
-    // so we don't need to check for existing subscriptions using this type
+    const subscriptionsWithType = subscriptions.filter(s => s.subscriptionType === type);
+
+    if (subscriptionsWithType.length > 0) {
+      setTypeWithSubscriptions({ name: type, count: subscriptionsWithType.length });
+      return;
+    }
+
     removeType(type);
     toast({
       title: 'Type removed',
@@ -216,6 +225,31 @@ export function SubscriptionTypeManagementDialog({ isOpen, onClose }: Subscripti
           </Button>
         </div>
       </DialogContent>
+
+      {/* Warning dialog for types with subscriptions */}
+      <AlertDialog open={!!typeWithSubscriptions} onOpenChange={() => setTypeWithSubscriptions(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Cannot Delete Type
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                The type &quot;{typeWithSubscriptions?.name}&quot; is still in use by {typeWithSubscriptions?.count} subscription{typeWithSubscriptions?.count !== 1 ? 's' : ''}.
+              </p>
+              <p>
+                To delete this type, please first delete or change the type of all subscriptions using this type.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setTypeWithSubscriptions(null)}>
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
