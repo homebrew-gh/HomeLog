@@ -187,6 +187,49 @@ export function convertCurrency(
   }
 }
 
+// Reasonable range for BTC price in USD (reject clearly wrong values)
+const MIN_BTC_USD = 1000;
+const MAX_BTC_USD = 1_000_000;
+
+function parseBtcPriceUsd(data: unknown): number {
+  if (data == null || typeof data !== 'object') return 0;
+  const o = data as Record<string, unknown>;
+  // CoinGecko: { bitcoin: { usd: number } }; proxy might wrap in .data
+  const bitcoin = (o.bitcoin ?? (o.data as Record<string, unknown>)?.bitcoin) as Record<string, unknown> | undefined;
+  if (!bitcoin || typeof bitcoin !== 'object') return 0;
+  // Only use the price field (usd), not usd_market_cap or other fields
+  const raw = bitcoin.usd ?? bitcoin.USD;
+  if (raw == null) return 0;
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(n) || n < MIN_BTC_USD || n > MAX_BTC_USD) return 0;
+  return n;
+}
+
+async function fetchBtcPriceUsdFromCoinGecko(): Promise<number> {
+  const url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd';
+  const res = await fetch(
+    `https://proxy.shakespeare.diy/?url=${encodeURIComponent(url)}`
+  );
+  if (!res.ok) return 0;
+  const data = await res.json();
+  return parseBtcPriceUsd(data);
+}
+
+async function fetchBtcPriceUsdFromCoinbase(): Promise<number> {
+  // Coinbase public API: https://api.coinbase.com/v2/prices/BTC-USD/spot
+  const url = 'https://api.coinbase.com/v2/prices/BTC-USD/spot';
+  const res = await fetch(
+    `https://proxy.shakespeare.diy/?url=${encodeURIComponent(url)}`
+  );
+  if (!res.ok) return 0;
+  const data = await res.json();
+  const amount = (data as { data?: { amount?: string } })?.data?.amount;
+  if (amount == null) return 0;
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n < MIN_BTC_USD || n > MAX_BTC_USD) return 0;
+  return n;
+}
+
 // Fetch current exchange rates from a free API
 export async function fetchExchangeRates(baseCurrency: string = 'USD'): Promise<ExchangeRates> {
   try {
@@ -202,25 +245,25 @@ export async function fetchExchangeRates(baseCurrency: string = 'USD'): Promise<
     
     const fiatData = await fiatResponse.json();
     
-    // Fetch Bitcoin price from CoinGecko (free, no API key needed)
-    let btcPrice = 0;
-    try {
-      const btcResponse = await fetch(
-        `https://proxy.shakespeare.diy/?url=${encodeURIComponent('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')}`
-      );
-      if (btcResponse.ok) {
-        const btcData = await btcResponse.json();
-        // CoinGecko returns { bitcoin: { usd: number } }; handle string or number
-        const raw = btcData.bitcoin?.usd ?? btcData.bitcoin?.USD;
-        btcPrice = typeof raw === 'number' ? raw : Number(raw) || 0;
-        
-        // If base isn't USD, convert BTC price from USD to base currency
-        if (baseCurrency !== 'USD' && btcPrice > 0 && fiatData.rates?.USD != null) {
-          btcPrice = btcPrice / fiatData.rates.USD;
-        }
+    // Bitcoin price in USD: try CoinGecko first, then Coinbase as fallback
+    let btcPrice = await fetchBtcPriceUsdFromCoinGecko();
+    if (btcPrice === 0) {
+      try {
+        btcPrice = await fetchBtcPriceUsdFromCoinbase();
+      } catch {
+        // ignore
       }
-    } catch {
-      logger.warn('[Currency] Failed to fetch BTC price');
+    }
+    if (btcPrice === 0) {
+      logger.warn('[Currency] No valid BTC price from CoinGecko or Coinbase');
+    }
+    
+    // If base isn't USD, convert BTC price from USD to base currency
+    if (baseCurrency !== 'USD' && btcPrice > 0 && fiatData.rates?.USD != null) {
+      const usdPerBase = fiatData.rates.USD as number;
+      if (Number.isFinite(usdPerBase) && usdPerBase > 0) {
+        btcPrice = btcPrice / usdPerBase;
+      }
     }
 
     const rates: Record<string, number> = { ...(fiatData.rates || {}) };
