@@ -887,6 +887,14 @@ body.offline {
   .sticky.top-0 {
     top: env(safe-area-inset-top);
   }
+
+  /* Budget tracker: stack stats on narrow PWA screens to prevent number overlap */
+  .budget-tracker .budget-tracker-stats {
+    grid-template-columns: 1fr;
+  }
+  .budget-tracker .budget-tracker-value {
+    font-size: 1.25rem; /* text-xl - slightly smaller so long amounts fit */
+  }
 }
 
 /* iOS-specific PWA adjustments */

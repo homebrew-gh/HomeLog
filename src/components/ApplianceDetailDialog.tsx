@@ -8,6 +8,7 @@ import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { ArchiveConfirmDialog } from '@/components/ArchiveConfirmDialog';
 import { BlossomDocumentLink } from '@/components/BlossomMedia';
 import { useApplianceActions } from '@/hooks/useAppliances';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import type { Appliance } from '@/lib/types';
 
@@ -21,6 +22,7 @@ interface ApplianceDetailDialogProps {
 
 export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDelete }: ApplianceDetailDialogProps) {
   const { deleteAppliance, archiveAppliance } = useApplianceActions();
+  const { formatForDisplay } = useCurrency();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -129,7 +131,7 @@ export function ApplianceDetailDialog({ isOpen, onClose, appliance, onEdit, onDe
                 <DollarSign className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Price</p>
-                  <p>{appliance.price}</p>
+                  <p>{formatForDisplay(appliance.price)}</p>
                 </div>
               </div>
             )}

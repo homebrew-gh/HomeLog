@@ -42,6 +42,7 @@ import { PetDialog } from '@/components/PetDialog';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { usePetById, usePets } from '@/hooks/usePets';
 import { useVetVisitsByPetId, useVetVisitActions } from '@/hooks/useVetVisits';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import { VET_VISIT_TYPES, type VetVisit } from '@/lib/types';
 import NotFound from './NotFound';
@@ -118,7 +119,8 @@ export function PetDetailPage() {
   const pet = usePetById(petId);
   const vetVisits = useVetVisitsByPetId(petId);
   const { deleteVetVisit } = useVetVisitActions();
-  
+  const { formatForDisplay } = useCurrency();
+
   // Dialog states
   const [vetVisitDialogOpen, setVetVisitDialogOpen] = useState(false);
   const [editingVetVisit, setEditingVetVisit] = useState<VetVisit | undefined>();
@@ -669,7 +671,7 @@ export function PetDetailPage() {
                             {visit.cost && (
                               <div className="flex items-center gap-1 text-muted-foreground">
                                 <DollarSign className="h-3.5 w-3.5" />
-                                <span>{visit.cost}</span>
+                                <span>{formatForDisplay(visit.cost)}</span>
                               </div>
                             )}
                           </div>

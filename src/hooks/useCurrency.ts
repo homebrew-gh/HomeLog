@@ -111,6 +111,22 @@ export function useCurrency() {
     return parseCurrencyAmount(costString);
   }, []);
 
+  /**
+   * Format any price/cost/amount for display using the user's display currency.
+   * Converts from source currency when entry and display differ and rates are available.
+   * Use for all read-only display of amounts (not in form inputs).
+   * @param value - Amount as string (e.g. "$100.00") or number
+   * @param sourceCurrency - Currency the amount is stored in; defaults to entry currency
+   */
+  const formatForDisplay = useCallback((
+    value: string | number,
+    sourceCurrency?: CurrencyCode | string
+  ): string => {
+    const amount = typeof value === 'string' ? parseCurrencyAmount(value) : value;
+    const from = sourceCurrency ?? preferences.entryCurrency;
+    return convertAndFormat(amount, from, preferences.displayCurrency);
+  }, [preferences.entryCurrency, preferences.displayCurrency, convertAndFormat]);
+
   // Get currency info
   const getEntryCurrencyInfo = useCallback(() => {
     return getCurrency(preferences.entryCurrency);
@@ -147,6 +163,7 @@ export function useCurrency() {
     convert,
     format,
     convertAndFormat,
+    formatForDisplay,
     parseAmount,
   };
 }

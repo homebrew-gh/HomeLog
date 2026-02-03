@@ -2,19 +2,13 @@ import { DollarSign, TrendingUp, TrendingDown, PieChart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useBudgetSummary } from '@/hooks/useProjectMaterials';
+import { useCurrency } from '@/hooks/useCurrency';
 import { EXPENSE_CATEGORIES } from '@/lib/types';
 
 interface BudgetTrackerProps {
   projectId: string;
   originalBudget?: string;
 }
-
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-};
 
 const getCategoryLabel = (value: string) => {
   return EXPENSE_CATEGORIES.find(c => c.value === value)?.label || value;
@@ -42,6 +36,7 @@ export function BudgetTracker({ projectId, originalBudget }: BudgetTrackerProps)
     categoryBreakdown,
     isOverBudget,
   } = useBudgetSummary(projectId, originalBudget);
+  const { formatForDisplay } = useCurrency();
 
   const hasBudget = budgetAmount > 0;
   const hasExpenses = totalPlanned > 0;
@@ -56,48 +51,48 @@ export function BudgetTracker({ projectId, originalBudget }: BudgetTrackerProps)
         </CardTitle>
         {hasBudget && (
           <CardDescription>
-            Tracking against {formatCurrency(budgetAmount)} budget
+            Tracking against {formatForDisplay(budgetAmount)} budget
           </CardDescription>
         )}
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Main Stats */}
-        <div className="grid grid-cols-3 gap-4">
+      <CardContent className="space-y-6 budget-tracker">
+        {/* Main Stats - use class for PWA-only layout overrides in index.css */}
+        <div className="budget-tracker-stats grid grid-cols-3 gap-4">
           {/* Total Spent */}
-          <div className="text-center p-4 rounded-lg bg-muted/50">
+          <div className="text-center p-4 rounded-lg bg-muted/50 min-w-0">
             <p className="text-sm text-muted-foreground mb-1">Spent</p>
-            <p className={`text-2xl font-bold ${isOverBudget ? 'text-destructive' : 'text-foreground'}`}>
-              {formatCurrency(totalSpent)}
+            <p className={`budget-tracker-value text-2xl font-bold truncate ${isOverBudget ? 'text-destructive' : 'text-foreground'}`} title={formatForDisplay(totalSpent)}>
+              {formatForDisplay(totalSpent)}
             </p>
           </div>
 
           {/* Budget / Planned */}
-          <div className="text-center p-4 rounded-lg bg-muted/50">
+          <div className="text-center p-4 rounded-lg bg-muted/50 min-w-0">
             <p className="text-sm text-muted-foreground mb-1">
               {hasBudget ? 'Budget' : 'Planned'}
             </p>
-            <p className="text-2xl font-bold text-foreground">
-              {formatCurrency(hasBudget ? budgetAmount : totalPlanned)}
+            <p className="budget-tracker-value text-2xl font-bold text-foreground truncate" title={formatForDisplay(hasBudget ? budgetAmount : totalPlanned)}>
+              {formatForDisplay(hasBudget ? budgetAmount : totalPlanned)}
             </p>
           </div>
 
           {/* Remaining / Difference */}
-          <div className="text-center p-4 rounded-lg bg-muted/50">
+          <div className="text-center p-4 rounded-lg bg-muted/50 min-w-0">
             <p className="text-sm text-muted-foreground mb-1">
               {hasBudget ? 'Remaining' : 'To Spend'}
             </p>
-            <p className={`text-2xl font-bold flex items-center justify-center gap-1 ${
+            <p className={`budget-tracker-value text-2xl font-bold flex items-center justify-center gap-1 min-w-0 ${
               hasBudget 
                 ? isOverBudget ? 'text-destructive' : 'text-green-600'
                 : 'text-foreground'
-            }`}>
+            }`} title={hasBudget ? formatForDisplay(Math.abs(remaining)) : formatForDisplay(totalPlanned - totalSpent)}>
               {hasBudget ? (
                 <>
-                  {isOverBudget ? <TrendingDown className="h-5 w-5" /> : <TrendingUp className="h-5 w-5" />}
-                  {formatCurrency(Math.abs(remaining))}
+                  <span className="shrink-0">{isOverBudget ? <TrendingDown className="h-5 w-5" /> : <TrendingUp className="h-5 w-5" />}</span>
+                  <span className="truncate">{formatForDisplay(Math.abs(remaining))}</span>
                 </>
               ) : (
-                formatCurrency(totalPlanned - totalSpent)
+                <span className="truncate">{formatForDisplay(totalPlanned - totalSpent)}</span>
               )}
             </p>
           </div>
@@ -105,10 +100,10 @@ export function BudgetTracker({ projectId, originalBudget }: BudgetTrackerProps)
 
         {/* Progress Bar (only if budget is set) */}
         {hasBudget && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Budget Used</span>
-              <span className={`font-medium ${isOverBudget ? 'text-destructive' : 'text-foreground'}`}>
+          <div className="space-y-2 budget-tracker-progress">
+            <div className="flex justify-between items-center gap-2 text-sm min-w-0">
+              <span className="text-muted-foreground shrink-0">Budget Used</span>
+              <span className={`font-medium truncate text-right ${isOverBudget ? 'text-destructive' : 'text-foreground'}`}>
                 {Math.min(percentUsed, 100).toFixed(0)}%
                 {percentUsed > 100 && ` (${percentUsed.toFixed(0)}% of budget)`}
               </span>
@@ -133,15 +128,15 @@ export function BudgetTracker({ projectId, originalBudget }: BudgetTrackerProps)
                 const _spentPercent = planned > 0 ? (spent / planned) * 100 : 0;
                 
                 return (
-                  <div key={category} className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${getCategoryColor(category)}`} />
-                        <span>{getCategoryLabel(category)}</span>
+                  <div key={category} className="space-y-1 budget-tracker-category">
+                    <div className="flex justify-between items-center gap-2 text-sm min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-3 h-3 rounded-full shrink-0 ${getCategoryColor(category)}`} />
+                        <span className="truncate">{getCategoryLabel(category)}</span>
                       </div>
-                      <div className="text-right">
-                        <span className="font-medium">{formatCurrency(spent)}</span>
-                        <span className="text-muted-foreground"> / {formatCurrency(planned)}</span>
+                      <div className="text-right shrink-0 whitespace-nowrap">
+                        <span className="font-medium">{formatForDisplay(spent)}</span>
+                        <span className="text-muted-foreground"> / {formatForDisplay(planned)}</span>
                       </div>
                     </div>
                     <div className="flex gap-1 h-2">

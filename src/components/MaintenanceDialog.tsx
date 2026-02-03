@@ -12,6 +12,7 @@ import { useCompanies } from '@/hooks/useCompanies';
 import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate } from '@/hooks/useMaintenance';
 import { useCompletionsByMaintenance, useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import { FREQUENCY_UNITS, INTERVAL_TYPES, type MaintenanceSchedule, type MaintenancePart, type IntervalType } from '@/lib/types';
 
@@ -34,6 +35,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
   const { allHomeFeatures, addCustomHomeFeature } = useCustomHomeFeatures();
   const { createMaintenance, updateMaintenance } = useMaintenanceActions();
   const { createCompletion } = useMaintenanceCompletionActions();
+  const { formatForDisplay } = useCurrency();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomFeatureInput, setShowCustomFeatureInput] = useState(false);
@@ -476,7 +478,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
                       <p className="font-medium text-sm truncate">{part.name}</p>
                       <div className="flex gap-3 text-xs text-muted-foreground">
                         {part.partNumber && <span>Part #: {part.partNumber}</span>}
-                        {part.cost && <span>Cost: {part.cost}</span>}
+                        {part.cost && <span>Cost: {formatForDisplay(part.cost)}</span>}
                       </div>
                     </div>
                     <Button

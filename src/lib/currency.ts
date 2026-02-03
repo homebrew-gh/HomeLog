@@ -210,10 +210,12 @@ export async function fetchExchangeRates(baseCurrency: string = 'USD'): Promise<
       );
       if (btcResponse.ok) {
         const btcData = await btcResponse.json();
-        btcPrice = btcData.bitcoin?.usd || 0;
+        // CoinGecko returns { bitcoin: { usd: number } }; handle string or number
+        const raw = btcData.bitcoin?.usd ?? btcData.bitcoin?.USD;
+        btcPrice = typeof raw === 'number' ? raw : Number(raw) || 0;
         
-        // If base isn't USD, convert BTC price
-        if (baseCurrency !== 'USD' && fiatData.rates?.USD) {
+        // If base isn't USD, convert BTC price from USD to base currency
+        if (baseCurrency !== 'USD' && btcPrice > 0 && fiatData.rates?.USD != null) {
           btcPrice = btcPrice / fiatData.rates.USD;
         }
       }
@@ -221,11 +223,17 @@ export async function fetchExchangeRates(baseCurrency: string = 'USD'): Promise<
       logger.warn('[Currency] Failed to fetch BTC price');
     }
 
+    const rates: Record<string, number> = { ...(fiatData.rates || {}) };
+    // Ensure base currency is present in rates (some APIs omit it)
+    if (rates[baseCurrency] == null) {
+      rates[baseCurrency] = 1;
+    }
+
     return {
       base: baseCurrency,
-      rates: fiatData.rates || {},
+      rates,
       timestamp: Date.now(),
-      btcPrice,
+      btcPrice: typeof btcPrice === 'number' ? btcPrice : 0,
     };
   } catch {
     logger.error('[Currency] Failed to fetch exchange rates');

@@ -12,6 +12,7 @@ import { useVehicles, useVehicleActions } from '@/hooks/useVehicles';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useMaintenanceActions } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import type { MaintenancePart } from '@/lib/types';
 
@@ -28,6 +29,7 @@ function getTodayFormatted(): string {
 
 export function LogMaintenanceDialog({ isOpen, onClose, preselectedVehicleId }: LogMaintenanceDialogProps) {
   const { data: vehicles = [] } = useVehicles();
+  const { formatForDisplay } = useCurrency();
   const { data: companies = [] } = useCompanies();
   const { updateVehicle } = useVehicleActions();
   const { createMaintenance } = useMaintenanceActions();
@@ -278,7 +280,7 @@ export function LogMaintenanceDialog({ isOpen, onClose, preselectedVehicleId }: 
                       <p className="font-medium text-sm truncate">{part.name}</p>
                       <div className="flex gap-3 text-xs text-muted-foreground">
                         {part.partNumber && <span>Part #: {part.partNumber}</span>}
-                        {part.cost && <span>Cost: {part.cost}</span>}
+                        {part.cost && <span>Cost: {formatForDisplay(part.cost)}</span>}
                       </div>
                     </div>
                     <Button

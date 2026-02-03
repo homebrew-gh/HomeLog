@@ -11,6 +11,7 @@ import { useApplianceById } from '@/hooks/useAppliances';
 import { useVehicleById, useVehicleActions } from '@/hooks/useVehicles';
 import { useMaintenanceActions, calculateNextDueDate, formatDueDate, isOverdue, isDueSoon } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletionActions, useCompletionsByMaintenance } from '@/hooks/useMaintenanceCompletions';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import type { MaintenanceSchedule, MaintenancePart } from '@/lib/types';
 
@@ -25,6 +26,7 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
   const { deleteMaintenance } = useMaintenanceActions();
   const { createCompletion } = useMaintenanceCompletionActions();
   const { updateVehicle } = useVehicleActions();
+  const { formatForDisplay } = useCurrency();
   const appliance = useApplianceById(maintenance.applianceId);
   const vehicle = useVehicleById(maintenance.vehicleId);
   const completions = useCompletionsByMaintenance(maintenance.id);
@@ -314,7 +316,7 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
                           <span className="text-muted-foreground ml-2">
                             {part.partNumber && `#${part.partNumber}`}
                             {part.partNumber && part.cost && ' · '}
-                            {part.cost && part.cost}
+                            {part.cost && formatForDisplay(part.cost)}
                           </span>
                         )}
                       </div>
@@ -478,7 +480,7 @@ export function MaintenanceDetailDialog({ isOpen, onClose, maintenance, onEdit }
                             <p className="font-medium truncate">{part.name}</p>
                             <div className="flex gap-2 text-xs text-muted-foreground">
                               {part.partNumber && <span>#{part.partNumber}</span>}
-                              {part.cost && <span>{part.cost}</span>}
+                              {part.cost && <span>{formatForDisplay(part.cost)}</span>}
                             </div>
                           </div>
                           <Button

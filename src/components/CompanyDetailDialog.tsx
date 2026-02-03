@@ -27,6 +27,7 @@ import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { BlossomLink } from '@/components/BlossomMedia';
 import { useCompanyActions } from '@/hooks/useCompanies';
 import { useSubscriptionsByCompanyId } from '@/hooks/useSubscriptions';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import type { Company } from '@/lib/types';
 import { BILLING_FREQUENCIES } from '@/lib/types';
@@ -42,6 +43,7 @@ interface CompanyDetailDialogProps {
 export function CompanyDetailDialog({ isOpen, onClose, company, onEdit, onDelete }: CompanyDetailDialogProps) {
   const { deleteCompany } = useCompanyActions();
   const linkedSubscriptions = useSubscriptionsByCompanyId(company.id);
+  const { formatForDisplay } = useCurrency();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -280,10 +282,10 @@ export function CompanyDetailDialog({ isOpen, onClose, company, onEdit, onDelete
                             <div className="flex items-center gap-2 text-sm">
                               <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                               <span className="font-medium">{invoice.date}</span>
-                              {invoice.amount && (
+                              {invoice.amount != null && invoice.amount !== '' && (
                                 <>
                                   <DollarSign className="h-3.5 w-3.5 text-muted-foreground ml-1" />
-                                  <span>{invoice.amount}</span>
+                                  <span>{formatForDisplay(invoice.amount)}</span>
                                 </>
                               )}
                             </div>
@@ -325,7 +327,7 @@ export function CompanyDetailDialog({ isOpen, onClose, company, onEdit, onDelete
                               <p className="text-xs text-muted-foreground">{subscription.subscriptionType}</p>
                             </div>
                             <div className="text-right ml-2">
-                              <p className="font-semibold text-primary">{subscription.cost}</p>
+                              <p className="font-semibold text-primary">{formatForDisplay(subscription.cost, subscription.currency)}</p>
                               <p className="text-xs text-muted-foreground">{billingLabel}</p>
                             </div>
                           </div>

@@ -13,6 +13,7 @@ import { useCompanies } from '@/hooks/useCompanies';
 import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useMaintenanceActions } from '@/hooks/useMaintenance';
 import { useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import type { MaintenancePart } from '@/lib/types';
 
@@ -42,6 +43,7 @@ export function LogHomeMaintenanceDialog({
   const { allHomeFeatures, addCustomHomeFeature } = useCustomHomeFeatures();
   const { createMaintenance } = useMaintenanceActions();
   const { createCompletion } = useMaintenanceCompletionActions();
+  const { formatForDisplay } = useCurrency();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomFeatureInput, setShowCustomFeatureInput] = useState(false);
@@ -395,7 +397,7 @@ export function LogHomeMaintenanceDialog({
                       <p className="font-medium text-sm truncate">{part.name}</p>
                       <div className="flex gap-3 text-xs text-muted-foreground">
                         {part.partNumber && <span>Part #: {part.partNumber}</span>}
-                        {part.cost && <span>Cost: {part.cost}</span>}
+                        {part.cost && <span>Cost: {formatForDisplay(part.cost)}</span>}
                       </div>
                     </div>
                     <Button

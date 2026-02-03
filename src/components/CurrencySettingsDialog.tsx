@@ -29,6 +29,8 @@ export function CurrencySettingsDialog({ isOpen, onClose }: CurrencySettingsDial
     lastUpdated,
     isRefreshing,
     updateRates,
+    convert,
+    format,
   } = useCurrency();
 
   const groupedCurrencies = getGroupedCurrencies();
@@ -139,9 +141,18 @@ export function CurrencySettingsDialog({ isOpen, onClose }: CurrencySettingsDial
             </div>
             
             {hasRates && lastUpdated ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Last updated: {lastUpdated}</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>Last updated: {lastUpdated}</span>
+                </div>
+                {entryCurrency !== displayCurrency && (
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">Rate used for conversion:</span>
+                    {' '}
+                    1 {entryCurrency} = {format(convert(1, entryCurrency, displayCurrency), displayCurrency)}
+                  </div>
+                )}
               </div>
             ) : (
               <Alert>

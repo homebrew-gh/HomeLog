@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useProjectMaterials, useProjectMaterialActions } from '@/hooks/useProjectMaterials';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import { EXPENSE_CATEGORIES, type ProjectMaterial, type ExpenseCategory } from '@/lib/types';
 
@@ -36,6 +37,7 @@ const getCategoryColor = (category: string) => {
 export function MaterialsList({ projectId }: MaterialsListProps) {
   const { data: materials = [], isLoading } = useProjectMaterials(projectId);
   const { createMaterial, toggleMaterialPurchased, deleteMaterial } = useProjectMaterialActions();
+  const { formatForDisplay } = useCurrency();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -181,7 +183,7 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
       </div>
       <div className="text-right shrink-0">
         <span className={`font-semibold ${isPurchased ? 'text-muted-foreground' : 'text-foreground'}`}>
-          ${material.totalPrice}
+          {formatForDisplay(material.totalPrice)}
         </span>
       </div>
       <button

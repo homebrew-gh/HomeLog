@@ -53,6 +53,7 @@ import { useWarranties, useWarrantiesByApplianceId, useWarrantiesByVehicleId, us
 import { useCompanyById, useCompanies } from '@/hooks/useCompanies';
 import { useCompanyWorkLogsByCompanyId, useCompanyWorkLogActions } from '@/hooks/useCompanyWorkLogs';
 import { useSubscriptionsByCompanyId, useSubscriptions } from '@/hooks/useSubscriptions';
+import { useCurrency } from '@/hooks/useCurrency';
 import { FUEL_TYPES, type MaintenanceSchedule, type Warranty, type Company, type Subscription, type CompanyWorkLog } from '@/lib/types';
 import { CompanyWorkLogDialog } from '@/components/CompanyWorkLogDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -361,6 +362,7 @@ function CompanySection({ companyIds, companies }: { companyIds: string[]; compa
 
 // SubscriptionSection component
 function SubscriptionSection({ subscriptions }: { subscriptions: Subscription[] }) {
+  const { formatForDisplay } = useCurrency();
   return (
     <div className="space-y-4">
       {subscriptions.map((subscription) => (
@@ -375,8 +377,7 @@ function SubscriptionSection({ subscriptions }: { subscriptions: Subscription[] 
 
                 <div className="flex items-center gap-4 text-sm">
                   <span className="font-semibold text-lg text-primary">
-                    {subscription.cost}
-                    {subscription.currency && ` ${subscription.currency}`}
+                    {formatForDisplay(subscription.cost, subscription.currency)}
                   </span>
                   <span className="text-muted-foreground">/ {subscription.billingFrequency}</span>
                 </div>
@@ -407,6 +408,7 @@ function ApplianceDetailContent({ id }: { id: string }) {
   const maintenance = useMaintenanceByAppliance(id);
   const warranties = useWarrantiesByApplianceId(id);
   const { data: companies = [] } = useCompanies();
+  const { formatForDisplay } = useCurrency();
   const { data: subscriptions = [] } = useSubscriptions();
 
   // Get company IDs from maintenance and warranties
@@ -515,7 +517,7 @@ function ApplianceDetailContent({ id }: { id: string }) {
                   <DollarSign className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Purchase Price</p>
-                    <p>{appliance.price}</p>
+                    <p>{formatForDisplay(appliance.price)}</p>
                   </div>
                 </div>
               )}
@@ -1189,6 +1191,7 @@ function CompanyDetailContent({ id }: { id: string }) {
   const { deleteWorkLog } = useCompanyWorkLogActions();
   const { data: allAppliances = [] } = useAppliances();
   const { data: allVehicles = [] } = useVehicles();
+  const { formatForDisplay } = useCurrency();
 
   const [workLogDialogOpen, setWorkLogDialogOpen] = useState(false);
   const [editingWorkLog, setEditingWorkLog] = useState<CompanyWorkLog | null>(null);
@@ -1425,7 +1428,7 @@ function CompanyDetailContent({ id }: { id: string }) {
                             {log.totalPrice && (
                               <span className="flex items-center gap-1">
                                 <DollarSign className="h-3.5 w-3.5" />
-                                {log.totalPrice}
+                                {formatForDisplay(log.totalPrice)}
                               </span>
                             )}
                             {formatWorkLogDate(log) && (
@@ -1526,7 +1529,7 @@ function CompanyDetailContent({ id }: { id: string }) {
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {invoice.date}
-                          {invoice.amount && ` • ${invoice.amount}`}
+                          {invoice.amount != null && invoice.amount !== '' && ` • ${formatForDisplay(invoice.amount)}`}
                         </p>
                       </div>
                     </BlossomDocumentLink>
