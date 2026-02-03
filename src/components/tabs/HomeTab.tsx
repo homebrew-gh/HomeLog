@@ -515,23 +515,21 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
     return hiddenWidgets.filter(w => widgetsFromTabs.includes(w));
   }, [preferences.activeTabs, hiddenWidgets]);
 
-  // Auto-scroll configuration
-  const SCROLL_ZONE_SIZE = 100; // pixels from edge to trigger scroll
-  const SCROLL_SPEED_SLOW = 3; // pixels per frame (slow, deliberate)
-  const SCROLL_SPEED_FAST = 8; // pixels per frame when closer to edge
+  // Auto-scroll: only in top/bottom 12.5% of viewport; middle 75% is no-scroll so the screen stays still
+  const EDGE_ZONE_FRACTION = 0.125; // 12.5% from top and bottom
+  const AUTO_SCROLL_PX_PER_FRAME = 2; // slow, deliberate autoscroll
   const autoScrollRef = useRef<number | null>(null);
   const currentPointerY = useRef<number>(0);
-  const isDraggingRef = useRef<boolean>(false); // Track dragging state in a ref for the animation loop
+  const isDraggingRef = useRef<boolean>(false);
+  const scrollLockRef = useRef<string | null>(null); // restore overflow when drag ends
 
   // Keep the ref in sync with state
   useEffect(() => {
     isDraggingRef.current = !!draggedWidget;
   }, [draggedWidget]);
 
-  // Auto-scroll function that runs in animation frame loop
-  // Uses refs to avoid stale closure issues
+  // Auto-scroll only when pointer is in the top or bottom edge zones; middle 75% = no scroll
   const performAutoScroll = useCallback(() => {
-    // Use the ref to check if we're still dragging (avoids stale closure)
     if (!isDraggingRef.current) {
       autoScrollRef.current = null;
       return;
@@ -539,56 +537,55 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
 
     const viewportHeight = window.innerHeight;
     const y = currentPointerY.current;
-    
+
+    const topBound = viewportHeight * EDGE_ZONE_FRACTION;
+    const bottomBound = viewportHeight * (1 - EDGE_ZONE_FRACTION);
+
     let scrollAmount = 0;
-    
-    // Account for the sticky header (approximately 120px)
-    const headerOffset = 120;
-    const topScrollZone = headerOffset + SCROLL_ZONE_SIZE;
-    
-    // Check if near top edge (below header) - scroll up
-    if (y < topScrollZone && y > headerOffset) {
-      const distanceFromZoneStart = topScrollZone - y;
-      const intensity = distanceFromZoneStart / SCROLL_ZONE_SIZE; // 0 to 1, higher when closer to edge
-      scrollAmount = -(SCROLL_SPEED_SLOW + (SCROLL_SPEED_FAST - SCROLL_SPEED_SLOW) * intensity);
+
+    if (y < topBound) {
+      // Top 12.5%: scroll up slowly (closer to top = same speed, keep it simple)
+      scrollAmount = -AUTO_SCROLL_PX_PER_FRAME;
+    } else if (y > bottomBound) {
+      // Bottom 12.5%: scroll down slowly
+      scrollAmount = AUTO_SCROLL_PX_PER_FRAME;
     }
-    // Check if in header area - scroll up faster
-    else if (y <= headerOffset) {
-      scrollAmount = -SCROLL_SPEED_FAST;
-    }
-    // Check if near bottom edge - scroll down
-    else if (y > viewportHeight - SCROLL_ZONE_SIZE) {
-      const distanceFromBottom = viewportHeight - y;
-      const intensity = 1 - (distanceFromBottom / SCROLL_ZONE_SIZE); // 0 to 1, higher when closer to edge
-      scrollAmount = SCROLL_SPEED_SLOW + (SCROLL_SPEED_FAST - SCROLL_SPEED_SLOW) * intensity;
-    }
-    
+    // Middle 75%: scrollAmount stays 0, screen does not move
+
     if (scrollAmount !== 0) {
       window.scrollBy(0, scrollAmount);
     }
-    
-    // Continue the loop using the ref check
+
     if (isDraggingRef.current) {
       autoScrollRef.current = requestAnimationFrame(performAutoScroll);
     }
-  }, []); // No dependencies - uses refs for all dynamic values
+  }, []);
 
-  // Start auto-scroll loop when dragging begins
+  // When dragging: lock body scroll (so PWA doesn't scroll on touch/mouse move) and start edge-only autoscroll loop
   useEffect(() => {
     if (draggedWidget) {
-      // Start the auto-scroll loop
+      // Prevent page from scrolling with the finger/mouse; only our edge autoscroll will move the page
+      scrollLockRef.current = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
       if (!autoScrollRef.current) {
         autoScrollRef.current = requestAnimationFrame(performAutoScroll);
       }
     } else {
-      // Stop the auto-scroll loop
+      if (scrollLockRef.current !== null) {
+        document.body.style.overflow = scrollLockRef.current;
+        scrollLockRef.current = null;
+      }
       if (autoScrollRef.current) {
         cancelAnimationFrame(autoScrollRef.current);
         autoScrollRef.current = null;
       }
     }
-    
+
     return () => {
+      if (scrollLockRef.current !== null) {
+        document.body.style.overflow = scrollLockRef.current;
+        scrollLockRef.current = null;
+      }
       if (autoScrollRef.current) {
         cancelAnimationFrame(autoScrollRef.current);
         autoScrollRef.current = null;
