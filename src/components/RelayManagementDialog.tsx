@@ -148,7 +148,7 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
             {eligible && (
               <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/50">
                 <RefreshCw className={`h-4 w-4 text-emerald-600 ${isRunning ? 'animate-spin' : ''}`} />
-                <AlertDescription asChild>
+                <AlertDescription>
                   <div className="space-y-2">
                     {error && (
                       <p className="text-sm text-destructive font-medium">{error.message}</p>

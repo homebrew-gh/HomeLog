@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useBlossomUrl } from '@/hooks/useBlossomUrl';
+import { useViewerBlobUrl } from '@/hooks/useViewerBlobUrl';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 /** File types that can be viewed */
@@ -92,15 +93,22 @@ export function FileViewer({
   onGalleryNavigate,
 }: FileViewerProps) {
   const { currentUrl, tryNextUrl, hasFailed, reset, currentIndex, totalUrls } = useBlossomUrl(url);
+  const { displayUrl, isBlob, isLoadingBlob, reset: resetBlob } = useViewerBlobUrl(currentUrl, {
+    isActive: isOpen,
+    fileType: getFileType(url),
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
-  
+
   const fileType = getFileType(url);
   const fileName = title || getFileName(url);
   const isGalleryMode = gallery && gallery.length > 1;
-  
+
+  // URL to use for rendering (blob when in PWA and proxy succeeded, else direct)
+  const renderUrl = displayUrl;
+
   // Reset state when URL changes
   useEffect(() => {
     setIsLoading(true);
@@ -108,21 +116,28 @@ export function FileViewer({
     setZoom(1);
     setRotation(0);
     reset();
-  }, [url, reset]);
-  
+    resetBlob();
+  }, [url, reset, resetBlob]);
+
   const handleImageLoad = useCallback(() => {
     setIsLoading(false);
     setHasError(false);
   }, []);
-  
+
   const handleImageError = useCallback(() => {
+    // When showing a blob URL, don't try next fallback (blob is already the fetched content)
+    if (isBlob) {
+      setIsLoading(false);
+      setHasError(true);
+      return;
+    }
     if (!hasFailed) {
       tryNextUrl();
     } else {
       setIsLoading(false);
       setHasError(true);
     }
-  }, [hasFailed, tryNextUrl]);
+  }, [isBlob, hasFailed, tryNextUrl]);
   
   const handleRetry = useCallback(() => {
     setIsLoading(true);
@@ -351,8 +366,8 @@ export function FileViewer({
         
         {/* Content area */}
         <div className="flex items-center justify-center w-full h-full pt-16 pb-4 px-4 overflow-auto">
-          {/* Loading state */}
-          {isLoading && fileType === 'image' && (
+          {/* Loading state (image loading or PWA blob fetch) */}
+          {(isLoading || isLoadingBlob) && (fileType === 'image' || fileType === 'pdf') && (
             <div className="absolute inset-0 flex items-center justify-center">
               <Loader2 className="h-12 w-12 text-white animate-spin" />
             </div>
@@ -382,7 +397,7 @@ export function FileViewer({
           {/* Image viewer */}
           {fileType === 'image' && !hasError && (
             <img
-              src={currentUrl}
+              src={renderUrl}
               alt={fileName}
               className={cn(
                 "max-w-full max-h-full object-contain transition-transform duration-200",
@@ -400,7 +415,7 @@ export function FileViewer({
           {/* PDF viewer */}
           {fileType === 'pdf' && !hasError && (
             <iframe
-              src={`${currentUrl}#toolbar=1&navpanes=0`}
+              src={isBlob ? renderUrl : `${renderUrl}#toolbar=1&navpanes=0`}
               className="w-full h-full bg-white rounded-lg"
               title={fileName}
               onLoad={() => setIsLoading(false)}
