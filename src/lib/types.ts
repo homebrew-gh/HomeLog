@@ -36,6 +36,14 @@ export const DEFAULT_VEHICLE_TYPES = [
 
 export type DefaultVehicleType = typeof DEFAULT_VEHICLE_TYPES[number];
 
+/** Document attached to a vehicle (e.g. manual, registration copy). */
+export interface VehicleDocument {
+  url: string;
+  /** Optional description/label (e.g. "Registration", "Service manual"). */
+  name?: string;
+  uploadedAt?: string;
+}
+
 export interface Vehicle {
   id: string;
   vehicleType: string;
@@ -66,7 +74,10 @@ export interface Vehicle {
   receiptUrl?: string;
   warrantyUrl?: string;
   warrantyExpiry?: string; // MM/DD/YYYY format
-  documentsUrls?: string[]; // Array of PDF/document URLs
+  /** Documents with optional description. When present, use this instead of documentsUrls. */
+  documents?: VehicleDocument[];
+  /** Legacy: array of document URLs only (no description). Populated for backward compatibility. */
+  documentsUrls?: string[];
   // Metadata
   notes?: string;
   isArchived?: boolean; // Whether this vehicle is archived
@@ -360,6 +371,7 @@ export const PROJECT_KIND = 35389;
 export const PROJECT_ENTRY_KIND = 1661;
 export const PROJECT_TASK_KIND = 4209;
 export const PROJECT_MATERIAL_KIND = 8347;
+export const PROJECT_RESEARCH_KIND = 8348;
 export const VET_VISIT_KIND = 7443;
 
 export interface Pet {
@@ -455,6 +467,23 @@ export interface ProjectTask {
   // Metadata
   pubkey: string;
   createdAt: number;
+}
+
+// Project Research/Planning Note (structured note with optional documents and quotes)
+export interface ProjectResearchDocument {
+  url: string;
+  name?: string;
+}
+
+export interface ProjectResearchNote {
+  id: string;
+  projectId: string;
+  description: string; // Title/summary of the note
+  content: string; // Main text
+  documents?: ProjectResearchDocument[]; // Optional file/link attachments
+  quotes?: string[]; // Optional quotes or references
+  pubkey: string;
+  createdAt: number; // Unix timestamp when note was added
 }
 
 // Expense categories for budget tracking
