@@ -26,6 +26,7 @@ import { useUploadFile } from '@/hooks/useUploadFile';
 export const EditProfileForm: React.FC = () => {
   const queryClient = useQueryClient();
   const [copiedNpub, setCopiedNpub] = React.useState(false);
+  const [copiedHex, setCopiedHex] = React.useState(false);
 
   const { user, metadata } = useCurrentUser();
   const { mutateAsync: publishEvent, isPending } = useNostrPublish();
@@ -34,6 +35,7 @@ export const EditProfileForm: React.FC = () => {
 
   // Convert hex pubkey to npub
   const npub = user?.pubkey ? nip19.npubEncode(user.pubkey) : null;
+  const pubkeyHex = user?.pubkey ?? null;
 
   // Copy npub to clipboard
   const copyNpubToClipboard = async () => {
@@ -47,6 +49,27 @@ export const EditProfileForm: React.FC = () => {
         description: 'Your npub has been copied to the clipboard.',
       });
       setTimeout(() => setCopiedNpub(false), 2000);
+    } catch {
+      toast({
+        title: 'Failed to copy',
+        description: 'Please try selecting and copying manually.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Copy hex pubkey to clipboard
+  const copyHexToClipboard = async () => {
+    if (!pubkeyHex) return;
+    
+    try {
+      await navigator.clipboard.writeText(pubkeyHex);
+      setCopiedHex(true);
+      toast({
+        title: 'Copied!',
+        description: 'Your public key (hex) has been copied to the clipboard.',
+      });
+      setTimeout(() => setCopiedHex(false), 2000);
     } catch {
       toast({
         title: 'Failed to copy',
@@ -184,6 +207,41 @@ export const EditProfileForm: React.FC = () => {
             </div>
             <p className="text-sm text-muted-foreground">
               Your unique Nostr public key. Share this with others so they can find you.
+            </p>
+          </div>
+        )}
+
+        {/* Public Key (hex) Section */}
+        {pubkeyHex && (
+          <div className="rounded-lg border p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium leading-none">
+                Public Key (hex)
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={copyHexToClipboard}
+                className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              >
+                {copiedHex ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                <span className="ml-2">{copiedHex ? 'Copied!' : 'Copy'}</span>
+              </Button>
+            </div>
+            <div 
+              className="font-mono text-sm bg-muted p-3 rounded-md break-all select-all cursor-pointer"
+              onClick={copyHexToClipboard}
+              title="Click to copy"
+            >
+              {pubkeyHex}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Hex format for node setup and other applications.
             </p>
           </div>
         )}

@@ -36,11 +36,14 @@ export function EditProfileDialog({ isOpen, onClose }: EditProfileDialogProps) {
   const [about, setAbout] = useState('');
   const [picture, setPicture] = useState('');
   const [copiedNpub, setCopiedNpub] = useState(false);
+  const [copiedHex, setCopiedHex] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Convert hex pubkey to npub
   const npub = user?.pubkey ? nip19.npubEncode(user.pubkey) : null;
+  // Pubkey in hex (same as user.pubkey) - useful for node setup and other apps
+  const pubkeyHex = user?.pubkey ?? null;
 
   // Copy npub to clipboard
   const copyNpubToClipboard = async () => {
@@ -54,6 +57,27 @@ export function EditProfileDialog({ isOpen, onClose }: EditProfileDialogProps) {
         description: 'Your npub has been copied to the clipboard.',
       });
       setTimeout(() => setCopiedNpub(false), 2000);
+    } catch {
+      toast({
+        title: 'Failed to copy',
+        description: 'Please try selecting and copying manually.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Copy hex pubkey to clipboard
+  const copyHexToClipboard = async () => {
+    if (!pubkeyHex) return;
+    
+    try {
+      await navigator.clipboard.writeText(pubkeyHex);
+      setCopiedHex(true);
+      toast({
+        title: 'Copied!',
+        description: 'Your public key (hex) has been copied to the clipboard.',
+      });
+      setTimeout(() => setCopiedHex(false), 2000);
     } catch {
       toast({
         title: 'Failed to copy',
@@ -269,6 +293,39 @@ export function EditProfileDialog({ isOpen, onClose }: EditProfileDialogProps) {
               </div>
               <p className="text-xs text-muted-foreground">
                 Share this with others so they can find you on Nostr.
+              </p>
+            </div>
+          )}
+
+          {/* Public Key (hex) Section */}
+          {pubkeyHex && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Public Key (hex)</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={copyHexToClipboard}
+                  className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                >
+                  {copiedHex ? (
+                    <Check className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                  <span className="ml-1.5 text-xs">{copiedHex ? 'Copied!' : 'Copy'}</span>
+                </Button>
+              </div>
+              <div 
+                className="font-mono text-xs bg-muted p-2.5 rounded-md break-all select-all cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                onClick={copyHexToClipboard}
+                title="Click to copy"
+              >
+                {pubkeyHex}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Hex format for node setup and other applications.
               </p>
             </div>
           )}
