@@ -857,7 +857,7 @@ function VehicleDetailContent({ id }: { id: string }) {
         )}
 
         {/* Documents Section */}
-        {(vehicle.receiptUrl || vehicle.warrantyUrl || (vehicle.documentsUrls && vehicle.documentsUrls.length > 0)) && (
+        {(vehicle.receiptUrl || vehicle.warrantyUrl || (vehicle.documents && vehicle.documents.length > 0) || (vehicle.documentsUrls && vehicle.documentsUrls.length > 0)) && (
           <section>
             <Card>
               <CardHeader>
@@ -887,15 +887,18 @@ function VehicleDetailContent({ id }: { id: string }) {
                     <span>View Warranty Document</span>
                   </BlossomDocumentLink>
                 )}
-                {vehicle.documentsUrls?.map((url, index) => (
+                {(vehicle.documents && vehicle.documents.length > 0
+                  ? vehicle.documents
+                  : vehicle.documentsUrls?.map(url => ({ url, name: undefined })) ?? []
+                ).map((doc, index) => (
                   <BlossomDocumentLink
                     key={index}
-                    href={url}
+                    href={typeof doc === 'object' ? doc.url : doc}
                     className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-foreground"
                     showIcon={false}
                   >
                     <FileText className="h-5 w-5 text-primary" />
-                    <span>Document {index + 1}</span>
+                    <span>{typeof doc === 'object' && doc.name ? doc.name : `Document ${index + 1}`}</span>
                   </BlossomDocumentLink>
                 ))}
               </CardContent>

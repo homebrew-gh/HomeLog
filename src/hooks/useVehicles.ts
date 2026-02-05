@@ -8,7 +8,7 @@ import { useAppContext } from '@/hooks/useAppContext';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
-import { VEHICLE_KIND, type Vehicle } from '@/lib/types';
+import { VEHICLE_KIND, type Vehicle, type VehicleDocument } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventByAddress } from '@/lib/eventCache';
 import { isRelayUrlSecure } from '@/lib/relay';
 import { getSiblingEventIdsForDeletion } from '@/lib/relayDeletion';
@@ -31,6 +31,29 @@ function getTagValues(event: NostrEvent, tagName: string): string[] {
     .filter(Boolean);
 }
 
+// Parse document tags: ["document", "<url>", "<name>", "<uploadedAt>"] or legacy document_url
+function parseVehicleDocuments(event: NostrEvent): { documents: VehicleDocument[]; documentsUrls: string[] } {
+  const documentTags = event.tags.filter(([name]) => name === 'document');
+  if (documentTags.length > 0) {
+    const documents: VehicleDocument[] = documentTags
+      .map(tag => ({
+        url: tag[1] || '',
+        name: tag[2] || undefined,
+        uploadedAt: tag[3] || undefined,
+      }))
+      .filter(doc => doc.url);
+    return {
+      documents,
+      documentsUrls: documents.map(d => d.url),
+    };
+  }
+  const urls = getTagValues(event, 'document_url');
+  return {
+    documents: urls.map(url => ({ url })),
+    documentsUrls: urls,
+  };
+}
+
 // Data stored in encrypted content
 type VehicleData = Omit<Vehicle, 'id' | 'pubkey' | 'createdAt'>;
 
@@ -41,6 +64,8 @@ function parseVehiclePlaintext(event: NostrEvent): Vehicle | null {
   const vehicleType = getTagValue(event, 'vehicle_type');
 
   if (!id || !name || !vehicleType) return null;
+
+  const { documents, documentsUrls } = parseVehicleDocuments(event);
 
   return {
     id,
@@ -65,7 +90,8 @@ function parseVehiclePlaintext(event: NostrEvent): Vehicle | null {
     receiptUrl: getTagValue(event, 'receipt_url'),
     warrantyUrl: getTagValue(event, 'warranty_url'),
     warrantyExpiry: getTagValue(event, 'warranty_expiry'),
-    documentsUrls: getTagValues(event, 'document_url'),
+    documents: documents.length > 0 ? documents : undefined,
+    documentsUrls: documentsUrls.length > 0 ? documentsUrls : undefined,
     notes: getTagValue(event, 'notes'),
     isArchived: getTagValue(event, 'is_archived') === 'true',
     pubkey: event.pubkey,
@@ -240,7 +266,14 @@ export function useVehicleActions() {
       if (data.notes) tags.push(['notes', data.notes]);
       if (data.isArchived) tags.push(['is_archived', 'true']);
 
-      if (data.documentsUrls) {
+      if (data.documents && data.documents.length > 0) {
+        for (const doc of data.documents) {
+          const docTag = ['document', doc.url];
+          if (doc.name) docTag.push(doc.name);
+          if (doc.uploadedAt) docTag.push(doc.uploadedAt);
+          tags.push(docTag);
+        }
+      } else if (data.documentsUrls && data.documentsUrls.length > 0) {
         for (const url of data.documentsUrls) {
           tags.push(['document_url', url]);
         }
@@ -306,7 +339,14 @@ export function useVehicleActions() {
       if (data.notes) tags.push(['notes', data.notes]);
       if (data.isArchived) tags.push(['is_archived', 'true']);
 
-      if (data.documentsUrls) {
+      if (data.documents && data.documents.length > 0) {
+        for (const doc of data.documents) {
+          const docTag = ['document', doc.url];
+          if (doc.name) docTag.push(doc.name);
+          if (doc.uploadedAt) docTag.push(doc.uploadedAt);
+          tags.push(docTag);
+        }
+      } else if (data.documentsUrls && data.documentsUrls.length > 0) {
         for (const url of data.documentsUrls) {
           tags.push(['document_url', url]);
         }

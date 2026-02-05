@@ -341,7 +341,7 @@ export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete
             )}
 
             {/* Documents */}
-            {(vehicle.receiptUrl || (vehicle.documentsUrls && vehicle.documentsUrls.length > 0)) && (
+            {(vehicle.receiptUrl || (vehicle.documents && vehicle.documents.length > 0) || (vehicle.documentsUrls && vehicle.documentsUrls.length > 0)) && (
               <>
                 <Separator />
                 {vehicle.receiptUrl && (
@@ -358,17 +358,20 @@ export function VehicleDetailDialog({ isOpen, onClose, vehicle, onEdit, onDelete
                   </div>
                 )}
 
-                {vehicle.documentsUrls && vehicle.documentsUrls.length > 0 && (
+                {((vehicle.documents && vehicle.documents.length > 0) || (vehicle.documentsUrls && vehicle.documentsUrls.length > 0)) && (
                   <div className="flex items-start gap-3">
                     <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-muted-foreground">Documents</p>
                       <div className="space-y-1 mt-1">
-                        {vehicle.documentsUrls.map((url, index) => (
+                        {(vehicle.documents && vehicle.documents.length > 0
+                          ? vehicle.documents
+                          : vehicle.documentsUrls!.map(url => ({ url, name: undefined }))
+                        ).map((doc, index) => (
                           <BlossomDocumentLink
                             key={index}
-                            href={url}
-                            name={`Document ${index + 1}`}
+                            href={typeof doc === 'object' ? doc.url : doc}
+                            name={typeof doc === 'object' && doc.name ? doc.name : `Document ${index + 1}`}
                           />
                         ))}
                       </div>

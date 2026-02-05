@@ -18,7 +18,7 @@ import { useWarrantyActions } from '@/hooks/useWarranties';
 import { useSubscriptionActions } from '@/hooks/useSubscriptions';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
-import { FUEL_TYPES, BILLING_FREQUENCIES, type Vehicle, type BillingFrequency } from '@/lib/types';
+import { FUEL_TYPES, BILLING_FREQUENCIES, type Vehicle, type VehicleDocument, type BillingFrequency } from '@/lib/types';
 
 interface VehicleDialogProps {
   isOpen: boolean;
@@ -105,7 +105,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
     receiptUrl: '',
     warrantyUrl: '',
     warrantyExpiry: '',
-    documentsUrls: [] as string[],
+    documents: [] as { url: string; name: string }[],
     notes: '',
   });
 
@@ -152,7 +152,10 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           receiptUrl: vehicle.receiptUrl || '',
           warrantyUrl: vehicle.warrantyUrl || '',
           warrantyExpiry: vehicle.warrantyExpiry || '',
-          documentsUrls: vehicle.documentsUrls || [],
+          documents: (vehicle.documents ?? vehicle.documentsUrls?.map(url => ({ url, name: '' })) ?? []).map(d => ({
+            url: d.url,
+            name: typeof d === 'object' && d.name != null ? d.name : '',
+          })),
           notes: vehicle.notes || '',
         });
         setShowWarranty(!!(vehicle.warrantyUrl || vehicle.warrantyExpiry));
@@ -183,7 +186,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           receiptUrl: '',
           warrantyUrl: '',
           warrantyExpiry: '',
-          documentsUrls: [],
+          documents: [],
           notes: '',
         });
         setShowWarranty(false);
@@ -205,7 +208,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
         if (type === 'document') {
           setFormData(prev => ({
             ...prev,
-            documentsUrls: [...prev.documentsUrls, url],
+            documents: [...prev.documents, { url, name: '' }],
           }));
         } else {
           setFormData(prev => ({
@@ -257,11 +260,11 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
   };
 
   const handleRemoveDocument = (index: number, deleteFromServer: boolean = false) => {
-    const url = formData.documentsUrls[index];
+    const url = formData.documents[index]?.url;
     
     setFormData(prev => ({
       ...prev,
-      documentsUrls: prev.documentsUrls.filter((_, i) => i !== index),
+      documents: prev.documents.filter((_, i) => i !== index),
     }));
 
     if (deleteFromServer && url) {
@@ -382,14 +385,20 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
       let vehicleId: string;
       
       if (isEditing && vehicle) {
-        await updateVehicle(vehicle.id, formData);
+        await updateVehicle(vehicle.id, {
+          ...formData,
+          documents: formData.documents.map(({ url, name }) => ({ url, name: name.trim() || undefined })),
+        });
         vehicleId = vehicle.id;
         toast({
           title: 'Vehicle updated',
           description: 'Your vehicle has been updated successfully.',
         });
       } else {
-        vehicleId = await createVehicle(formData);
+        vehicleId = await createVehicle({
+          ...formData,
+          documents: formData.documents.map(({ url, name }) => ({ url, name: name.trim() || undefined })),
+        });
         toast({
           title: 'Vehicle added',
           description: 'Your vehicle has been added successfully.',
@@ -409,7 +418,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
             linkedType: 'vehicle',
             linkedItemId: vehicleId,
             linkedItemName: formData.name,
-            documents: formData.warrantyUrl ? [{ url: formData.warrantyUrl }] : [],
+            documents: formData.warrantyUrl ? [{ url: formData.warrantyUrl, name: undefined }] : [],
             receiptUrl: formData.receiptUrl || undefined,
           });
           toast({
@@ -1144,19 +1153,27 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
                 </TooltipContent>
               </Tooltip>
             </div>
-            {formData.documentsUrls.length > 0 && (
-              <div className="space-y-1">
-                {formData.documentsUrls.map((url, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                    <FileText className="h-4 w-4" />
-                    <span className="truncate flex-1">Document {index + 1}</span>
+            {formData.documents.length > 0 && (
+              <div className="space-y-2">
+                {formData.documents.map((doc, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm bg-muted/50 p-2 rounded">
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <Input
+                      value={doc.name}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        documents: prev.documents.map((d, i) => i === index ? { ...d, name: e.target.value } : d),
+                      }))}
+                      placeholder="e.g. Registration, Service manual"
+                      className="flex-1 h-8 text-sm"
+                    />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-6 px-2"
+                          className="h-6 px-2 shrink-0"
                           disabled={isDeleting}
                         >
                           {isDeleting ? (

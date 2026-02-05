@@ -90,7 +90,7 @@ An addressable event representing a vehicle (car, truck, boat, plane, farm machi
     ["receipt_url", "<url>"],
     ["warranty_url", "<url>"],
     ["warranty_expiry", "<MM/DD/YYYY>"],
-    ["document_url", "<url>"],
+    ["document", "<url>", "<name>", "<uploadedAt>"],
     ["notes", "<notes>"]
   ]
 }
@@ -123,7 +123,7 @@ An addressable event representing a vehicle (car, truck, boat, plane, farm machi
 | `receipt_url` | No | URL to purchase receipt |
 | `warranty_url` | No | URL to warranty document |
 | `warranty_expiry` | No | Warranty expiration date |
-| `document_url` | No | URL to additional documents (can have multiple) |
+| `document` | No | Document with format: url, name (optional), uploadedAt (optional). Can have multiple. Legacy: `document_url` with URL only is also supported. |
 | `notes` | No | Additional notes |
 
 ### Vehicle Types
