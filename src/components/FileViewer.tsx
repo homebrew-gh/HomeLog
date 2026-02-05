@@ -93,7 +93,7 @@ export function FileViewer({
   onGalleryNavigate,
 }: FileViewerProps) {
   const { currentUrl, tryNextUrl, hasFailed, reset, currentIndex, totalUrls } = useBlossomUrl(url);
-  const { displayUrl, isBlob, isLoadingBlob, reset: resetBlob } = useViewerBlobUrl(currentUrl, {
+  const { displayUrl, isBlob, isLoadingBlob, blobAttemptFailed, reset: resetBlob } = useViewerBlobUrl(currentUrl, {
     isActive: isOpen,
     fileType: getFileType(url),
   });
@@ -379,7 +379,9 @@ export function FileViewer({
               <AlertCircle className="h-16 w-16 text-red-400 mb-4" />
               <p className="text-lg font-medium mb-2">Unable to load file</p>
               <p className="text-sm text-white/70 mb-4">
-                Tried {totalUrls} server{totalUrls !== 1 ? 's' : ''} without success
+                {blobAttemptFailed
+                  ? "In-app preview isn't available (the file server may not allow it). Use Open in browser or Download."
+                  : `Tried ${totalUrls} server${totalUrls !== 1 ? 's' : ''} without success`}
               </p>
               <div className="flex gap-2">
                 <Button variant="secondary" onClick={handleRetry}>
@@ -389,6 +391,10 @@ export function FileViewer({
                 <Button variant="secondary" onClick={handleOpenExternal}>
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Open in browser
+                </Button>
+                <Button variant="secondary" onClick={handleDownload}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
                 </Button>
               </div>
             </div>
@@ -412,15 +418,25 @@ export function FileViewer({
             />
           )}
           
-          {/* PDF viewer */}
+          {/* PDF viewer: use embed for blob URLs (better support on some mobile browsers), iframe for direct URLs */}
           {fileType === 'pdf' && !hasError && (
-            <iframe
-              src={isBlob ? renderUrl : `${renderUrl}#toolbar=1&navpanes=0`}
-              className="w-full h-full bg-white rounded-lg"
-              title={fileName}
-              onLoad={() => setIsLoading(false)}
-              onError={handleImageError}
-            />
+            isBlob ? (
+              <embed
+                src={renderUrl}
+                type="application/pdf"
+                className="w-full h-full rounded-lg min-h-[60vh]"
+                title={fileName}
+                onLoad={() => setIsLoading(false)}
+              />
+            ) : (
+              <iframe
+                src={`${renderUrl}#toolbar=1&navpanes=0`}
+                className="w-full h-full bg-white rounded-lg"
+                title={fileName}
+                onLoad={() => setIsLoading(false)}
+                onError={handleImageError}
+              />
+            )
           )}
           
           {/* Unknown file type */}

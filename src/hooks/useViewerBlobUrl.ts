@@ -1,18 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-/** Detect if the app is running as a PWA (standalone display mode or iOS home screen) */
-function isStandalonePWA(): boolean {
-  if (typeof window === 'undefined') return false;
-  // Standard display-mode media query (e.g. when launched from home screen)
-  if (window.matchMedia('(display-mode: standalone)').matches) return true;
-  // Safari iOS when added to home screen
-  const nav = navigator as { standalone?: boolean };
-  if (nav.standalone === true) return true;
-  // Some Android PWAs
-  if (document.referrer.includes('android-app://')) return true;
-  return false;
-}
-
 /** Check if URL is eligible for blob proxy (https, not already blob/data) */
 function canProxyToBlob(url: string): boolean {
   try {
@@ -20,6 +7,15 @@ function canProxyToBlob(url: string): boolean {
     return u.protocol === 'https:' || u.protocol === 'http:';
   } catch {
     return false;
+  }
+}
+
+/** True when URL is on a different origin than the current page (needs proxy for in-app display in PWA) */
+function isCrossOrigin(url: string): boolean {
+  try {
+    return new URL(url).origin !== window.location.origin;
+  } catch {
+    return true;
   }
 }
 
@@ -37,6 +33,8 @@ interface UseViewerBlobUrlResult {
   isBlob: boolean;
   /** True while fetching to create blob URL */
   isLoadingBlob: boolean;
+  /** True when we tried to fetch for blob but failed (e.g. CORS); caller can show "open in browser" hint */
+  blobAttemptFailed: boolean;
   /** Reset (e.g. when switching to next fallback URL) */
   reset: () => void;
 }
@@ -54,6 +52,7 @@ export function useViewerBlobUrl(
   const [displayUrl, setDisplayUrl] = useState(url);
   const [isBlob, setIsBlob] = useState(false);
   const [isLoadingBlob, setIsLoadingBlob] = useState(false);
+  const [blobAttemptFailed, setBlobAttemptFailed] = useState(false);
   const revokedRef = useRef<string | null>(null);
 
   const revokePrevious = useCallback(() => {
@@ -72,6 +71,7 @@ export function useViewerBlobUrl(
     setDisplayUrl(url);
     setIsBlob(false);
     setIsLoadingBlob(false);
+    setBlobAttemptFailed(false);
   }, [url, revokePrevious]);
 
   useEffect(() => {
@@ -80,20 +80,23 @@ export function useViewerBlobUrl(
       return () => revokePrevious();
     }
 
-    // Only proxy when in PWA standalone to avoid unnecessary fetch in normal browser
-    if (!isStandalonePWA()) {
+    // Same-origin URLs can be used directly; no need to proxy
+    if (!isCrossOrigin(url)) {
       setDisplayUrl(url);
       setIsBlob(false);
       setIsLoadingBlob(false);
+      setBlobAttemptFailed(false);
       return () => revokePrevious();
     }
 
+    // Cross-origin: fetch and create blob so img/iframe work in PWA (avoids cross-origin blocking)
     let cancelled = false;
     setIsLoadingBlob(true);
     setDisplayUrl(url);
     setIsBlob(false);
+    setBlobAttemptFailed(false);
 
-    fetch(url, { mode: 'cors' })
+    fetch(url, { mode: 'cors', credentials: 'omit' })
       .then((res) => {
         if (cancelled || !res.ok) return null;
         return res.blob();
@@ -110,6 +113,7 @@ export function useViewerBlobUrl(
         if (!cancelled) {
           setDisplayUrl(url);
           setIsBlob(false);
+          setBlobAttemptFailed(true);
         }
       })
       .finally(() => {
@@ -126,6 +130,7 @@ export function useViewerBlobUrl(
     displayUrl,
     isBlob,
     isLoadingBlob,
+    blobAttemptFailed,
     reset,
   };
 }
