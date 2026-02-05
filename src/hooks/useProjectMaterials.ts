@@ -56,6 +56,8 @@ function parseProjectMaterialPlaintext(event: NostrEvent): ProjectMaterial | nul
     unit: getTagValue(event, 'unit'),
     unitPrice: getTagValue(event, 'unit_price'),
     totalPrice,
+    estimatedPrice: getTagValue(event, 'estimated_price'),
+    actualPrice: getTagValue(event, 'actual_price'),
     isPurchased: getTagValue(event, 'is_purchased') === 'true',
     purchasedDate: getTagValue(event, 'purchased_date'),
     vendor: getTagValue(event, 'vendor'),
@@ -209,6 +211,8 @@ export function useProjectMaterialActions() {
       if (data.quantity !== undefined) tags.push(['quantity', String(data.quantity)]);
       if (data.unit) tags.push(['unit', data.unit]);
       if (data.unitPrice) tags.push(['unit_price', data.unitPrice]);
+      if (data.estimatedPrice) tags.push(['estimated_price', data.estimatedPrice]);
+      if (data.actualPrice) tags.push(['actual_price', data.actualPrice]);
       if (data.purchasedDate) tags.push(['purchased_date', data.purchasedDate]);
       if (data.vendor) tags.push(['vendor', data.vendor]);
       if (data.notes) tags.push(['notes', data.notes]);
@@ -252,6 +256,8 @@ export function useProjectMaterialActions() {
       unit: material.unit,
       unitPrice: material.unitPrice,
       totalPrice: material.totalPrice,
+      estimatedPrice: material.estimatedPrice,
+      actualPrice: material.actualPrice,
       isPurchased: !material.isPurchased,
       purchasedDate: !material.isPurchased ? formattedDate : undefined,
       vendor: material.vendor,
@@ -306,6 +312,16 @@ export function useProjectMaterialActions() {
   return { createMaterial, updateMaterial, toggleMaterialPurchased, deleteMaterial };
 }
 
+// Helper to get effective estimated price for an item
+function getEstimatedPrice(m: ProjectMaterial): string {
+  return m.estimatedPrice ?? m.totalPrice;
+}
+
+// Helper to get effective actual price for an item (when purchased)
+function getActualPrice(m: ProjectMaterial): string {
+  return m.actualPrice ?? m.estimatedPrice ?? m.totalPrice;
+}
+
 // Helper to calculate budget summary
 export function useBudgetSummary(projectId?: string, originalBudget?: string) {
   const { data: materials = [] } = useProjectMaterials(projectId);
@@ -316,28 +332,30 @@ export function useBudgetSummary(projectId?: string, originalBudget?: string) {
     return parseFloat(cleaned) || 0;
   };
 
-  // Calculate totals
-  const totalSpent = materials
+  // Total estimated (planned) across all items
+  const totalEstimated = materials.reduce((sum, m) => sum + parsePrice(getEstimatedPrice(m)), 0);
+  // Total actual (spent) for purchased items only
+  const totalActual = materials
     .filter(m => m.isPurchased)
-    .reduce((sum, m) => sum + parsePrice(m.totalPrice), 0);
+    .reduce((sum, m) => sum + parsePrice(getActualPrice(m)), 0);
 
-  const totalPlanned = materials
-    .reduce((sum, m) => sum + parsePrice(m.totalPrice), 0);
+  const totalSpent = totalActual;
+  const totalPlanned = totalEstimated;
 
   const budgetAmount = originalBudget ? parsePrice(originalBudget) : 0;
   const remaining = budgetAmount - totalSpent;
   const percentUsed = budgetAmount > 0 ? (totalSpent / budgetAmount) * 100 : 0;
+  const variance = totalEstimated - totalActual;
 
-  // Breakdown by category
+  // Breakdown by category (planned = estimated, spent = actual for purchased)
   const categoryBreakdown = materials.reduce((acc, m) => {
     const category = m.category;
     if (!acc[category]) {
       acc[category] = { planned: 0, spent: 0 };
     }
-    const price = parsePrice(m.totalPrice);
-    acc[category].planned += price;
+    acc[category].planned += parsePrice(getEstimatedPrice(m));
     if (m.isPurchased) {
-      acc[category].spent += price;
+      acc[category].spent += parsePrice(getActualPrice(m));
     }
     return acc;
   }, {} as Record<string, { planned: number; spent: number }>);
@@ -345,6 +363,9 @@ export function useBudgetSummary(projectId?: string, originalBudget?: string) {
   return {
     totalSpent,
     totalPlanned,
+    totalEstimated,
+    totalActual,
+    variance,
     budgetAmount,
     remaining,
     percentUsed,

@@ -479,7 +479,9 @@ export interface ProjectMaterial {
   quantity?: number; // Quantity needed
   unit?: string; // Unit of measurement (e.g., "sq ft", "each", "hours")
   unitPrice?: string; // Price per unit
-  totalPrice: string; // Total price for this item
+  totalPrice: string; // Total price for this item (legacy / display)
+  estimatedPrice?: string; // Estimated cost when planning
+  actualPrice?: string; // Actual cost paid (for variance vs estimated)
   isPurchased: boolean; // Whether the item has been bought
   purchasedDate?: string; // MM/DD/YYYY format - when item was purchased
   vendor?: string; // Where it was purchased from

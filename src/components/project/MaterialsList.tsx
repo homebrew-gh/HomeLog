@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, ShoppingCart, Check, Package } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, Check, Package, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -36,11 +36,13 @@ const getCategoryColor = (category: string) => {
 
 export function MaterialsList({ projectId }: MaterialsListProps) {
   const { data: materials = [], isLoading } = useProjectMaterials(projectId);
-  const { createMaterial, toggleMaterialPurchased, deleteMaterial } = useProjectMaterialActions();
+  const { createMaterial, updateMaterial, toggleMaterialPurchased, deleteMaterial } = useProjectMaterialActions();
   const { formatForDisplay } = useCurrency();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<ProjectMaterial | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     category: 'materials' as ExpenseCategory,
@@ -48,6 +50,8 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
     unit: '',
     unitPrice: '',
     totalPrice: '',
+    estimatedPrice: '',
+    actualPrice: '',
     vendor: '',
     notes: '',
   });
@@ -63,9 +67,32 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
       unit: '',
       unitPrice: '',
       totalPrice: '',
+      estimatedPrice: '',
+      actualPrice: '',
       vendor: '',
       notes: '',
     });
+  };
+
+  const openEditDialog = (material: ProjectMaterial) => {
+    setEditingMaterial(material);
+    setFormData({
+      name: material.name,
+      category: material.category,
+      quantity: material.quantity != null ? String(material.quantity) : '',
+      unit: material.unit ?? '',
+      unitPrice: material.unitPrice ?? '',
+      totalPrice: material.totalPrice,
+      estimatedPrice: material.estimatedPrice ?? '',
+      actualPrice: material.actualPrice ?? '',
+      vendor: material.vendor ?? '',
+      notes: material.notes ?? '',
+    });
+  };
+
+  const closeEditDialog = () => {
+    setEditingMaterial(null);
+    resetForm();
   };
 
   const handleAddMaterial = async () => {
