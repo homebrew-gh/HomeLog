@@ -41,6 +41,8 @@ const BACKFILL_SINCE_CAP_DAYS = 90;
 const PENDING_SYNC_STALE_MS = 3 * 60 * 1000; // 3 min
 const PERIODIC_INTERVAL_MS = 30 * 60 * 1000; // 30 min
 
+// Data kinds only. Do NOT include kind 5 (deletions): re-publishing deletion events
+// to the private relay would remove events we just backfilled (same 'a' tag targets).
 const BACKFILL_KINDS = [
   APPLIANCE_KIND,
   VEHICLE_KIND,
@@ -56,7 +58,6 @@ const BACKFILL_KINDS = [
   PROJECT_TASK_KIND,
   PROJECT_MATERIAL_KIND,
   VET_VISIT_KIND,
-  5, // deletions
 ];
 
 const ENCRYPTED_MARKER = 'nip44:';
@@ -148,11 +149,6 @@ export function usePrivateRelayBackfill() {
           deduped,
           BACKFILL_PUBLISH_CONCURRENCY,
           async (ev: NostrEvent) => {
-            if (ev.kind === 5) {
-              await privateGroup.event(ev, { signal: AbortSignal.timeout(5000) });
-              published++;
-              return;
-            }
             if (!ev.content?.startsWith(ENCRYPTED_MARKER)) {
               return;
             }
