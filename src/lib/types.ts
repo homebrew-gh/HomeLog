@@ -391,6 +391,8 @@ export interface Pet {
   // Veterinary info
   vetClinic?: string;
   vetPhone?: string;
+  /** Linked company (from Companies/Services) - when set, vet card appears there */
+  vetCompanyId?: string;
   // Medical info
   allergies?: string;
   medications?: string;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, Trash2, MoreVertical, AlertCircle } from 'lucide-react';
+import { Plus, Upload, X, FileText, Image, ChevronDown, ChevronUp, Trash2, MoreVertical, AlertCircle, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,8 +15,10 @@ import { DateInput } from '@/components/ui/date-input';
 import { BlossomImage } from '@/components/BlossomMedia';
 import { usePetActions } from '@/hooks/usePets';
 import { usePetTypes } from '@/hooks/usePetTypes';
+import { useCompanies } from '@/hooks/useCompanies';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
+import { CompanyDialog } from '@/components/CompanyDialog';
 import type { Pet } from '@/lib/types';
 
 interface PetDialogProps {
@@ -37,6 +39,11 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
   const [newType, setNewType] = useState('');
   const [showMedical, setShowMedical] = useState(false);
   const [showVet, setShowVet] = useState(false);
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+
+  const { data: companies = [] } = useCompanies();
+  const vetCompanies = companies.filter(c => c.serviceType === 'Vet');
+  const otherCompanies = companies.filter(c => c.serviceType !== 'Vet');
 
   const [formData, setFormData] = useState({
     petType: '',
@@ -51,6 +58,7 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
     isNeutered: false,
     microchipId: '',
     licenseNumber: '',
+    vetCompanyId: '' as string,
     vetClinic: '',
     vetPhone: '',
     allergies: '',
@@ -84,6 +92,7 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
           isNeutered: pet.isNeutered || false,
           microchipId: pet.microchipId || '',
           licenseNumber: pet.licenseNumber || '',
+          vetCompanyId: pet.vetCompanyId || '',
           vetClinic: pet.vetClinic || '',
           vetPhone: pet.vetPhone || '',
           allergies: pet.allergies || '',
@@ -95,7 +104,7 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
           notes: pet.notes || '',
         });
         setShowMedical(!!(pet.allergies || pet.medications || pet.medicalConditions || pet.lastVetVisit));
-        setShowVet(!!(pet.vetClinic || pet.vetPhone));
+        setShowVet(!!(pet.vetClinic || pet.vetPhone || pet.vetCompanyId));
       } else {
         setFormData({
           petType: '',
@@ -110,6 +119,7 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
           isNeutered: false,
           microchipId: '',
           licenseNumber: '',
+          vetCompanyId: '',
           vetClinic: '',
           vetPhone: '',
           allergies: '',
@@ -267,6 +277,7 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
       const petData = {
         ...formData,
         sex: formData.sex || undefined,
+        vetCompanyId: formData.vetCompanyId || undefined,
       };
 
       if (isEditing && pet) {
@@ -570,6 +581,53 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Link2 className="h-3.5 w-3.5" />
+                  Link to vet (Companies/Services)
+                </Label>
+                <Select
+                  value={formData.vetCompanyId || '__none__'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, vetCompanyId: value === '__none__' ? '' : value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a vet or leave unset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__" className="text-muted-foreground">
+                      None
+                    </SelectItem>
+                    {vetCompanies.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                        {c.phone ? ` · ${c.phone}` : ''}
+                      </SelectItem>
+                    ))}
+                    {otherCompanies.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} ({c.serviceType})
+                      </SelectItem>
+                    ))}
+                    {companies.length === 0 && (
+                      <div className="p-2 text-sm text-muted-foreground text-center">
+                        No companies yet. Add one below to create a vet card.
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setCompanyDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add new vet (creates a card in Companies/Services)
+                </Button>
+              </div>
+
+              <p className="text-xs text-muted-foreground">Or enter clinic details manually:</p>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <Label htmlFor="vetClinic">Vet Clinic</Label>
@@ -600,6 +658,21 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          <CompanyDialog
+            isOpen={companyDialogOpen}
+            onClose={() => setCompanyDialogOpen(false)}
+            defaultServiceType="Vet"
+            onCreated={(companyId) => {
+              setFormData(prev => ({ ...prev, vetCompanyId: companyId }));
+              setCompanyDialogOpen(false);
+              setShowVet(true);
+              toast({
+                title: 'Vet added',
+                description: 'Vet has been added to Companies/Services and linked to this pet.',
+              });
+            }}
+          />
 
           {/* Medical Information */}
           <Collapsible open={showMedical} onOpenChange={setShowMedical}>

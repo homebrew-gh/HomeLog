@@ -27,6 +27,7 @@ import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { ArchiveConfirmDialog } from '@/components/ArchiveConfirmDialog';
 import { BlossomImage, BlossomDocumentLink } from '@/components/BlossomMedia';
 import { usePetActions } from '@/hooks/usePets';
+import { useCompanyById } from '@/hooks/useCompanies';
 import { toast } from '@/hooks/useToast';
 import type { Pet } from '@/lib/types';
 
@@ -51,6 +52,7 @@ function getSexLabel(sex: string | undefined): string {
 
 export function PetDetailDialog({ isOpen, onClose, pet, onEdit, onDelete }: PetDetailDialogProps) {
   const { deletePet, archivePet } = usePetActions();
+  const linkedVet = useCompanyById(pet?.vetCompanyId ?? '');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -256,7 +258,7 @@ export function PetDetailDialog({ isOpen, onClose, pet, onEdit, onDelete }: PetD
             )}
 
             {/* Veterinary Info */}
-            {(pet.vetClinic || pet.vetPhone || pet.lastVetVisit) && (
+            {((pet.vetCompanyId && linkedVet) || pet.vetClinic || pet.vetPhone || pet.lastVetVisit) && (
               <>
                 <Separator />
                 <div className="space-y-3">
@@ -264,24 +266,48 @@ export function PetDetailDialog({ isOpen, onClose, pet, onEdit, onDelete }: PetD
                     <Stethoscope className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium">Veterinary Info</span>
                   </div>
-                  {pet.vetClinic && (
-                    <div className="flex items-start gap-3 pl-6">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground">Vet Clinic</p>
-                        <p className="text-sm">{pet.vetClinic}</p>
+                  {pet.vetCompanyId && linkedVet ? (
+                    <>
+                      <div className="flex items-start gap-3 pl-6">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Vet Clinic</p>
+                          <p className="text-sm">{linkedVet.name}</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {pet.vetPhone && (
-                    <div className="flex items-start gap-3 pl-6">
-                      <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground">Phone</p>
-                        <a href={`tel:${pet.vetPhone}`} className="text-sm text-primary hover:underline">
-                          {pet.vetPhone}
-                        </a>
-                      </div>
-                    </div>
+                      {linkedVet.phone && (
+                        <div className="flex items-start gap-3 pl-6">
+                          <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground">Phone</p>
+                            <a href={`tel:${linkedVet.phone}`} className="text-sm text-primary hover:underline">
+                              {linkedVet.phone}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {pet.vetClinic && (
+                        <div className="flex items-start gap-3 pl-6">
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground">Vet Clinic</p>
+                            <p className="text-sm">{pet.vetClinic}</p>
+                          </div>
+                        </div>
+                      )}
+                      {pet.vetPhone && (
+                        <div className="flex items-start gap-3 pl-6">
+                          <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground">Phone</p>
+                            <a href={`tel:${pet.vetPhone}`} className="text-sm text-primary hover:underline">
+                              {pet.vetPhone}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                   {pet.lastVetVisit && (
                     <div className="flex items-start gap-3 pl-6">

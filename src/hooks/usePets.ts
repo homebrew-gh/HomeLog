@@ -58,6 +58,7 @@ function parsePetPlaintext(event: NostrEvent): Pet | null {
     licenseNumber: getTagValue(event, 'license_number'),
     vetClinic: getTagValue(event, 'vet_clinic'),
     vetPhone: getTagValue(event, 'vet_phone'),
+    vetCompanyId: getTagValue(event, 'vet_company_id'),
     allergies: getTagValue(event, 'allergies'),
     medications: getTagValue(event, 'medications'),
     medicalConditions: getTagValue(event, 'medical_conditions'),
@@ -224,6 +225,7 @@ export function usePetActions() {
       if (data.licenseNumber) tags.push(['license_number', data.licenseNumber]);
       if (data.vetClinic) tags.push(['vet_clinic', data.vetClinic]);
       if (data.vetPhone) tags.push(['vet_phone', data.vetPhone]);
+      if (data.vetCompanyId) tags.push(['vet_company_id', data.vetCompanyId]);
       if (data.allergies) tags.push(['allergies', data.allergies]);
       if (data.medications) tags.push(['medications', data.medications]);
       if (data.medicalConditions) tags.push(['medical_conditions', data.medicalConditions]);
@@ -288,6 +290,7 @@ export function usePetActions() {
       if (data.licenseNumber) tags.push(['license_number', data.licenseNumber]);
       if (data.vetClinic) tags.push(['vet_clinic', data.vetClinic]);
       if (data.vetPhone) tags.push(['vet_phone', data.vetPhone]);
+      if (data.vetCompanyId) tags.push(['vet_company_id', data.vetCompanyId]);
       if (data.allergies) tags.push(['allergies', data.allergies]);
       if (data.medications) tags.push(['medications', data.medications]);
       if (data.medicalConditions) tags.push(['medical_conditions', data.medicalConditions]);

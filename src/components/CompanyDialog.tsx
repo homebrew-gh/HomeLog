@@ -147,9 +147,13 @@ interface CompanyDialogProps {
   onClose: () => void;
   company?: Company; // If provided, we're editing
   initialData?: Partial<VcfData>; // Initial data from VCF import
+  /** When creating, preselect this service type (e.g. "Vet" when adding from Pet form) */
+  defaultServiceType?: string;
+  /** Called with the new company id after a company is created (e.g. to link it as vet) */
+  onCreated?: (companyId: string) => void;
 }
 
-export function CompanyDialog({ isOpen, onClose, company, initialData }: CompanyDialogProps) {
+export function CompanyDialog({ isOpen, onClose, company, initialData, defaultServiceType, onCreated }: CompanyDialogProps) {
   const { createCompany, updateCompany } = useCompanyActions();
   const { allCompanyTypes, addCustomCompanyType } = useCompanyTypes();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
@@ -241,7 +245,7 @@ export function CompanyDialog({ isOpen, onClose, company, initialData }: Company
         setShowBusiness(false);
       } else {
         setFormData({
-          serviceType: '',
+          serviceType: defaultServiceType || '',
           name: '',
           contactName: '',
           phone: '',
@@ -269,7 +273,7 @@ export function CompanyDialog({ isOpen, onClose, company, initialData }: Company
         description: '',
       });
     }
-  }, [isOpen, company, initialData]);
+  }, [isOpen, company, initialData, defaultServiceType]);
 
   const handleInvoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -390,11 +394,12 @@ export function CompanyDialog({ isOpen, onClose, company, initialData }: Company
           description: 'Company information has been updated successfully.',
         });
       } else {
-        await createCompany(formData);
+        const id = await createCompany(formData);
         toast({
           title: 'Company added',
           description: 'Company has been added successfully.',
         });
+        onCreated?.(id);
       }
       onClose();
     } catch {

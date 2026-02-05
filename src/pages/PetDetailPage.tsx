@@ -41,6 +41,7 @@ import { VetVisitDialog } from '@/components/VetVisitDialog';
 import { PetDialog } from '@/components/PetDialog';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { usePetById, usePets } from '@/hooks/usePets';
+import { useCompanyById } from '@/hooks/useCompanies';
 import { useVetVisitsByPetId, useVetVisitActions } from '@/hooks/useVetVisits';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
@@ -117,6 +118,7 @@ export function PetDetailPage() {
   const { isLoading: isPetsLoading } = usePets();
   
   const pet = usePetById(petId);
+  const linkedVet = useCompanyById(pet?.vetCompanyId ?? '');
   const vetVisits = useVetVisitsByPetId(petId);
   const { deleteVetVisit } = useVetVisitActions();
   const { formatForDisplay } = useCurrency();
@@ -431,7 +433,7 @@ export function PetDetailPage() {
             </Card>
 
             {/* Medical Info Card */}
-            {(pet.vetClinic || pet.vetPhone || pet.allergies || pet.medications || pet.medicalConditions) && (
+            {(pet.vetClinic || pet.vetPhone || pet.vetCompanyId || pet.allergies || pet.medications || pet.medicalConditions) && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
@@ -440,28 +442,53 @@ export function PetDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Vet Info */}
-                  {(pet.vetClinic || pet.vetPhone) && (
+                  {/* Vet Info: linked company or manual */}
+                  {(pet.vetCompanyId && linkedVet) || pet.vetClinic || pet.vetPhone ? (
                     <div className="space-y-2">
-                      {pet.vetClinic && (
-                        <div className="flex items-start gap-2">
-                          <Stethoscope className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground">Vet Clinic</p>
-                            <p className="text-sm">{pet.vetClinic}</p>
+                      {pet.vetCompanyId && linkedVet ? (
+                        <>
+                          <div className="flex items-start gap-2">
+                            <Stethoscope className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground">Vet Clinic</p>
+                              <p className="text-sm">{linkedVet.name}</p>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {pet.vetPhone && (
-                        <div className="flex items-start gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground">Phone</p>
-                            <a href={`tel:${pet.vetPhone}`} className="text-sm text-primary hover:underline">
-                              {pet.vetPhone}
-                            </a>
-                          </div>
-                        </div>
+                          {linkedVet.phone && (
+                            <div className="flex items-start gap-2">
+                              <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground">Phone</p>
+                                <a href={`tel:${linkedVet.phone}`} className="text-sm text-primary hover:underline">
+                                  {linkedVet.phone}
+                                </a>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {pet.vetClinic && (
+                            <div className="flex items-start gap-2">
+                              <Stethoscope className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground">Vet Clinic</p>
+                                <p className="text-sm">{pet.vetClinic}</p>
+                              </div>
+                            </div>
+                          )}
+                          {pet.vetPhone && (
+                            <div className="flex items-start gap-2">
+                              <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground">Phone</p>
+                                <a href={`tel:${pet.vetPhone}`} className="text-sm text-primary hover:underline">
+                                  {pet.vetPhone}
+                                </a>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                       {pet.lastVetVisit && (
                         <div className="flex items-start gap-2">
@@ -473,12 +500,12 @@ export function PetDetailPage() {
                         </div>
                       )}
                     </div>
-                  )}
+                  ) : null}
 
                   {/* Medical Conditions */}
                   {(pet.allergies || pet.medications || pet.medicalConditions) && (
                     <>
-                      {(pet.vetClinic || pet.vetPhone) && <Separator />}
+                      {(pet.vetClinic || pet.vetPhone || (pet.vetCompanyId && linkedVet)) && <Separator />}
                       <div className="space-y-3">
                         {pet.allergies && (
                           <div className="flex items-start gap-2">
