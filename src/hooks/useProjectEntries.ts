@@ -1,12 +1,17 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
 
+import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { useAppContext } from '@/hooks/useAppContext';
+import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_ENTRY_KIND, PROJECT_KIND, type ProjectEntry } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
+import { isRelayUrlSecure } from '@/lib/relay';
+import { getSiblingEventIdsForDeletion } from '@/lib/relayDeletion';
 import { logger } from '@/lib/logger';
 import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
@@ -205,6 +210,9 @@ export function useAllProjectEntries() {
 
 export function useProjectEntryActions() {
   const { user } = useCurrentUser();
+  const { nostr } = useNostr();
+  const { config } = useAppContext();
+  const { preferences } = useUserPreferences();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
   const { encryptForCategory, shouldEncrypt } = useEncryption();
@@ -258,13 +266,34 @@ export function useProjectEntryActions() {
   const deleteEntry = async (entryId: string) => {
     if (!user) throw new Error('Must be logged in');
 
-    // Publish a deletion request (kind 5)
+    const privateRelayUrls = (preferences.privateRelays ?? []).filter(isRelayUrlSecure);
+    const publicRelayUrls = config.relayMetadata.relays
+      .filter((r) => !privateRelayUrls.includes(r.url))
+      .map((r) => r.url);
+
+    const cachedEvents = await getCachedEvents([PROJECT_ENTRY_KIND], user.pubkey);
+    const entryEvent = cachedEvents.find((e) => e.id === entryId);
+    const created_at = entryEvent?.created_at;
+
+    const siblingIds =
+      (privateRelayUrls.length > 0 || publicRelayUrls.length > 0) && created_at !== undefined
+        ? await getSiblingEventIdsForDeletion(
+            nostr.group(privateRelayUrls),
+            nostr.group(publicRelayUrls),
+            PROJECT_ENTRY_KIND,
+            user.pubkey,
+            { created_at },
+            AbortSignal.timeout(5000)
+          )
+        : [entryId];
+
+    const tags: string[][] = [];
+    for (const eventId of siblingIds) tags.push(['e', eventId]);
+
     const event = await publishEvent({
       kind: 5,
       content: 'Deleted project entry',
-      tags: [
-        ['e', entryId],
-      ],
+      tags,
     });
 
     if (event) {
@@ -272,10 +301,7 @@ export function useProjectEntryActions() {
       await deleteCachedEventById(entryId);
     }
 
-    // Small delay to allow the deletion event to propagate
     await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Force refetch
     await queryClient.refetchQueries({ queryKey: ['project-entries'] });
   };
 

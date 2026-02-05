@@ -488,20 +488,22 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
             }
           }
 
-          // Encrypt privateRelays so public relays cannot see private relay URLs
-          if (privateRelays && privateRelays.length > 0 && user.signer.nip44) {
-            try {
-              const encryptedPrivateRelays = await user.signer.nip44.encrypt(
-                user.pubkey,
-                JSON.stringify(privateRelays)
-              );
-              prefsToSync.privateRelays = ENCRYPTED_BLOSSOM_MARKER + encryptedPrivateRelays;
-              console.log('[UserPreferences] Encrypted privateRelays for relay storage');
-            } catch (encryptError) {
-              console.warn('[UserPreferences] Failed to encrypt privateRelays, omitting from sync:', encryptError);
+          // Encrypt privateRelays so public relays cannot see private relay URLs.
+          // Never sync private relay list in plaintext (data on those relays is plaintext; URLs must stay secret).
+          if (privateRelays && privateRelays.length > 0) {
+            if (user.signer.nip44) {
+              try {
+                const encryptedPrivateRelays = await user.signer.nip44.encrypt(
+                  user.pubkey,
+                  JSON.stringify(privateRelays)
+                );
+                prefsToSync.privateRelays = ENCRYPTED_BLOSSOM_MARKER + encryptedPrivateRelays;
+                console.log('[UserPreferences] Encrypted privateRelays for relay storage');
+              } catch (encryptError) {
+                console.warn('[UserPreferences] Failed to encrypt privateRelays, omitting from sync:', encryptError);
+              }
             }
-          } else if (privateRelays && privateRelays.length > 0) {
-            prefsToSync.privateRelays = privateRelays;
+            // If no NIP-44: do not sync private relay list (keep local only); never store plaintext on relays.
           }
           
           await publishEvent({

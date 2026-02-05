@@ -1,12 +1,17 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
 
+import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { useAppContext } from '@/hooks/useAppContext';
+import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { COMPANY_WORK_LOG_KIND, COMPANY_KIND, type CompanyWorkLog } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
+import { isRelayUrlSecure } from '@/lib/relay';
+import { getSiblingEventIdsForDeletion } from '@/lib/relayDeletion';
 import { logger } from '@/lib/logger';
 import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
@@ -150,6 +155,9 @@ export function useCompanyWorkLogsByCompanyId(companyId: string | undefined) {
 
 export function useCompanyWorkLogActions() {
   const { user } = useCurrentUser();
+  const { nostr } = useNostr();
+  const { config } = useAppContext();
+  const { preferences } = useUserPreferences();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
   const { encryptForCategory, shouldEncrypt } = useEncryption();
@@ -212,10 +220,34 @@ export function useCompanyWorkLogActions() {
   const deleteWorkLog = async (id: string) => {
     if (!user) throw new Error('Must be logged in');
 
+    const privateRelayUrls = (preferences.privateRelays ?? []).filter(isRelayUrlSecure);
+    const publicRelayUrls = config.relayMetadata.relays
+      .filter((r) => !privateRelayUrls.includes(r.url))
+      .map((r) => r.url);
+
+    const cachedEvents = await getCachedEvents([COMPANY_WORK_LOG_KIND], user.pubkey);
+    const workLogEvent = cachedEvents.find((e) => e.id === id);
+    const created_at = workLogEvent?.created_at;
+
+    const siblingIds =
+      (privateRelayUrls.length > 0 || publicRelayUrls.length > 0) && created_at !== undefined
+        ? await getSiblingEventIdsForDeletion(
+            nostr.group(privateRelayUrls),
+            nostr.group(publicRelayUrls),
+            COMPANY_WORK_LOG_KIND,
+            user.pubkey,
+            { created_at },
+            AbortSignal.timeout(5000)
+          )
+        : [id];
+
+    const tags: string[][] = [];
+    for (const eventId of siblingIds) tags.push(['e', eventId]);
+
     const event = await publishEvent({
       kind: 5,
       content: 'Deleted company work log',
-      tags: [['e', id]],
+      tags,
     });
 
     if (event) {

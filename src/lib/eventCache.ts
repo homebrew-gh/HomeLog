@@ -93,7 +93,7 @@ const ENCRYPTED_CONTENT_MARKER = 'nip44:';
  * Logical key for deduplication: same key = same logical entity (plain + encrypted copies).
  * Replaceable: (kind, pubkey). Addressable: (kind, pubkey, d). Regular: event id (no dedupe).
  */
-function getLogicalKey(event: NostrEvent): string {
+export function getLogicalKey(event: NostrEvent): string {
   if (event.kind >= 30000) {
     const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
     return `${event.kind}:${event.pubkey}:${dTag}`;

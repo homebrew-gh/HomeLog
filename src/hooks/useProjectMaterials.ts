@@ -1,12 +1,17 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
 
+import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { useAppContext } from '@/hooks/useAppContext';
+import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useEncryption, isAbortError } from './useEncryption';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { PROJECT_MATERIAL_KIND, PROJECT_KIND, type ProjectMaterial, type ExpenseCategory } from '@/lib/types';
 import { cacheEvents, getCachedEvents, deleteCachedEventById } from '@/lib/eventCache';
+import { isRelayUrlSecure } from '@/lib/relay';
+import { getSiblingEventIdsForDeletion } from '@/lib/relayDeletion';
 import { logger } from '@/lib/logger';
 import { runWithConcurrencyLimit, DECRYPT_CONCURRENCY } from '@/lib/utils';
 
@@ -173,6 +178,9 @@ export function useProjectMaterials(projectId?: string) {
 
 export function useProjectMaterialActions() {
   const { user } = useCurrentUser();
+  const { nostr } = useNostr();
+  const { config } = useAppContext();
+  const { preferences } = useUserPreferences();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
   const { encryptForCategory, shouldEncrypt } = useEncryption();
@@ -256,12 +264,34 @@ export function useProjectMaterialActions() {
   const deleteMaterial = async (materialId: string) => {
     if (!user) throw new Error('Must be logged in');
 
+    const privateRelayUrls = (preferences.privateRelays ?? []).filter(isRelayUrlSecure);
+    const publicRelayUrls = config.relayMetadata.relays
+      .filter((r) => !privateRelayUrls.includes(r.url))
+      .map((r) => r.url);
+
+    const cachedEvents = await getCachedEvents([PROJECT_MATERIAL_KIND], user.pubkey);
+    const materialEvent = cachedEvents.find((e) => e.id === materialId);
+    const created_at = materialEvent?.created_at;
+
+    const siblingIds =
+      (privateRelayUrls.length > 0 || publicRelayUrls.length > 0) && created_at !== undefined
+        ? await getSiblingEventIdsForDeletion(
+            nostr.group(privateRelayUrls),
+            nostr.group(publicRelayUrls),
+            PROJECT_MATERIAL_KIND,
+            user.pubkey,
+            { created_at },
+            AbortSignal.timeout(5000)
+          )
+        : [materialId];
+
+    const tags: string[][] = [];
+    for (const eventId of siblingIds) tags.push(['e', eventId]);
+
     const event = await publishEvent({
       kind: 5,
       content: 'Deleted project material',
-      tags: [
-        ['e', materialId],
-      ],
+      tags,
     });
 
     if (event) {

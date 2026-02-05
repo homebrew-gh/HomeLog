@@ -1,11 +1,13 @@
-import { Shield, Globe, Lock, ExternalLink, Cloud, HelpCircle } from 'lucide-react';
+import { Shield, Globe, Lock, ExternalLink, Cloud, HelpCircle, RefreshCw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 import { RelayListManager } from '@/components/RelayListManager';
 import { BlossomServerManager } from '@/components/BlossomServerManager';
+import { usePrivateRelayBackfill } from '@/hooks/usePrivateRelayBackfill';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
@@ -18,6 +20,20 @@ interface RelayManagementDialogProps {
 export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }: RelayManagementDialogProps) {
   const [isRelayInfoOpen, setIsRelayInfoOpen] = useState(false);
   const [isBlossomInfoOpen, setIsBlossomInfoOpen] = useState(false);
+  const {
+    eligible,
+    pendingSyncCount,
+    pendingSyncLoading,
+    runBackfill,
+    isRunning,
+    error,
+  } = usePrivateRelayBackfill();
+
+  const handleSyncToPrivate = () => {
+    // Sync last 90 days to private relay(s) so all events are on all relays
+    const ninetyDaysAgo = Math.floor(Date.now() / 1000) - 90 * 86400;
+    runBackfill({ since: ninetyDaysAgo, manual: true });
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -127,6 +143,47 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                 </div>
               </CollapsibleContent>
             </Collapsible>
+
+            {/* Private relay backfill: sync data to private relay(s) */}
+            {eligible && (
+              <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/50">
+                <RefreshCw className={`h-4 w-4 text-emerald-600 ${isRunning ? 'animate-spin' : ''}`} />
+                <AlertDescription asChild>
+                  <div className="space-y-2">
+                    {error && (
+                      <p className="text-sm text-destructive font-medium">{error.message}</p>
+                    )}
+                    {pendingSyncLoading ? (
+                      <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                        Checking how many events are not yet on your private relay…
+                      </p>
+                    ) : pendingSyncCount > 0 ? (
+                      <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                        You have <strong>{pendingSyncCount}</strong> event{pendingSyncCount !== 1 ? 's' : ''} on your other relays that are not yet on your private relay. Sync now for a full backup.
+                      </p>
+                    ) : (
+                      <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                        Your private relay is up to date with recent data.
+                      </p>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="mt-1"
+                      onClick={handleSyncToPrivate}
+                      disabled={isRunning}
+                    >
+                      {isRunning ? 'Syncing…' : 'Sync to private relay'}
+                      {pendingSyncCount > 0 && !isRunning && (
+                        <span className="ml-1.5 rounded-full bg-emerald-200 dark:bg-emerald-800 px-1.5 text-xs">
+                          {pendingSyncCount}
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Relays Section */}
             <div className="space-y-3">

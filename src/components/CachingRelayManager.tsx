@@ -50,7 +50,7 @@ export function CachingRelayManager() {
   const { user } = useCurrentUser();
   const { mutate: publishEvent } = useNostrPublish();
   const { toast } = useToast();
-  const { cachingRelay, setCachingRelay } = useEncryptionSettings();
+  const { cachingRelay, setCachingRelay, isPrivateRelay } = useEncryptionSettings();
 
   const [newRelayUrl, setNewRelayUrl] = useState('');
   const [relayStatus, setRelayStatus] = useState<RelayStatus>('unknown');
@@ -207,7 +207,9 @@ export function CachingRelayManager() {
   };
 
   const publishNIP65RelayList = (relayList: { url: string; read: boolean; write: boolean }[]) => {
-    const tags = relayList.map(relay => {
+    // NIP-65 must exclude private relays (they are stored encrypted in NIP-78 only)
+    const publicRelays = relayList.filter((r) => !isPrivateRelay(r.url));
+    const tags = publicRelays.map(relay => {
       if (relay.read && relay.write) {
         return ['r', relay.url];
       } else if (relay.read) {

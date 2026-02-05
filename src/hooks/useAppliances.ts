@@ -327,7 +327,7 @@ export function useApplianceActions() {
             nostr.group(publicRelayUrls),
             APPLIANCE_KIND,
             user.pubkey,
-            id,
+            { dTag: id },
             AbortSignal.timeout(5000)
           )
         : []; // Fallback: no relays (shouldn't happen)
