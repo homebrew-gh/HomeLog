@@ -195,6 +195,12 @@ export const DEFAULT_COMPANY_TYPES = [
   'Flooring',
   'Tree Service',
   'Septic/Sewer',
+  'Vet',
+  'Babysitter',
+  'Security',
+  'Finance/Banking',
+  'Mechanic/Auto Repair',
+  'Healthcare',
   'Other',
 ] as const;
 

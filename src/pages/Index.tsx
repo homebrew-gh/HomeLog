@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users, ChevronDown } from 'lucide-react';
+import { Package, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users, ChevronDown, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -15,6 +15,7 @@ import { SubscriptionTypeManagementDialog } from '@/components/SubscriptionTypeM
 import { HomeFeatureManagementDialog } from '@/components/HomeFeatureManagementDialog';
 import { WarrantyTypeManagementDialog } from '@/components/WarrantyTypeManagementDialog';
 import { PetTypeManagementDialog } from '@/components/PetTypeManagementDialog';
+import { CompanyTypeManagementDialog } from '@/components/CompanyTypeManagementDialog';
 import { StorageSettingsDialog } from '@/components/StorageSettingsDialog';
 import { DisplaySettingsDialog } from '@/components/DisplaySettingsDialog';
 import { CurrencySettingsDialog } from '@/components/CurrencySettingsDialog';
@@ -127,6 +128,7 @@ const Index = () => {
   const [homeFeatureManagementOpen, setHomeFeatureManagementOpen] = useState(false);
   const [warrantyTypeManagementOpen, setWarrantyTypeManagementOpen] = useState(false);
   const [petTypeManagementOpen, setPetTypeManagementOpen] = useState(false);
+  const [companyTypeManagementOpen, setCompanyTypeManagementOpen] = useState(false);
   const [_encryptionSettingsOpen, _setEncryptionSettingsOpen] = useState(false);
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
@@ -235,6 +237,10 @@ const Index = () => {
                     <DropdownMenuItem onClick={() => setPetTypeManagementOpen(true)}>
                       <PawPrint className="h-4 w-4 mr-2" />
                       Pet Types
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCompanyTypeManagementOpen(true)}>
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Company Types
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Privacy & Security</DropdownMenuLabel>
@@ -479,6 +485,11 @@ const Index = () => {
       <PetTypeManagementDialog
         isOpen={petTypeManagementOpen}
         onClose={() => setPetTypeManagementOpen(false)}
+      />
+
+      <CompanyTypeManagementDialog
+        isOpen={companyTypeManagementOpen}
+        onClose={() => setCompanyTypeManagementOpen(false)}
       />
 
       <DisplaySettingsDialog
