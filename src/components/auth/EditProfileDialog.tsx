@@ -170,18 +170,18 @@ export function EditProfileDialog({ isOpen, onClose }: EditProfileDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md flex max-h-[90vh] flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
             Update your Nostr profile information. Changes will be published to the network.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2 -mx-1 px-1">
           {/* Profile Picture */}
-          <div className="flex flex-col items-center gap-4">
-            <Avatar className="w-24 h-24">
+          <div className="flex flex-col items-center gap-2">
+            <Avatar className="w-20 h-20">
               <AvatarImage src={picture} alt={displayName} />
               <AvatarFallback className="text-2xl">{displayName.charAt(0)}</AvatarFallback>
             </Avatar>
@@ -252,86 +252,75 @@ export function EditProfileDialog({ isOpen, onClose }: EditProfileDialogProps) {
           </div>
 
           {/* Bio Input */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="about">Bio</Label>
             <Textarea
               id="about"
               value={about}
               onChange={(e) => setAbout(e.target.value)}
               placeholder="Tell others about yourself..."
-              rows={3}
+              rows={2}
               className="resize-none"
             />
           </div>
 
-          {/* Public Key (npub) Section */}
-          {npub && (
+          {/* Public keys: npub + hex in one compact section */}
+          {(npub || pubkeyHex) && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Public Key (npub)</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={copyNpubToClipboard}
-                  className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                >
-                  {copiedNpub ? (
-                    <Check className="h-3.5 w-3.5 text-green-500" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                  <span className="ml-1.5 text-xs">{copiedNpub ? 'Copied!' : 'Copy'}</span>
-                </Button>
+              <Label className="text-xs">Public keys</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {npub && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs text-muted-foreground">npub</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyNpubToClipboard}
+                        className="h-6 px-1.5 text-muted-foreground hover:text-foreground"
+                      >
+                        {copiedNpub ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                      </Button>
+                    </div>
+                    <div
+                      className="font-mono text-[10px] leading-tight bg-muted p-1.5 rounded max-h-14 overflow-y-auto break-all select-all cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={copyNpubToClipboard}
+                      title="Click to copy"
+                    >
+                      {npub}
+                    </div>
+                  </div>
+                )}
+                {pubkeyHex && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs text-muted-foreground">hex</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyHexToClipboard}
+                        className="h-6 px-1.5 text-muted-foreground hover:text-foreground"
+                      >
+                        {copiedHex ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                      </Button>
+                    </div>
+                    <div
+                      className="font-mono text-[10px] leading-tight bg-muted p-1.5 rounded max-h-14 overflow-y-auto break-all select-all cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={copyHexToClipboard}
+                      title="Click to copy"
+                    >
+                      {pubkeyHex}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div 
-                className="font-mono text-xs bg-muted p-2.5 rounded-md break-all select-all cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-                onClick={copyNpubToClipboard}
-                title="Click to copy"
-              >
-                {npub}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Share this with others so they can find you on Nostr.
-              </p>
-            </div>
-          )}
-
-          {/* Public Key (hex) Section */}
-          {pubkeyHex && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Public Key (hex)</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={copyHexToClipboard}
-                  className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                >
-                  {copiedHex ? (
-                    <Check className="h-3.5 w-3.5 text-green-500" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                  <span className="ml-1.5 text-xs">{copiedHex ? 'Copied!' : 'Copy'}</span>
-                </Button>
-              </div>
-              <div 
-                className="font-mono text-xs bg-muted p-2.5 rounded-md break-all select-all cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-                onClick={copyHexToClipboard}
-                title="Click to copy"
-              >
-                {pubkeyHex}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Hex format for node setup and other applications.
-              </p>
             </div>
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4 mt-2">
           <Button variant="outline" onClick={onClose} disabled={isPending}>
             Cancel
           </Button>
