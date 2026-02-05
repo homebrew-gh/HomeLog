@@ -4,6 +4,7 @@ import { ScrollToTop } from "./components/ScrollToTop";
 import Index from "./pages/Index";
 import FAQ from "./pages/FAQ";
 import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import License from "./pages/License";
 import { NIP19Page } from "./pages/NIP19Page";
 import { AssetDetailPage } from "./pages/AssetDetailPage";
@@ -22,6 +23,7 @@ export function AppRouter() {
         <Route path="/" element={<Index />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="/license" element={<License />} />
         <Route path="/asset/:type/:id" element={<AssetDetailPage />} />
         <Route path="/vehicle/:vehicleId/maintenance" element={<VehicleMaintenancePage />} />

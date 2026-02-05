@@ -202,6 +202,10 @@ export function License() {
               Privacy Policy
             </Link>
             <span className="text-slate-300 dark:text-slate-600">•</span>
+            <Link to="/terms" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+              Terms of Use
+            </Link>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
             <Link to="/" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
               Back to Cypher Log
             </Link>

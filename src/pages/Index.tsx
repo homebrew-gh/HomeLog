@@ -385,6 +385,10 @@ const Index = () => {
                   Privacy Policy
                 </Link>
                 <span className="text-border">•</span>
+                <Link to="/terms" className="hover:text-primary transition-colors">
+                  Terms of Use
+                </Link>
+                <span className="text-border">•</span>
                 <Link to="/license" className="hover:text-primary transition-colors">
                   MIT License
                 </Link>
@@ -424,6 +428,10 @@ const Index = () => {
                 <span className="text-border">•</span>
                 <Link to="/privacy" className="hover:text-primary transition-colors">
                   Privacy Policy
+                </Link>
+                <span className="text-border">•</span>
+                <Link to="/terms" className="hover:text-primary transition-colors">
+                  Terms of Use
                 </Link>
                 <span className="text-border">•</span>
                 <Link to="/license" className="hover:text-primary transition-colors">
