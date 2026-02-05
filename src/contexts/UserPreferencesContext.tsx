@@ -412,31 +412,61 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     lastSyncedRelayTimestamp.current = config.relayMetadata.updatedAt;
   }, [user?.pubkey, config.relayMetadata.updatedAt]);
 
+  // Merge two string arrays without duplicates (order: local first, then remote additions)
+  const mergeStringArrays = useCallback((local: string[] | undefined, remote: string[] | undefined): string[] => {
+    const a = local ?? [];
+    const b = remote ?? [];
+    const seen = new Set(a.map((s) => s.toLowerCase()));
+    const out = [...a];
+    for (const s of b) {
+      if (!seen.has(s.toLowerCase())) {
+        seen.add(s.toLowerCase());
+        out.push(s);
+      }
+    }
+    return out;
+  }, []);
+
   // Apply remote preferences when fetched (but don't change activeTab - always start on home)
-  // Only apply remote preferences if local storage is empty/default (no tabs configured)
-  // This prevents overwriting local changes that haven't been synced to Nostr yet
+  // Full replace only when local has no tabs (new browser/PWA context). Otherwise merge type/room
+  // lists from remote so custom rooms and types added on another device (e.g. browser) appear here.
   useEffect(() => {
     if (isFetched && !hasSyncedFromRemote && user?.pubkey) {
       if (remotePreferences) {
         const hasLocalTabs = localPreferences.activeTabs && localPreferences.activeTabs.length > 0;
         const hasRemoteTabs = remotePreferences.activeTabs && remotePreferences.activeTabs.length > 0;
-        
+
         if (!hasLocalTabs && hasRemoteTabs) {
           // No local tabs but remote has tabs - this is a new browser/device, sync from remote
           console.log('[UserPreferences] Syncing preferences from Nostr relay (new browser/device)');
           console.log('[UserPreferences] Active tabs from relay:', remotePreferences.activeTabs);
           setLocalPreferences(remotePreferences);
         } else if (hasLocalTabs) {
-          // Local storage has tabs - don't overwrite with potentially stale remote data
-          // The local changes will be synced to Nostr when saveToNostr runs
-          console.log('[UserPreferences] Local preferences exist, not overwriting with remote');
-          console.log('[UserPreferences] Local tabs:', localPreferences.activeTabs);
-          console.log('[UserPreferences] Remote tabs:', remotePreferences.activeTabs);
+          // Local has tabs (e.g. PWA with its own storage). Don't overwrite tabs or other prefs,
+          // but merge type/room lists from remote so custom rooms and types from Nostr appear here.
+          setLocalPreferences((prev) => ({
+            ...prev,
+            customRooms: mergeStringArrays(prev.customRooms, remotePreferences.customRooms),
+            hiddenDefaultRooms: mergeStringArrays(prev.hiddenDefaultRooms, remotePreferences.hiddenDefaultRooms),
+            customVehicleTypes: mergeStringArrays(prev.customVehicleTypes, remotePreferences.customVehicleTypes),
+            hiddenDefaultVehicleTypes: mergeStringArrays(prev.hiddenDefaultVehicleTypes, remotePreferences.hiddenDefaultVehicleTypes),
+            customCompanyTypes: mergeStringArrays(prev.customCompanyTypes, remotePreferences.customCompanyTypes),
+            hiddenDefaultCompanyTypes: mergeStringArrays(prev.hiddenDefaultCompanyTypes, remotePreferences.hiddenDefaultCompanyTypes),
+            customSubscriptionTypes: mergeStringArrays(prev.customSubscriptionTypes, remotePreferences.customSubscriptionTypes),
+            hiddenDefaultSubscriptionTypes: mergeStringArrays(prev.hiddenDefaultSubscriptionTypes, remotePreferences.hiddenDefaultSubscriptionTypes),
+            customHomeFeatures: mergeStringArrays(prev.customHomeFeatures, remotePreferences.customHomeFeatures),
+            hiddenDefaultHomeFeatures: mergeStringArrays(prev.hiddenDefaultHomeFeatures, remotePreferences.hiddenDefaultHomeFeatures),
+            customWarrantyTypes: mergeStringArrays(prev.customWarrantyTypes, remotePreferences.customWarrantyTypes),
+            hiddenDefaultWarrantyTypes: mergeStringArrays(prev.hiddenDefaultWarrantyTypes, remotePreferences.hiddenDefaultWarrantyTypes),
+            customPetTypes: mergeStringArrays(prev.customPetTypes, remotePreferences.customPetTypes),
+            hiddenDefaultPetTypes: mergeStringArrays(prev.hiddenDefaultPetTypes, remotePreferences.hiddenDefaultPetTypes),
+          }));
+          console.log('[UserPreferences] Merged type/room lists from Nostr into local preferences');
         }
       }
       setHasSyncedFromRemote(true);
     }
-  }, [isFetched, hasSyncedFromRemote, remotePreferences, setLocalPreferences, user?.pubkey, localPreferences.activeTabs]);
+  }, [isFetched, hasSyncedFromRemote, remotePreferences, setLocalPreferences, user?.pubkey, localPreferences.activeTabs, mergeStringArrays]);
 
   // Save preferences to Nostr (debounced)
   const saveToNostr = useCallback(
