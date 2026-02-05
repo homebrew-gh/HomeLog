@@ -56,6 +56,8 @@ import { useSubscriptionsByCompanyId, useSubscriptions } from '@/hooks/useSubscr
 import { useCurrency } from '@/hooks/useCurrency';
 import { FUEL_TYPES, type MaintenanceSchedule, type Warranty, type Company, type Subscription, type CompanyWorkLog } from '@/lib/types';
 import { CompanyWorkLogDialog } from '@/components/CompanyWorkLogDialog';
+import { ApplianceDialog } from '@/components/ApplianceDialog';
+import { VehicleDialog } from '@/components/VehicleDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import NotFound from './NotFound';
 
@@ -403,6 +405,7 @@ function SubscriptionSection({ subscriptions }: { subscriptions: Subscription[] 
 // Appliance Detail Content
 function ApplianceDetailContent({ id }: { id: string }) {
   const navigate = useNavigate();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { isLoading: isAppliancesLoading } = useAppliances();
   const appliance = useApplianceById(id);
   const maintenance = useMaintenanceByAppliance(id);
@@ -460,15 +463,21 @@ function ApplianceDetailContent({ id }: { id: string }) {
                 </div>
               </div>
             </div>
-            <Button variant="outline" asChild>
-              <Link to="/?tab=appliances">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Link>
+            <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
             </Button>
           </div>
         </div>
       </header>
+
+      {appliance && (
+        <ApplianceDialog
+          isOpen={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          appliance={appliance}
+        />
+      )}
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 space-y-8">
@@ -640,6 +649,7 @@ function ApplianceDetailContent({ id }: { id: string }) {
 // Vehicle Detail Content
 function VehicleDetailContent({ id }: { id: string }) {
   const navigate = useNavigate();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { isLoading: isVehiclesLoading } = useVehicles();
   const vehicle = useVehicleById(id);
   const maintenance = useMaintenanceByVehicle(id);
@@ -702,15 +712,21 @@ function VehicleDetailContent({ id }: { id: string }) {
                 </div>
               </div>
             </div>
-            <Button variant="outline" asChild>
-              <Link to="/?tab=vehicles">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Link>
+            <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
             </Button>
           </div>
         </div>
       </header>
+
+      {vehicle && (
+        <VehicleDialog
+          isOpen={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          vehicle={vehicle}
+        />
+      )}
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 space-y-8">

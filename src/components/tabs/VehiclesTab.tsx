@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, ChevronDown, ChevronRight, Car, List, LayoutGrid, Calendar, Factory, Plane, Ship, Tractor, Gauge, FileText, Archive, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, ChevronDown, ChevronRight, Car, List, LayoutGrid, Calendar, Factory, Plane, Ship, Tractor, Gauge, Archive, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { VehicleDialog } from '@/components/VehicleDialog';
-import { VehicleDetailDialog } from '@/components/VehicleDetailDialog';
 import { useVehicles } from '@/hooks/useVehicles';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import type { Vehicle } from '@/lib/types';
@@ -39,10 +38,10 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
   // View mode: 'active' or 'archived'
   const [showArchived, setShowArchived] = useState(false);
 
-  // Dialog states
+  // Dialog state (for Add)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | undefined>();
-  const [viewingVehicle, setViewingVehicle] = useState<Vehicle | undefined>();
+  const navigate = useNavigate();
 
   // Collapsed types state (for list view)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
@@ -127,11 +126,6 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
       }
       return newSet;
     });
-  };
-
-  const handleEditVehicle = (vehicle: Vehicle) => {
-    setEditingVehicle(vehicle);
-    setDialogOpen(true);
   };
 
   return (
@@ -319,7 +313,7 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
                       {vehiclesByType.grouped[type].map((vehicle) => (
                         <button
                           key={vehicle.id}
-                          onClick={() => setViewingVehicle(vehicle)}
+                          onClick={() => navigate(`/asset/vehicle/${vehicle.id}`)}
                           className="flex items-center gap-2 w-full p-2 rounded-lg text-left hover:bg-primary/5 transition-colors group"
                         >
                           <span className="text-muted-foreground group-hover:text-primary">
@@ -365,11 +359,7 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
                 <CardContent className="pt-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {vehiclesByType.grouped[type].map((vehicle) => (
-                      <VehicleCard
-                        key={vehicle.id}
-                        vehicle={vehicle}
-                        onClick={() => setViewingVehicle(vehicle)}
-                      />
+                      <VehicleCard key={vehicle.id} vehicle={vehicle} />
                     ))}
                   </div>
                 </CardContent>
@@ -389,28 +379,17 @@ export function VehiclesTab({ scrollTarget }: VehiclesTabProps) {
         vehicle={editingVehicle}
       />
 
-      {viewingVehicle && (
-        <VehicleDetailDialog
-          isOpen={!!viewingVehicle}
-          onClose={() => setViewingVehicle(undefined)}
-          vehicle={viewingVehicle}
-          onEdit={() => handleEditVehicle(viewingVehicle)}
-          onDelete={() => setViewingVehicle(undefined)}
-        />
-      )}
     </section>
   );
 }
 
 interface VehicleCardProps {
   vehicle: Vehicle;
-  onClick: () => void;
 }
 
-function VehicleCard({ vehicle, onClick }: VehicleCardProps) {
+function VehicleCard({ vehicle }: VehicleCardProps) {
   const VehicleIcon = getVehicleIcon(vehicle.vehicleType);
   
-  // Get usage display (mileage, hours, etc.)
   const getUsageDisplay = () => {
     if (vehicle.mileage) return `${vehicle.mileage} mi`;
     if (vehicle.engineHours) return `${vehicle.engineHours} hrs`;
@@ -421,59 +400,46 @@ function VehicleCard({ vehicle, onClick }: VehicleCardProps) {
   const usageDisplay = getUsageDisplay();
 
   return (
-    <div className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200">
-      {/* Clickable area for quick view */}
-      <button
-        onClick={onClick}
-        className="text-left flex-1 flex flex-col"
-      >
-        {/* Icon */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-            <VehicleIcon className="h-5 w-5 text-primary" />
-          </div>
-          {usageDisplay && (
-            <Badge variant="secondary" className="text-xs bg-slate-100 dark:bg-slate-700">
-              <Gauge className="h-3 w-3 mr-1" />
-              {usageDisplay}
-            </Badge>
-          )}
+    <Link
+      to={`/asset/vehicle/${vehicle.id}`}
+      className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200"
+    >
+      {/* Icon */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+          <VehicleIcon className="h-5 w-5 text-primary" />
         </div>
-
-        {/* Name */}
-        <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-          {vehicle.name}
-        </h3>
-
-        {/* Make/Model */}
-        {(vehicle.make || vehicle.model) && (
-          <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-2">
-            <Factory className="h-3.5 w-3.5" />
-            <span className="truncate">{[vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(' ')}</span>
-          </p>
+        {usageDisplay && (
+          <Badge variant="secondary" className="text-xs bg-slate-100 dark:bg-slate-700">
+            <Gauge className="h-3 w-3 mr-1" />
+            {usageDisplay}
+          </Badge>
         )}
+      </div>
 
-        {/* Purchase Date */}
-        {vehicle.purchaseDate && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
-            <Calendar className="h-3 w-3" />
-            <span>Purchased {vehicle.purchaseDate}</span>
-          </p>
-        )}
-      </button>
+      {/* Name */}
+      <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+        {vehicle.name}
+      </h3>
 
-      {/* View Details Link */}
-      <Link
-        to={`/asset/vehicle/${vehicle.id}`}
-        className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <FileText className="h-4 w-4" />
-        View Full Details
-      </Link>
+      {/* Make/Model */}
+      {(vehicle.make || vehicle.model) && (
+        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-2">
+          <Factory className="h-3.5 w-3.5" />
+          <span className="truncate">{[vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(' ')}</span>
+        </p>
+      )}
+
+      {/* Purchase Date */}
+      {vehicle.purchaseDate && (
+        <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
+          <Calendar className="h-3 w-3" />
+          <span>Purchased {vehicle.purchaseDate}</span>
+        </p>
+      )}
 
       {/* Hover indicator */}
       <div className="absolute inset-0 rounded-xl ring-2 ring-primary ring-opacity-0 group-hover:ring-opacity-20 transition-all pointer-events-none" />
-    </div>
+    </Link>
   );
 }

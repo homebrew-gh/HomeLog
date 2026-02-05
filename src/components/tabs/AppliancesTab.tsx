@@ -9,8 +9,8 @@
  * Code/Data: "appliance" / "appliances"
  */
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, ChevronDown, ChevronRight, Home, Package, List, LayoutGrid, Calendar, Building2, FileText, Archive, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, ChevronDown, ChevronRight, Home, Package, List, LayoutGrid, Calendar, Building2, Archive, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +18,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ApplianceDialog } from '@/components/ApplianceDialog';
-import { ApplianceDetailDialog } from '@/components/ApplianceDetailDialog';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useUserPreferences } from '@/hooks/useTabPreferences';
 import type { Appliance } from '@/lib/types';
@@ -35,10 +34,10 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
   // View mode: 'active' or 'archived'
   const [showArchived, setShowArchived] = useState(false);
 
-  // Dialog states
+  // Dialog state (for Add)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAppliance, setEditingAppliance] = useState<Appliance | undefined>();
-  const [viewingAppliance, setViewingAppliance] = useState<Appliance | undefined>();
+  const navigate = useNavigate();
 
   // Collapsed rooms state (for list view)
   const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(new Set());
@@ -123,11 +122,6 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
       }
       return newSet;
     });
-  };
-
-  const handleEditAppliance = (appliance: Appliance) => {
-    setEditingAppliance(appliance);
-    setDialogOpen(true);
   };
 
   return (
@@ -313,7 +307,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
                     {appliancesByRoom.grouped[room].map((appliance) => (
                       <button
                         key={appliance.id}
-                        onClick={() => setViewingAppliance(appliance)}
+                        onClick={() => navigate(`/asset/appliance/${appliance.id}`)}
                         className="flex items-center gap-2 w-full p-2 rounded-lg text-left hover:bg-primary/5 transition-colors group"
                       >
                         <span className="text-muted-foreground group-hover:text-primary">
@@ -356,11 +350,7 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
               <CardContent className="pt-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {appliancesByRoom.grouped[room].map((appliance) => (
-                    <ApplianceCard
-                      key={appliance.id}
-                      appliance={appliance}
-                      onClick={() => setViewingAppliance(appliance)}
-                    />
+                    <ApplianceCard key={appliance.id} appliance={appliance} />
                   ))}
                 </div>
               </CardContent>
@@ -379,73 +369,50 @@ export function AppliancesTab({ scrollTarget }: AppliancesTabProps) {
         appliance={editingAppliance}
       />
 
-      {viewingAppliance && (
-        <ApplianceDetailDialog
-          isOpen={!!viewingAppliance}
-          onClose={() => setViewingAppliance(undefined)}
-          appliance={viewingAppliance}
-          onEdit={() => handleEditAppliance(viewingAppliance)}
-          onDelete={() => setViewingAppliance(undefined)}
-        />
-      )}
     </section>
   );
 }
 
 interface ApplianceCardProps {
   appliance: Appliance;
-  onClick: () => void;
 }
 
-function ApplianceCard({ appliance, onClick }: ApplianceCardProps) {
+function ApplianceCard({ appliance }: ApplianceCardProps) {
   return (
-    <div className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200">
-      {/* Clickable area for quick view */}
-      <button
-        onClick={onClick}
-        className="text-left flex-1 flex flex-col"
-      >
-        {/* Icon */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-            <Package className="h-5 w-5 text-primary" />
-          </div>
+    <Link
+      to={`/asset/appliance/${appliance.id}`}
+      className="group relative flex flex-col p-4 rounded-xl border-2 border-border bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:shadow-md transition-all duration-200"
+    >
+      {/* Icon */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+          <Package className="h-5 w-5 text-primary" />
         </div>
+      </div>
 
-        {/* Model/Name */}
-        <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-          {appliance.model}
-        </h3>
+      {/* Model/Name */}
+      <h3 className="font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+        {appliance.model}
+      </h3>
 
-        {/* Manufacturer */}
-        {appliance.manufacturer && (
-          <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-2">
-            <Building2 className="h-3.5 w-3.5" />
-            <span className="truncate">{appliance.manufacturer}</span>
-          </p>
-        )}
+      {/* Manufacturer */}
+      {appliance.manufacturer && (
+        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-2">
+          <Building2 className="h-3.5 w-3.5" />
+          <span className="truncate">{appliance.manufacturer}</span>
+        </p>
+      )}
 
-        {/* Purchase Date */}
-        {appliance.purchaseDate && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
-            <Calendar className="h-3 w-3" />
-            <span>Purchased {appliance.purchaseDate}</span>
-          </p>
-        )}
-      </button>
-
-      {/* View Details Link */}
-      <Link
-        to={`/asset/appliance/${appliance.id}`}
-        className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <FileText className="h-4 w-4" />
-        View Full Details
-      </Link>
+      {/* Purchase Date */}
+      {appliance.purchaseDate && (
+        <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
+          <Calendar className="h-3 w-3" />
+          <span>Purchased {appliance.purchaseDate}</span>
+        </p>
+      )}
 
       {/* Hover indicator */}
       <div className="absolute inset-0 rounded-xl ring-2 ring-primary ring-opacity-0 group-hover:ring-opacity-20 transition-all pointer-events-none" />
-    </div>
+    </Link>
   );
 }
