@@ -27,6 +27,7 @@ import {
   PROJECT_ENTRY_KIND,
   PROJECT_TASK_KIND,
   PROJECT_MATERIAL_KIND,
+  PROJECT_RESEARCH_KIND,
   VET_VISIT_KIND,
 } from '@/lib/types';
 import { dedupeEventsByLogicalKey, getLogicalKey } from '@/lib/eventCache';
@@ -57,6 +58,7 @@ const BACKFILL_KINDS = [
   PROJECT_ENTRY_KIND,
   PROJECT_TASK_KIND,
   PROJECT_MATERIAL_KIND,
+  PROJECT_RESEARCH_KIND,
   VET_VISIT_KIND,
 ];
 

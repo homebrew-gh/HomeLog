@@ -12,7 +12,7 @@ export function Privacy() {
     description: 'Privacy policy for Cypher Log - a decentralized home management application built on top of the Nostr protocol.',
   });
 
-  const lastUpdated = 'January 31, 2026';
+  const lastUpdated = 'February 5, 2026';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-sky-100 dark:from-slate-900 dark:to-slate-800 tool-pattern-bg">
@@ -176,9 +176,10 @@ export function Privacy() {
               <p className="font-medium text-slate-800 dark:text-slate-200">Projects</p>
               <ul className="list-disc list-inside space-y-1 ml-2 mb-3">
                 <li>Project names, descriptions, timelines</li>
-                <li>Budgets and expense tracking</li>
-                <li>Tasks, materials, and diary entries</li>
-                <li>Progress photos (uploaded files)</li>
+                <li>Budgets and expense tracking (materials/expenses with optional estimated vs actual prices; items are editable)</li>
+                <li>Tasks, materials/expenses, progress diary entries</li>
+                <li>Research and planning notes (description, text, optional documents and quotes; each note is timestamped)</li>
+                <li>Progress photos and uploaded documents (uploaded files)</li>
               </ul>
               <p className="font-medium text-slate-800 dark:text-slate-200">Pets & Animals</p>
               <ul className="list-disc list-inside space-y-1 ml-2 mb-3">
@@ -215,7 +216,7 @@ export function Privacy() {
               <p className="font-medium text-slate-800 dark:text-slate-200">All Data Categories Encrypted:</p>
               <ul className="list-disc list-inside space-y-1 ml-2 mb-3">
                 <li>Home items ("My Stuff"), vehicles, maintenance, subscriptions, warranties</li>
-                <li>Pets and vet visits, companies/service providers, projects and project entries/tasks/materials</li>
+                <li>Pets and vet visits, companies/service providers, projects and project entries/tasks/materials/research notes</li>
               </ul>
               <p>
                 Data sent to <strong>public relays</strong> is always NIP-44 encrypted. Data sent to relays you mark as <strong>private</strong> is stored in plaintext on that relay only (see Private Relays below).

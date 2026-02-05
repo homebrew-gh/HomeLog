@@ -948,6 +948,49 @@ The application compares these totals against the project's `budget` field (if s
 
 ---
 
+## Kind 8348: Project Research/Planning Note
+
+A regular event representing a structured research or planning note for a project. Each note is timestamped when created and can include optional documents and quotes.
+
+### Format
+
+```json
+{
+  "kind": 8348,
+  "content": "",
+  "tags": [
+    ["a", "35389:<pubkey>:<project-d-tag>", "", "project"],
+    ["alt", "Research: <description>"],
+    ["description", "<note title/summary>"],
+    ["content_text", "<main note text>"],
+    ["documents", "<JSON array of {url, name?}>"],
+    ["quotes", "<JSON array of quote strings>"]
+  ]
+}
+```
+
+When encryption is enabled for projects, the payload (description, content_text, documents, quotes) is stored in the encrypted `content` and only the `a` and `alt` tags are in plaintext.
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `a` | Yes | Reference to the parent project (kind 35389) |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `description` | Yes | Title or summary of the note |
+| `content_text` | Yes | Main note text |
+| `documents` | No | JSON array of objects with `url` (required) and optional `name` for file/link attachments |
+| `quotes` | No | JSON array of strings for quotes or references |
+
+### Behavior
+
+- Notes are displayed in a Research & Planning section on the project page, stacked one above the other.
+- Users can sort notes by **Newest first** or **Oldest first**.
+- Each note shows its creation timestamp (from the event `created_at`).
+- Documents are shown as links; quotes are shown in a distinct style.
+
+---
+
 ## Kind 7443: Vet Visit
 
 A regular event representing a veterinary visit for a pet/animal.

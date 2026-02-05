@@ -24,6 +24,7 @@ import {
   DollarSign,
   KeyRound,
   AlertTriangle,
+  StickyNote,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -214,13 +215,29 @@ const EVENT_KINDS = [
     category: 'Custom (Regular)',
     icon: DollarSign,
     color: 'amber',
-    description: 'Materials and expenses for projects with quantity, pricing, vendor information, and purchase tracking for budget management.',
+    description: 'Materials and expenses for projects with quantity, pricing, vendor information, and purchase tracking. Items are editable; you can set estimated and actual prices to track variance, and totals feed the budget tracker.',
     dataStored: [
       'Item name & category',
-      'Quantity & unit',
-      'Unit price & total price',
+      'Quantity, unit & unit price',
+      'Total, estimated & actual price',
       'Vendor',
       'Purchase status & date',
+    ],
+    encrypted: true,
+  },
+  {
+    kind: 8348,
+    name: 'Project Research/Planning Note',
+    category: 'Custom (Regular)',
+    icon: StickyNote,
+    color: 'amber',
+    description: 'Structured research and planning notes for projects. Each note has a description, main text, and optional documents or quotes. Notes are timestamped when added and can be sorted by newest or oldest.',
+    dataStored: [
+      'Description (title/summary)',
+      'Main note text',
+      'Optional document attachments',
+      'Optional quotes/references',
+      'Creation timestamp',
     ],
     encrypted: true,
   },
@@ -310,11 +327,11 @@ const FAQ_ITEMS = [
   },
   {
     question: 'What can I track with Cypher Log?',
-    answer: 'Cypher Log helps you manage your entire household and more: home appliances and possessions (My Stuff), vehicles (cars, boats, planes, farm equipment), maintenance schedules, companies and service providers, subscriptions, warranties, pets and their vet visits, and home improvement projects with budgets and progress tracking.',
+    answer: 'Cypher Log helps you manage your entire household and more: home appliances and possessions (My Stuff), vehicles (cars, boats, planes, farm equipment), maintenance schedules, companies and service providers, subscriptions, warranties, pets and their vet visits, and home improvement projects with budgets, progress diary, tasks, materials/expenses (with estimated vs actual pricing), and research/planning notes.',
   },
   {
     question: 'Is my data encrypted?',
-    answer: 'Yes! Cypher Log uses NIP-44 encryption for all data categories: appliances, vehicles, pets, maintenance records, subscriptions, warranties, companies/service providers, and projects. Your data is encrypted with your private key before being sent to public relays. Only you can decrypt and read it. If you mark a relay as "private" in relay settings, data sent to that relay is stored in plaintext (so you can read it directly on a self-hosted or trusted relay); data on all other relays remains encrypted.',
+    answer: 'Yes! Cypher Log uses NIP-44 encryption for all data categories: appliances, vehicles, pets, maintenance records, subscriptions, warranties, companies/service providers, and projects (including project entries, tasks, materials/expenses, and research/planning notes). Your data is encrypted with your private key before being sent to public relays. Only you can decrypt and read it. If you mark a relay as "private" in relay settings, data sent to that relay is stored in plaintext (so you can read it directly on a self-hosted or trusted relay); data on all other relays remains encrypted.',
   },
   {
     question: 'What are relays?',
@@ -362,7 +379,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How do I track home improvement projects?',
-    answer: 'Use the Projects tab to create projects with budgets and timelines. Each project can have progress diary entries with photos, a task checklist, and a materials/expenses tracker. Link companies and contractors to keep everything organized.',
+    answer: 'Use the Projects tab to create projects with budgets and timelines. Each project includes: a progress diary (entries with photos), a task checklist, a materials/expenses list (editable items with optional estimated vs actual prices—totals feed the budget tracker), and a Research & Planning section for structured notes with optional documents and quotes (timestamped, sortable by newest or oldest). You can link companies and contractors to keep everything organized.',
   },
   {
     question: 'Can I archive items instead of deleting them?',
