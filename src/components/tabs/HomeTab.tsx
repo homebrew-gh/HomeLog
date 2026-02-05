@@ -23,7 +23,6 @@ import {
   GripVertical,
   Pencil,
   Check,
-  UserCheck,
   DollarSign,
   CheckCircle2,
   Tag,
@@ -34,8 +33,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useAppliances } from '@/hooks/useAppliances';
 import { useVehicles } from '@/hooks/useVehicles';
@@ -46,11 +43,8 @@ import { useMaintenance, useApplianceMaintenance, useVehicleMaintenance, calcula
 import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { useTabPreferences, type TabId } from '@/hooks/useTabPreferences';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useCypherLogFriends } from '@/hooks/useCypherLogFriends';
-import { useAuthor } from '@/hooks/useAuthor';
 import { useDataSyncStatus } from '@/hooks/useDataSyncStatus';
 import { useCurrency } from '@/hooks/useCurrency';
-import { genUserName } from '@/lib/genUserName';
 import { parseCurrencyAmount, formatCurrency, convertCurrency } from '@/lib/currency';
 import { usePets } from '@/hooks/usePets';
 import { useProjects } from '@/hooks/useProjects';
@@ -143,9 +137,6 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
   const showWarrantiesLoading = isLoadingWarranties || (isDataSyncing && warranties.length === 0 && !syncCategories.warranties?.synced);
   const showPetsLoading = isLoadingPets || (isDataSyncing && pets.length === 0 && !syncCategories.pets?.synced);
   const showProjectsLoading = isLoadingProjects || (isDataSyncing && projects.length === 0 && !syncCategories.projects?.synced);
-  
-  // Discover friends using HomeLog
-  const { friends: cypherLogFriends, isLoading: isLoadingFriends } = useCypherLogFriends();
   
   // Get next 3 warranties about to expire sorted by expiration date
   const nextExpiringWarranties = useMemo(() => {
@@ -1692,14 +1683,6 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
         </Card>
       )}
 
-      {/* Friends using HomeLog */}
-      {hasActiveTabs && (
-        <FriendsUsingHomeLog 
-          friends={cypherLogFriends} 
-          isLoading={isLoadingFriends} 
-        />
-      )}
-
       {/* Floating dragged widget that follows cursor */}
       {draggedWidget && dragPosition && draggedWidgetSize && (
         <div
@@ -1790,107 +1773,3 @@ function WidgetCard({ title, icon: Icon, onClick, isLoading, badge, clickable = 
   );
 }
 
-// Component to display a single friend's avatar with tooltip
-function FriendAvatar({ pubkey }: { pubkey: string }) {
-  const author = useAuthor(pubkey);
-  const metadata = author.data?.metadata;
-  
-  const displayName = metadata?.name || metadata?.display_name || genUserName(pubkey);
-  const picture = metadata?.picture;
-  const shortPubkey = pubkey.slice(0, 8) + '...';
-  
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="relative">
-            <Avatar className="h-10 w-10 border-2 border-white dark:border-slate-800 shadow-sm hover:scale-110 transition-transform cursor-pointer">
-              {picture ? (
-                <AvatarImage src={picture} alt={displayName} />
-              ) : null}
-              <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                {displayName.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p className="font-medium">{displayName}</p>
-          <p className="text-xs text-muted-foreground">{shortPubkey}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-// Friends using HomeLog section
-interface FriendsUsingHomeLogProps {
-  friends: { pubkey: string; eventCount: number }[];
-  isLoading: boolean;
-}
-
-function FriendsUsingHomeLog({ friends, isLoading }: FriendsUsingHomeLogProps) {
-  if (isLoading) {
-    return (
-      <Card className="bg-card border-border">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-primary" />
-            <span>Friends Using Home Log</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <Skeleton className="h-10 w-10 rounded-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (friends.length === 0) {
-    return (
-      <Card className="bg-card border-border">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-primary" />
-            <span>Friends Using Home Log</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            None of your follows are using Home Log yet. Share it with friends!
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="bg-card border-border">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <UserCheck className="h-5 w-5 text-primary" />
-          <span>Friends Using Home Log</span>
-          <Badge variant="secondary" className="text-xs">
-            {friends.length}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-1">
-          {friends.slice(0, 12).map((friend) => (
-            <FriendAvatar key={friend.pubkey} pubkey={friend.pubkey} />
-          ))}
-          {friends.length > 12 && (
-            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary text-xs font-medium">
-              +{friends.length - 12}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
