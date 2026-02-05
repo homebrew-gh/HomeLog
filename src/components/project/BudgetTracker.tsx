@@ -28,8 +28,10 @@ const getCategoryColor = (category: string) => {
 
 export function BudgetTracker({ projectId, originalBudget }: BudgetTrackerProps) {
   const {
-    totalSpent,
     totalPlanned,
+    totalEstimated,
+    totalActual,
+    variance,
     budgetAmount,
     remaining,
     percentUsed,
@@ -40,6 +42,7 @@ export function BudgetTracker({ projectId, originalBudget }: BudgetTrackerProps)
 
   const hasBudget = budgetAmount > 0;
   const hasExpenses = totalPlanned > 0;
+  const hasVariance = totalEstimated !== totalActual && (totalEstimated > 0 || totalActual > 0);
   const categories = Object.entries(categoryBreakdown);
 
   return (
@@ -58,45 +61,62 @@ export function BudgetTracker({ projectId, originalBudget }: BudgetTrackerProps)
       <CardContent className="space-y-6 budget-tracker">
         {/* Main Stats - use class for PWA-only layout overrides in index.css */}
         <div className="budget-tracker-stats grid grid-cols-3 gap-4">
-          {/* Total Spent */}
+          {/* Total Actual (Spent) */}
           <div className="text-center p-4 rounded-lg bg-muted/50 min-w-0">
-            <p className="text-sm text-muted-foreground mb-1">Spent</p>
-            <p className={`budget-tracker-value text-2xl font-bold truncate ${isOverBudget ? 'text-destructive' : 'text-foreground'}`} title={formatForDisplay(totalSpent)}>
-              {formatForDisplay(totalSpent)}
+            <p className="text-sm text-muted-foreground mb-1">Actual (Spent)</p>
+            <p className={`budget-tracker-value text-2xl font-bold truncate ${isOverBudget ? 'text-destructive' : 'text-foreground'}`} title={formatForDisplay(totalActual)}>
+              {formatForDisplay(totalActual)}
             </p>
           </div>
 
-          {/* Budget / Planned */}
+          {/* Estimated (Planned) / Budget */}
           <div className="text-center p-4 rounded-lg bg-muted/50 min-w-0">
             <p className="text-sm text-muted-foreground mb-1">
-              {hasBudget ? 'Budget' : 'Planned'}
+              {hasBudget ? 'Budget' : 'Estimated'}
             </p>
-            <p className="budget-tracker-value text-2xl font-bold text-foreground truncate" title={formatForDisplay(hasBudget ? budgetAmount : totalPlanned)}>
-              {formatForDisplay(hasBudget ? budgetAmount : totalPlanned)}
+            <p className="budget-tracker-value text-2xl font-bold text-foreground truncate" title={formatForDisplay(hasBudget ? budgetAmount : totalEstimated)}>
+              {formatForDisplay(hasBudget ? budgetAmount : totalEstimated)}
             </p>
           </div>
 
-          {/* Remaining / Difference */}
+          {/* Remaining / Variance / To Spend */}
           <div className="text-center p-4 rounded-lg bg-muted/50 min-w-0">
             <p className="text-sm text-muted-foreground mb-1">
-              {hasBudget ? 'Remaining' : 'To Spend'}
+              {hasBudget ? 'Remaining' : hasVariance ? 'Variance' : 'To Spend'}
             </p>
             <p className={`budget-tracker-value text-2xl font-bold flex items-center justify-center gap-1 min-w-0 ${
-              hasBudget 
+              hasBudget
                 ? isOverBudget ? 'text-destructive' : 'text-green-600'
-                : 'text-foreground'
-            }`} title={hasBudget ? formatForDisplay(Math.abs(remaining)) : formatForDisplay(totalPlanned - totalSpent)}>
+                : hasVariance
+                  ? variance > 0 ? 'text-green-600' : 'text-destructive'
+                  : 'text-foreground'
+            }`} title={
+              hasBudget ? formatForDisplay(Math.abs(remaining)) : hasVariance ? formatForDisplay(Math.abs(variance)) : formatForDisplay(totalEstimated - totalActual)
+            }>
               {hasBudget ? (
                 <>
                   <span className="shrink-0">{isOverBudget ? <TrendingDown className="h-5 w-5" /> : <TrendingUp className="h-5 w-5" />}</span>
                   <span className="truncate">{formatForDisplay(Math.abs(remaining))}</span>
                 </>
+              ) : hasVariance ? (
+                <>
+                  <span className="shrink-0">{variance > 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}</span>
+                  <span className="truncate">{formatForDisplay(Math.abs(variance))} {variance > 0 ? 'under' : 'over'}</span>
+                </>
               ) : (
-                <span className="truncate">{formatForDisplay(totalPlanned - totalSpent)}</span>
+                <span className="truncate">{formatForDisplay(totalEstimated - totalActual)}</span>
               )}
             </p>
           </div>
         </div>
+
+        {/* Estimated vs Actual summary when there is variance */}
+        {hasVariance && (
+          <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+            <span>Est. total: {formatForDisplay(totalEstimated)}</span>
+            <span>Actual total: {formatForDisplay(totalActual)}</span>
+          </div>
+        )}
 
         {/* Progress Bar (only if budget is set) */}
         {hasBudget && (

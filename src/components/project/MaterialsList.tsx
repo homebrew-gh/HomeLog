@@ -95,11 +95,19 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
     resetForm();
   };
 
+  const getTotalPriceForSave = () => {
+    const est = formData.estimatedPrice.trim();
+    const actual = formData.actualPrice.trim();
+    const total = formData.totalPrice.trim();
+    return total || est || actual || '0';
+  };
+
   const handleAddMaterial = async () => {
-    if (!formData.name.trim() || !formData.totalPrice.trim()) {
+    const totalPrice = getTotalPriceForSave();
+    if (!formData.name.trim() || totalPrice === '0') {
       toast({
         title: 'Error',
-        description: 'Please enter a name and price',
+        description: 'Please enter a name and at least one price (estimated or actual)',
         variant: 'destructive',
       });
       return;
@@ -113,7 +121,9 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
         quantity: formData.quantity ? parseFloat(formData.quantity) : undefined,
         unit: formData.unit.trim() || undefined,
         unitPrice: formData.unitPrice.trim() || undefined,
-        totalPrice: formData.totalPrice.trim(),
+        totalPrice,
+        estimatedPrice: formData.estimatedPrice.trim() || undefined,
+        actualPrice: formData.actualPrice.trim() || undefined,
         isPurchased: false,
         vendor: formData.vendor.trim() || undefined,
         notes: formData.notes.trim() || undefined,
@@ -132,6 +142,50 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
       });
     } finally {
       setIsAdding(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMaterial) return;
+    const totalPrice = getTotalPriceForSave();
+    if (!formData.name.trim() || totalPrice === '0') {
+      toast({
+        title: 'Error',
+        description: 'Please enter a name and at least one price (estimated or actual)',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      await updateMaterial(editingMaterial.id, projectId, {
+        name: formData.name.trim(),
+        category: formData.category,
+        quantity: formData.quantity ? parseFloat(formData.quantity) : undefined,
+        unit: formData.unit.trim() || undefined,
+        unitPrice: formData.unitPrice.trim() || undefined,
+        totalPrice,
+        estimatedPrice: formData.estimatedPrice.trim() || undefined,
+        actualPrice: formData.actualPrice.trim() || undefined,
+        isPurchased: editingMaterial.isPurchased,
+        purchasedDate: editingMaterial.purchasedDate,
+        vendor: formData.vendor.trim() || undefined,
+        notes: formData.notes.trim() || undefined,
+      });
+      closeEditDialog();
+      toast({
+        title: 'Item Updated',
+        description: 'Material has been updated.',
+      });
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to update material',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -178,6 +232,22 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
     setFormData(newFormData);
   };
 
+  const displayPrice = (m: ProjectMaterial) => {
+    const est = m.estimatedPrice?.trim();
+    const actual = m.actualPrice?.trim();
+    if (est && actual) {
+      return (
+        <span className="flex flex-col items-end gap-0.5">
+          <span className="text-muted-foreground text-xs">Est. {formatForDisplay(est)}</span>
+          <span>Actual {formatForDisplay(actual)}</span>
+        </span>
+      );
+    }
+    if (actual) return formatForDisplay(actual);
+    if (est) return formatForDisplay(est);
+    return formatForDisplay(m.totalPrice);
+  };
+
   const renderMaterialItem = (material: ProjectMaterial, isPurchased: boolean) => (
     <div
       key={material.id}
@@ -208,17 +278,25 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
           )}
         </div>
       </div>
-      <div className="text-right shrink-0">
-        <span className={`font-semibold ${isPurchased ? 'text-muted-foreground' : 'text-foreground'}`}>
-          {formatForDisplay(material.totalPrice)}
-        </span>
+      <div className="text-right shrink-0 font-semibold">
+        {displayPrice(material)}
       </div>
-      <button
-        onClick={() => handleDeleteMaterial(material.id)}
-        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity shrink-0"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
+      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => openEditDialog(material)}
+          className="text-muted-foreground hover:text-foreground p-1 rounded"
+          aria-label="Edit"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => handleDeleteMaterial(material.id)}
+          className="text-muted-foreground hover:text-destructive p-1 rounded"
+          aria-label="Delete"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 
@@ -352,7 +430,7 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="totalPrice">Total Price *</Label>
+              <Label htmlFor="totalPrice">Total Price</Label>
               <Input
                 id="totalPrice"
                 value={formData.totalPrice}
@@ -360,6 +438,30 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
                 placeholder="59.90"
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="estimatedPrice">Estimated Price</Label>
+                <Input
+                  id="estimatedPrice"
+                  value={formData.estimatedPrice}
+                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedPrice: e.target.value }))}
+                  placeholder="50.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="actualPrice">Actual Price</Label>
+                <Input
+                  id="actualPrice"
+                  value={formData.actualPrice}
+                  onChange={(e) => setFormData(prev => ({ ...prev, actualPrice: e.target.value }))}
+                  placeholder="52.00"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Use estimated for planning and actual after purchase to track variance.
+            </p>
 
             <div className="space-y-2">
               <Label htmlFor="vendor">Vendor/Store</Label>
@@ -378,6 +480,137 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
             </Button>
             <Button onClick={handleAddMaterial} disabled={isAdding}>
               {isAdding ? 'Adding...' : 'Add Item'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Material Dialog */}
+      <Dialog open={!!editingMaterial} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Material or Expense</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Item Name *</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., 2x4 Lumber"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-category">Category *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(v) => setFormData(prev => ({ ...prev, category: v as ExpenseCategory }))}
+              >
+                <SelectTrigger id="edit-category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXPENSE_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="edit-quantity">Quantity</Label>
+                <Input
+                  id="edit-quantity"
+                  type="number"
+                  value={formData.quantity}
+                  onChange={(e) => handleQuantityOrPriceChange('quantity', e.target.value)}
+                  placeholder="10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-unit">Unit</Label>
+                <Input
+                  id="edit-unit"
+                  value={formData.unit}
+                  onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
+                  placeholder="each"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-unitPrice">Unit Price</Label>
+                <Input
+                  id="edit-unitPrice"
+                  value={formData.unitPrice}
+                  onChange={(e) => handleQuantityOrPriceChange('unitPrice', e.target.value)}
+                  placeholder="5.99"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-totalPrice">Total Price</Label>
+              <Input
+                id="edit-totalPrice"
+                value={formData.totalPrice}
+                onChange={(e) => setFormData(prev => ({ ...prev, totalPrice: e.target.value }))}
+                placeholder="59.90"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="edit-estimatedPrice">Estimated Price</Label>
+                <Input
+                  id="edit-estimatedPrice"
+                  value={formData.estimatedPrice}
+                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedPrice: e.target.value }))}
+                  placeholder="50.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-actualPrice">Actual Price</Label>
+                <Input
+                  id="edit-actualPrice"
+                  value={formData.actualPrice}
+                  onChange={(e) => setFormData(prev => ({ ...prev, actualPrice: e.target.value }))}
+                  placeholder="52.00"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-vendor">Vendor/Store</Label>
+              <Input
+                id="edit-vendor"
+                value={formData.vendor}
+                onChange={(e) => setFormData(prev => ({ ...prev, vendor: e.target.value }))}
+                placeholder="e.g., Home Depot"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-notes">Notes</Label>
+              <Input
+                id="edit-notes"
+                value={formData.notes}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Optional notes"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditDialog}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSavingEdit}>
+              {isSavingEdit ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
