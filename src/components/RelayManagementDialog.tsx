@@ -305,6 +305,7 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                     <li>Add a Blossom server URL below (or use an existing one)</li>
                     <li>Click the settings icon on the server</li>
                     <li>Enable "Private Server" for servers you trust with sensitive data</li>
+                    <li><strong>In-app viewing (PDF/images):</strong> Your server must send CORS headers so files can be shown in the app. <a href="https://github.com/hzrd149/blossom-server" target="_blank" rel="noopener noreferrer" className="text-sky-600 dark:text-sky-400 hover:underline">blossom-server</a> does this by default; with another server or a reverse proxy, add <code className="text-xs bg-muted px-1 rounded">Access-Control-Allow-Origin: *</code> to file responses.</li>
                   </ol>
                 </div>
               </CollapsibleContent>
