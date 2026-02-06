@@ -270,6 +270,7 @@ export function Privacy() {
                 <li>You can add, remove, or change relays at any time</li>
                 <li>Relays you mark as "private" receive plaintext copies of your data; all other relays receive NIP-44 encrypted data</li>
                 <li>Private relay URLs are stored encrypted in your app preferences (NIP-78) and are excluded from your public relay list (NIP-65)</li>
+                <li><strong>NIP-42 relay authentication:</strong> Cypher Log supports NIP-42. When a relay requires authentication (e.g. whitelisted pubkeys or auth_required), the app responds to the relay&apos;s AUTH challenge by signing a kind 22242 event with your logged-in Nostr identity. This allows use of closed or whitelisted relays; authentication is only sent when you are logged in. Relays that do not require auth are unaffected.</li>
                 <li>Relay operators may have their own data retention policies</li>
                 <li>Cypher Log has no control over relay operators or their policies</li>
               </ul>
@@ -331,6 +332,7 @@ export function Privacy() {
               <ul className="list-disc list-inside space-y-2 ml-2 mb-4">
                 <li>Relays receive and store your Nostr events</li>
                 <li>Relay operators may log connection information (IP addresses, timestamps)</li>
+                <li>Cypher Log supports NIP-42 relay authentication: when a relay requires auth (e.g. whitelisted pubkeys), the app signs an auth challenge with your logged-in identity so you can use closed or whitelisted relays</li>
                 <li>Each relay has its own privacy practices and terms of service</li>
                 <li>Relays may retain data even after deletion requests</li>
                 <li>Using private or self-hosted relays gives you more control</li>

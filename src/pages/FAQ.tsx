@@ -362,6 +362,10 @@ const FAQ_ITEMS = [
     answer: 'If you\'re connected to multiple relays, your data will still be available from the other relays. This is why it\'s recommended to use at least 2-3 relays. Cypher Log shows connection status indicators (green/red) in the relay management settings.',
   },
   {
+    question: 'Does Cypher Log support relay authentication (NIP-42)?',
+    answer: 'Yes. Cypher Log supports NIP-42 relay authentication. When a relay requires authentication (e.g. whitelisted pubkeys or auth_required for read/write), the app responds to the relay\'s AUTH challenge by signing a kind 22242 event with your logged-in Nostr identity. You must be logged in for authentication to be sent. Relays that do not require auth are unaffected. This lets you use closed or whitelisted relays (e.g. self-hosted relays that only allow your pubkey) for both reading and writing. See docs/NIP42_RELAY_AUTH.md for details.',
+  },
+  {
     question: 'Can other Nostr apps read my Cypher Log data?',
     answer: 'The custom event kinds used by Cypher Log are documented in our NIP specification. Other apps could theoretically read this data if they implement support for these kinds, but encrypted data can only be decrypted by you. Standard kinds like relay lists (10002) are interoperable with other Nostr clients.',
   },

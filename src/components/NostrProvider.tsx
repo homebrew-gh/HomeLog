@@ -3,10 +3,14 @@ import { NostrEvent, NostrFilter, NPool, NRelay1 } from '@nostrify/nostrify';
 import { NostrContext } from '@nostrify/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@/hooks/useAppContext';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 
 /** Setter for private relay URLs; synced from UserPreferencesProvider when preferences load */
 export const SetPrivateRelayUrlsContext = createContext<((urls: string[]) => void) | null>(null);
+
+/** NIP-42 auth kind for relay authentication */
+const NIP42_AUTH_KIND = 22242;
 
 interface NostrProviderProps {
   children: React.ReactNode;
@@ -16,9 +20,16 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   const { children } = props;
   const { config } = useAppContext();
   const { cachingRelay } = useEncryptionSettings();
+  const { user } = useCurrentUser();
 
   const queryClient = useQueryClient();
   const [privateRelayUrls, setPrivateRelayUrls] = useState<string[]>([]);
+
+  // Ref so relay open() and NIP-42 auth callback always see current user
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Full relay list with private relays first (preferred for reads)
   const mergedRelays = useMemo(() => {
@@ -60,7 +71,23 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
     pool.current = new NPool({
       open(url: string) {
         console.log('[NostrProvider] Opening relay connection:', url);
-        return new NRelay1(url);
+        return new NRelay1(url, {
+          auth: async (challenge: string) => {
+            const currentUser = userRef.current;
+            if (!currentUser?.signer) {
+              throw new Error('NIP-42 auth requires login');
+            }
+            return currentUser.signer.signEvent({
+              kind: NIP42_AUTH_KIND,
+              content: '',
+              tags: [
+                ['relay', url],
+                ['challenge', challenge],
+              ],
+              created_at: Math.floor(Date.now() / 1000),
+            });
+          },
+        });
       },
       reqRouter(filters: NostrFilter[]) {
         const routes = new Map<string, NostrFilter[]>();
