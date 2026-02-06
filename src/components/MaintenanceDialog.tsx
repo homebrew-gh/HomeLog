@@ -15,6 +15,7 @@ import { useCompletionsByMaintenance, useMaintenanceCompletionActions } from '@/
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from '@/hooks/useToast';
 import { FREQUENCY_UNITS, INTERVAL_TYPES, type MaintenanceSchedule, type MaintenancePart, type IntervalType } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 interface MaintenanceDialogProps {
   isOpen: boolean;
@@ -264,7 +265,7 @@ export function MaintenanceDialog({ isOpen, onClose, maintenance, preselectedApp
           try {
             await createCompletion(maintenanceId, formData.lastCompletedDate);
           } catch (completionError) {
-            console.error('Failed to create initial completion record:', completionError);
+            logger.error('Failed to create initial completion record:', completionError);
             // Don't fail the whole operation if completion creation fails
           }
         }

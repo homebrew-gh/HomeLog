@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
+import { logger } from '@/lib/logger';
 
 /** Setter for private relay URLs; synced from UserPreferencesProvider when preferences load */
 export const SetPrivateRelayUrlsContext = createContext<((urls: string[]) => void) | null>(null);
@@ -82,10 +83,10 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
 
   // Initialize NPool only once (uses ref so it always sees latest mergedRelays)
   if (!pool.current) {
-    console.log('[NostrProvider] Initializing NPool');
+    logger.log('[NostrProvider] Initializing NPool');
     pool.current = new NPool({
       open(url: string) {
-        console.log('[NostrProvider] Opening relay connection:', url);
+        logger.log('[NostrProvider] Opening relay connection');
         return new NRelay1(url, {
           auth: async (challenge: string) => {
             const signer = signerRef.current;

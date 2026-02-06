@@ -34,6 +34,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import type { Event } from 'nostr-tools';
 import QRCode from 'qrcode';
 import type { WebLNProvider } from "@webbtc/webln-types";
+import { logger } from '@/lib/logger';
 
 interface ZapDialogProps {
   target: Event;
@@ -280,7 +281,7 @@ export function ZapDialog({ target, children, className }: ZapDialogProps) {
         }
       } catch (err) {
         if (!isCancelled) {
-          console.error('Failed to generate QR code:', err);
+          logger.error('Failed to generate QR code:', err);
         }
       }
     };

@@ -3,6 +3,7 @@ import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppContext } from '@/hooks/useAppContext';
 import { getCachedEvents, cacheEvents } from '@/lib/eventCache';
+import { logger } from '@/lib/logger';
 
 /**
  * NostrSync - Syncs user's Nostr data in the background
@@ -55,7 +56,7 @@ export function NostrSync() {
               }));
 
             if (cachedRelays.length > 0) {
-              console.log('[NostrSync] Loading relay list from cache:', cachedRelays.length, 'relays');
+              logger.log('[NostrSync] Loading relay list from cache');
               updateConfig((current) => ({
                 ...current,
                 relayMetadata: {
@@ -67,7 +68,7 @@ export function NostrSync() {
           }
         }
       } catch (error) {
-        console.warn('[NostrSync] Failed to load relays from cache:', error);
+        logger.warn('[NostrSync] Failed to load relays from cache:', error);
       }
 
       // STEP 2: Fetch fresh data from relays in background
@@ -82,7 +83,7 @@ export function NostrSync() {
 
           // Cache the fresh event
           cacheEvents([event]).catch(err => 
-            console.warn('[NostrSync] Failed to cache relay list:', err)
+            logger.warn('[NostrSync] Failed to cache relay list:', err)
           );
 
           // Only update if the event is newer than our stored data
@@ -96,7 +97,7 @@ export function NostrSync() {
               }));
 
             if (fetchedRelays.length > 0) {
-              console.log('[NostrSync] Syncing relay list from Nostr:', fetchedRelays.length, 'relays');
+              logger.log('[NostrSync] Syncing relay list from Nostr');
               updateConfig((current) => ({
                 ...current,
                 relayMetadata: {
@@ -108,7 +109,7 @@ export function NostrSync() {
           }
         }
       } catch (error) {
-        console.warn('[NostrSync] Failed to sync relays from Nostr (using cache):', error);
+        logger.warn('[NostrSync] Failed to sync relays from Nostr (using cache):', error);
       } finally {
         // Signal that relay list has been attempted for this user so data sync can proceed (with user's relays or defaults)
         updateConfig((c) => ({ ...c, relayListSyncedForPubkey: pubkey }));

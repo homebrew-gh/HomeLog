@@ -1,5 +1,6 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // IndexedDB Schema
@@ -63,7 +64,7 @@ export async function writeMessagesToDB(
       // Each message content is already encrypted by the sender
       await db.put(STORE_NAME, messageStore, userPubkey);
   } catch (error) {
-    console.error('[MessageStore] ❌ Error writing to IndexedDB:', error);
+    logger.error('[MessageStore] ❌ Error writing to IndexedDB:', error);
     throw error;
   }
 }
@@ -85,7 +86,7 @@ export async function readMessagesFromDB(
     
     return data as MessageStore;
   } catch (error) {
-    console.error('[MessageStore] Error reading from IndexedDB:', error);
+    logger.error('[MessageStore] Error reading from IndexedDB:', error);
     throw error;
   }
 }
@@ -98,7 +99,7 @@ export async function deleteMessagesFromDB(userPubkey: string): Promise<void> {
     const db = await openDatabase();
     await db.delete(STORE_NAME, userPubkey);
   } catch (error) {
-    console.error('[MessageStore] Error deleting from IndexedDB:', error);
+    logger.error('[MessageStore] Error deleting from IndexedDB:', error);
     throw error;
   }
 }
@@ -111,7 +112,7 @@ export async function clearAllMessages(): Promise<void> {
     const db = await openDatabase();
     await db.clear(STORE_NAME);
   } catch (error) {
-    console.error('[MessageStore] Error clearing IndexedDB:', error);
+    logger.error('[MessageStore] Error clearing IndexedDB:', error);
     throw error;
   }
 }

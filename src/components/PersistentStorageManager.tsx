@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { SAFE_STORAGE_KEYS } from '@/hooks/usePersistentStorage';
+import { logger } from '@/lib/logger';
 
 /**
  * PersistentStorageManager
@@ -25,7 +26,7 @@ export function PersistentStorageManager() {
     const initPersistentStorage = async () => {
       // Check if Storage API is available
       if (!navigator.storage || !navigator.storage.persist) {
-        console.log('[PersistentStorage] Storage API not available');
+        logger.log('[PersistentStorage] Storage API not available');
         return;
       }
 
@@ -34,7 +35,7 @@ export function PersistentStorageManager() {
         const alreadyPersisted = await navigator.storage.persisted();
         
         if (alreadyPersisted) {
-          console.log('[PersistentStorage] Storage is already persistent');
+          logger.log('[PersistentStorage] Storage is already persistent');
           return;
         }
 
@@ -43,21 +44,21 @@ export function PersistentStorageManager() {
         const userWantsPersistence = prefValue ? JSON.parse(prefValue) === true : false;
 
         if (!userWantsPersistence) {
-          console.log('[PersistentStorage] User has not enabled persistent storage');
+          logger.log('[PersistentStorage] User has not enabled persistent storage');
           return;
         }
 
         // Request persistent storage
-        console.log('[PersistentStorage] Requesting persistent storage...');
+        logger.log('[PersistentStorage] Requesting persistent storage...');
         const granted = await navigator.storage.persist();
 
         if (granted) {
-          console.log('[PersistentStorage] Persistent storage granted');
+          logger.log('[PersistentStorage] Persistent storage granted');
         } else {
-          console.log('[PersistentStorage] Persistent storage request denied by browser');
+          logger.log('[PersistentStorage] Persistent storage request denied by browser');
         }
       } catch (error) {
-        console.error('[PersistentStorage] Error initializing:', error);
+        logger.error('[PersistentStorage] Error initializing:', error);
       }
     };
 

@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Copy, Check, QrCode, ExternalLink } from 'lucide-react';
 import { useAppContext } from '@/hooks/useAppContext';
+import { logger } from '@/lib/logger';
 
 export interface NostrConnectResult {
   /** The remote signer's pubkey */
@@ -99,9 +100,7 @@ export function NostrConnectLogin({
       params.set('perms', 'sign_event,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt');
 
       const uri = `nostrconnect://${clientPubkey}?${params.toString()}`;
-      console.log('[NostrConnectLogin] Generated URI:', uri);
-      console.log('[NostrConnectLogin] Secret:', secret);
-      console.log('[NostrConnectLogin] Relay:', relayUrl);
+      // SECURITY: Do not log URI, secret, or relayUrl - they could enable session hijacking
       setConnectUri(uri);
 
       // Generate QR code
@@ -131,7 +130,7 @@ export function NostrConnectLogin({
       // Listen for the connect response
       await waitForConnection(relay, clientSecretKey, clientPubkey, secret, relayUrl);
     } catch (err) {
-      console.error('[NostrConnectLogin] Error generating connection:', err);
+      logger.error('[NostrConnectLogin] Error generating connection:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate connection');
       setIsGenerating(false);
       setIsConnecting(false);
@@ -166,40 +165,39 @@ export function NostrConnectLogin({
 
         if (msg[0] === 'EVENT') {
           const event = msg[2];
-          console.log('[NostrConnectLogin] Received event from:', event.pubkey);
+          logger.log('[NostrConnectLogin] Received event from signer');
 
           // Decrypt the response using NIP-44 or NIP-04
           let decrypted: string;
           try {
             // Try NIP-44 first
             decrypted = await clientSigner.nip44!.decrypt(event.pubkey, event.content);
-            console.log('[NostrConnectLogin] Decrypted with NIP-44');
+            logger.log('[NostrConnectLogin] Decrypted with NIP-44');
           } catch (e) {
-            console.log('[NostrConnectLogin] NIP-44 decrypt failed, trying NIP-04:', e);
+            logger.log('[NostrConnectLogin] NIP-44 decrypt failed, trying NIP-04');
             // Fall back to NIP-04
             try {
               decrypted = await clientSigner.nip04!.decrypt(event.pubkey, event.content);
-              console.log('[NostrConnectLogin] Decrypted with NIP-04');
+              logger.log('[NostrConnectLogin] Decrypted with NIP-04');
             } catch (e2) {
-              console.warn('[NostrConnectLogin] Failed to decrypt response with both NIP-44 and NIP-04:', e2);
+              logger.warn('[NostrConnectLogin] Failed to decrypt response with both NIP-44 and NIP-04');
               continue;
             }
           }
 
           const response = JSON.parse(decrypted);
-          console.log('[NostrConnectLogin] Received response:', response);
-          console.log('[NostrConnectLogin] Expected secret:', secret);
+          // SECURITY: Do not log response or secret
 
           // Check for errors first
           if (response.error) {
-            console.error('[NostrConnectLogin] Signer returned error:', response.error);
+            logger.error('[NostrConnectLogin] Signer returned error:', response.error);
             throw new Error(response.error);
           }
 
           // Check if this is a successful connect response
           // Different signers respond differently:
           // - Some return the secret we sent
-          // - Some return "ack"  
+          // - Some return "ack"
           // - Some return the user's pubkey
           // - Some just return a truthy result
           if (response.result) {
@@ -208,16 +206,12 @@ export function NostrConnectLogin({
 
             // If the result looks like a pubkey (64 hex chars), use it as the user pubkey
             // Otherwise assume user pubkey = remote pubkey
-            const resultIsHexPubkey = typeof response.result === 'string' && 
+            const resultIsHexPubkey = typeof response.result === 'string' &&
                                        /^[0-9a-f]{64}$/i.test(response.result);
             const userPubkey = resultIsHexPubkey ? response.result : remotePubkey;
-            
-            console.log('[NostrConnectLogin] Connection successful!', {
-              remotePubkey,
-              userPubkey,
-              resultWas: response.result,
-            });
-            
+
+            logger.log('[NostrConnectLogin] Connection successful');
+
             // Convert client secret key to nsec for storage
             const clientNsec = nip19.nsecEncode(clientSecretKey);
 
@@ -239,7 +233,7 @@ export function NostrConnectLogin({
         return;
       }
 
-      console.error('[NostrConnectLogin] Connection error:', err);
+      logger.error('[NostrConnectLogin] Connection error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Connection failed';
       setError(errorMessage);
       setIsConnecting(false);
@@ -255,7 +249,7 @@ export function NostrConnectLogin({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      logger.error('Failed to copy:', err);
     }
   };
 

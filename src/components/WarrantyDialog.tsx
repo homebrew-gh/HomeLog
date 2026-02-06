@@ -24,6 +24,7 @@ import { useCustomHomeFeatures } from '@/hooks/useCustomHomeFeatures';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import { WARRANTY_LENGTH_UNITS, type Warranty, type WarrantyLinkedType, type WarrantyDocument, type WarrantyLengthUnit } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 // Get today's date in MM/DD/YYYY format
 function getTodayFormatted(): string {
@@ -407,7 +408,7 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
         });
       }
     } catch (error) {
-      console.error('File upload error:', error);
+      logger.error('File upload error:', error);
       
       if (error instanceof NoPrivateServerError) {
         toast({
@@ -450,7 +451,7 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
           description: 'File has been removed from your media server.',
         });
       } catch (error) {
-        console.error('Failed to delete file from server:', error);
+        logger.error('Failed to delete file from server:', error);
         toast({
           title: 'Could not delete from server',
           description: error instanceof Error ? error.message : 'The file reference was removed but the file may still exist on the server.',
@@ -475,7 +476,7 @@ export function WarrantyDialog({ isOpen, onClose, warranty }: WarrantyDialogProp
           description: 'File has been removed from your media server.',
         });
       } catch (error) {
-        console.error('Failed to delete file from server:', error);
+        logger.error('Failed to delete file from server:', error);
         toast({
           title: 'Could not delete from server',
           description: error instanceof Error ? error.message : 'The file reference was removed but the file may still exist on the server.',

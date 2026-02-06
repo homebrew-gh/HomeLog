@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/useToast';
 import QRCode from 'qrcode';
+import { logger } from '@/lib/logger';
 
 const LIGHTNING_ADDRESS = 'homebrewbitcoiner@getalby.com';
 
@@ -16,7 +17,7 @@ async function fetchBtcPrice(): Promise<number> {
     const data = await response.json();
     return parseFloat(data.data.amount);
   } catch (error) {
-    console.error('Failed to fetch BTC price:', error);
+    logger.error('Failed to fetch BTC price:', error);
     // Fallback price if API fails
     return 100000;
   }
@@ -70,7 +71,7 @@ async function fetchLightningInvoice(lightningAddress: string, amountSats: numbe
 
     throw new Error('No invoice returned');
   } catch (error) {
-    console.error('Failed to fetch Lightning invoice:', error);
+    logger.error('Failed to fetch Lightning invoice:', error);
     return null;
   }
 }
@@ -128,7 +129,7 @@ export function DonateSection() {
     }).then(url => {
       setQrCodeUrl(url);
     }).catch(err => {
-      console.error('Failed to generate QR code:', err);
+      logger.error('Failed to generate QR code:', err);
     });
   }, [invoice]);
 

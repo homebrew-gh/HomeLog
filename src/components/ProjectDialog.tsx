@@ -12,6 +12,7 @@ import { useProjectActions } from '@/hooks/useProjects';
 import { useCompanies } from '@/hooks/useCompanies';
 import { toast } from '@/hooks/useToast';
 import type { Project } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 interface ProjectDialogProps {
   isOpen: boolean;
@@ -133,7 +134,7 @@ export function ProjectDialog({ isOpen, onClose, project }: ProjectDialogProps) 
 
       onClose();
     } catch (error) {
-      console.error('Error saving project:', error);
+      logger.error('Error saving project:', error);
       toast({
         title: 'Error',
         description: isEditing ? 'Failed to update project' : 'Failed to create project',

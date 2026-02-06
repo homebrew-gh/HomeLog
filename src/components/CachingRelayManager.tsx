@@ -12,6 +12,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useToast } from '@/hooks/useToast';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
+import { logger } from '@/lib/logger';
 
 type RelayStatus = 'checking' | 'connected' | 'error' | 'unknown';
 
@@ -234,7 +235,7 @@ export function CachingRelayManager() {
           });
         },
         onError: (error) => {
-          console.error('Failed to publish relay list:', error);
+          logger.error('Failed to publish relay list:', error);
           toast({
             title: 'Failed to publish relay list',
             description: 'There was an error publishing your relay list to Nostr.',

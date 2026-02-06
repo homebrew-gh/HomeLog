@@ -17,6 +17,7 @@ import { useCompanyTypes } from '@/hooks/useCompanyTypes';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import type { Company, Invoice } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 // VCF Parser - extracts contact information from vCard format
 interface VcfData {
@@ -309,7 +310,7 @@ export function CompanyDialog({ isOpen, onClose, company, initialData, defaultSe
         });
       }
     } catch (error) {
-      console.error('Invoice upload error:', error);
+      logger.error('Invoice upload error:', error);
       
       if (error instanceof NoPrivateServerError) {
         toast({
@@ -347,7 +348,7 @@ export function CompanyDialog({ isOpen, onClose, company, initialData, defaultSe
           });
         })
         .catch((error) => {
-          console.error('Failed to delete invoice from server:', error);
+          logger.error('Failed to delete invoice from server:', error);
           toast({
             title: 'Could not delete from server',
             description: error instanceof Error ? error.message : 'The invoice reference was removed but the file may still exist on the server.',

@@ -9,6 +9,7 @@
  */
 
 import type { NostrEvent } from '@nostrify/nostrify';
+import { logger } from '@/lib/logger';
 
 const DB_NAME = 'cypherlog-event-cache';
 const DB_VERSION = 1;
@@ -40,7 +41,7 @@ function openDB(): Promise<IDBDatabase> {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
-      console.error('[EventCache] Failed to open database');
+      logger.error('[EventCache] Failed to open database');
       reject(request.error);
     };
 
@@ -156,7 +157,7 @@ export async function cacheEvents(events: NostrEvent[]): Promise<void> {
       });
     });
   } catch (error) {
-    console.error('[EventCache] Failed to cache events:', error);
+    logger.error('[EventCache] Failed to cache events:', error);
   }
 }
 
@@ -194,7 +195,7 @@ export async function getCachedEvents(kinds: number[], pubkey: string): Promise<
       return run();
     });
   } catch (error) {
-    console.error('[EventCache] Failed to get cached events:', error);
+    logger.error('[EventCache] Failed to get cached events:', error);
     return [];
   }
 }
@@ -214,7 +215,7 @@ export async function deleteCachedEvent(event: NostrEvent): Promise<void> {
       });
     });
   } catch (error) {
-    console.error('[EventCache] Failed to delete cached event:', error);
+    logger.error('[EventCache] Failed to delete cached event:', error);
   }
 }
 
@@ -235,7 +236,7 @@ export async function deleteCachedEventByAddress(kind: number, pubkey: string, d
       tx.onerror = () => reject(tx.error);
     });
   } catch (error) {
-    console.error('[EventCache] Failed to delete cached event by address:', error);
+    logger.error('[EventCache] Failed to delete cached event by address:', error);
   }
 }
 
@@ -254,7 +255,7 @@ export async function deleteCachedEventById(eventId: string): Promise<void> {
       });
     });
   } catch (error) {
-    console.error('[EventCache] Failed to delete cached event by id:', error);
+    logger.error('[EventCache] Failed to delete cached event by id:', error);
   }
 }
 
@@ -286,7 +287,7 @@ export async function clearCacheForPubkey(pubkey: string): Promise<void> {
       tx.onerror = () => reject(tx.error);
     });
   } catch (error) {
-    console.error('[EventCache] Failed to clear cache for pubkey:', error);
+    logger.error('[EventCache] Failed to clear cache for pubkey:', error);
   }
 }
 
@@ -308,7 +309,7 @@ export async function getLastSyncTime(cacheKey: string): Promise<number | null> 
       });
     });
   } catch (error) {
-    console.error('[EventCache] Failed to get last sync time:', error);
+    logger.error('[EventCache] Failed to get last sync time:', error);
     return null;
   }
 }
@@ -335,7 +336,7 @@ export async function updateLastSyncTime(cacheKey: string, pubkey: string): Prom
       tx.onerror = () => reject(tx.error);
     });
   } catch (error) {
-    console.error('[EventCache] Failed to update last sync time:', error);
+    logger.error('[EventCache] Failed to update last sync time:', error);
   }
 }
 
@@ -354,7 +355,7 @@ export async function clearAllCache(): Promise<void> {
       });
     });
   } catch (error) {
-    console.error('[EventCache] Failed to clear all cache:', error);
+    logger.error('[EventCache] Failed to clear all cache:', error);
   }
 }
 
@@ -372,7 +373,7 @@ export async function getCachedEvent(kind: number, pubkey: string): Promise<Nost
       event.created_at > latest.created_at ? event : latest
     );
   } catch (error) {
-    console.error('[EventCache] Failed to get cached event:', error);
+    logger.error('[EventCache] Failed to get cached event:', error);
     return null;
   }
 }

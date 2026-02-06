@@ -18,6 +18,7 @@ import { useWarranties, useWarrantyActions } from '@/hooks/useWarranties';
 import { useMaintenanceCompletionActions } from '@/hooks/useMaintenanceCompletions';
 import { toast } from '@/hooks/useToast';
 import type { Vehicle, Appliance, Pet } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 type AssetType = 'vehicle' | 'appliance' | 'pet';
 
@@ -166,7 +167,7 @@ export function ArchiveConfirmDialog({
               }
             }
           } catch (error) {
-            console.error(`Failed to ${action} ${tabKey} item:`, error);
+            logger.error(`Failed to ${action} ${tabKey} item:`, error);
           }
         }
       }
@@ -184,7 +185,7 @@ export function ArchiveConfirmDialog({
 
       onClose();
     } catch (error) {
-      console.error('Failed to archive:', error);
+      logger.error('Failed to archive:', error);
       toast({
         title: 'Error',
         description: 'Failed to archive the item. Please try again.',

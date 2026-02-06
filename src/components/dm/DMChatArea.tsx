@@ -17,6 +17,7 @@ import { ArrowLeft, Send, Loader2, AlertTriangle, Key, ShieldCheck } from 'lucid
 import { cn } from '@/lib/utils';
 import { NoteContent } from '@/components/NoteContent';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { logger } from '@/lib/logger';
 
 interface DMChatAreaProps {
   pubkey: string | null;
@@ -259,7 +260,7 @@ export const DMChatArea = ({ pubkey, onBack, className }: DMChatAreaProps) => {
       });
       setMessageText('');
     } catch (error) {
-      console.error('Failed to send message:', error);
+      logger.error('Failed to send message:', error);
     } finally {
       setIsSending(false);
     }

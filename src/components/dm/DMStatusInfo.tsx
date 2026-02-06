@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/useToast';
+import { logger } from '@/lib/logger';
 
 interface DMStatusInfoProps {
   clearCacheAndRefetch?: () => Promise<void>;
@@ -36,7 +37,7 @@ export const DMStatusInfo = ({ clearCacheAndRefetch }: DMStatusInfoProps) => {
       });
       setIsClearing(false);
     } catch (error) {
-      console.error('Error clearing cache:', error);
+      logger.error('Error clearing cache:', error);
       toast({
         title: 'Error',
         description: 'Failed to clear cache. Please try again.',

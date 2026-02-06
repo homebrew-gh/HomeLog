@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useLoginActions } from '@/hooks/useLoginActions';
 import { DialogTitle } from '@radix-ui/react-dialog';
 import { NostrConnectLogin, type NostrConnectResult } from './NostrConnectLogin';
+import { logger } from '@/lib/logger';
 
 interface LoginDialogProps {
   isOpen: boolean;
@@ -102,7 +103,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
         }
       }, 100);
     } catch (error) {
-      console.error('Failed to access camera:', error);
+      logger.error('Failed to access camera:', error);
       setErrors(prev => ({
         ...prev,
         qr: 'Could not access camera. Please check permissions or enter the bunker URI manually.'
@@ -169,7 +170,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
       onClose();
     } catch (e: unknown) {
       const error = e as Error;
-      console.error('Extension login failed:', error);
+      logger.error('Extension login failed:', error);
       setErrors(prev => ({
         ...prev,
         extension: error instanceof Error ? error.message : 'Extension login failed'
@@ -283,7 +284,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
       onLogin();
       onClose();
     } catch (err) {
-      console.error('[LoginDialog] NostrConnect login failed:', err);
+      logger.error('[LoginDialog] NostrConnect login failed:', err);
       setErrors(prev => ({
         ...prev,
         bunker: 'Failed to save login. Please try again.'

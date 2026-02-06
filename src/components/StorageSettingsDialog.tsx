@@ -16,6 +16,7 @@ import {
   formatBytes,
   LOGOUT_ON_CLOSE_KEY,
 } from '@/hooks/usePersistentStorage';
+import { logger } from '@/lib/logger';
 
 interface StorageSettingsDialogProps {
   isOpen: boolean;
@@ -87,7 +88,7 @@ export function StorageSettingsDialog({ isOpen, onClose }: StorageSettingsDialog
         setPersistentStorageEnabled(true);
       }
     } catch (error) {
-      console.error('Failed to check storage status:', error);
+      logger.error('Failed to check storage status:', error);
       setPersistenceSupported(false);
     }
   };
@@ -122,7 +123,7 @@ export function StorageSettingsDialog({ isOpen, onClose }: StorageSettingsDialog
           });
         }
       } catch (error) {
-        console.error('Failed to request persistent storage:', error);
+        logger.error('Failed to request persistent storage:', error);
         toast({
           title: 'Error',
           description: 'Failed to request persistent storage permission.',

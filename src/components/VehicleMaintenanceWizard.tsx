@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useMaintenanceActions } from '@/hooks/useMaintenance';
 import { toast } from '@/hooks/useToast';
 import { FREQUENCY_UNITS, type MaintenanceSchedule } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 interface MaintenanceTask {
   id: string;
@@ -144,7 +145,7 @@ export function VehicleMaintenanceWizard({ isOpen, onClose, vehicleId, vehicleNa
         });
         successCount++;
       } catch (error) {
-        console.error('Failed to create maintenance task:', error);
+        logger.error('Failed to create maintenance task:', error);
         errorCount++;
       }
     }

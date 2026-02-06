@@ -20,6 +20,7 @@ import { useUploadFile } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import { useQueryClient } from '@tanstack/react-query';
 import { genUserName } from '@/lib/genUserName';
+import { logger } from '@/lib/logger';
 
 interface EditProfileDialogProps {
   isOpen: boolean;
@@ -105,7 +106,7 @@ export function EditProfileDialog({ isOpen, onClose }: EditProfileDialogProps) {
         description: 'Profile picture uploaded successfully',
       });
     } catch (error) {
-      console.error('Failed to upload picture:', error);
+      logger.error('Failed to upload picture:', error);
       toast({
         title: 'Upload failed',
         description: 'Failed to upload profile picture. Please try again.',
@@ -157,7 +158,7 @@ export function EditProfileDialog({ isOpen, onClose }: EditProfileDialogProps) {
 
       onClose();
     } catch (error) {
-      console.error('Failed to update profile:', error);
+      logger.error('Failed to update profile:', error);
       toast({
         title: 'Error',
         description: 'Failed to update your profile. Please try again.',

@@ -13,6 +13,7 @@ import { useCustomRooms } from '@/hooks/useCustomRooms';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import type { Appliance } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 interface ApplianceDialogProps {
   isOpen: boolean;
@@ -90,7 +91,7 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
         });
       }
     } catch (error) {
-      console.error('File upload error:', error);
+      logger.error('File upload error:', error);
       
       if (error instanceof NoPrivateServerError) {
         toast({
@@ -139,7 +140,7 @@ export function ApplianceDialog({ isOpen, onClose, appliance }: ApplianceDialogP
           description: 'File has been removed from your media server.',
         });
       } catch (error) {
-        console.error('Failed to delete file from server:', error);
+        logger.error('Failed to delete file from server:', error);
         toast({
           title: 'Could not delete from server',
           description: error instanceof Error ? error.message : 'The file reference was removed but the file may still exist on the server.',

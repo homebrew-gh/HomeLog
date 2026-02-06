@@ -12,6 +12,7 @@ import { generateSecretKey } from 'nostr-tools';
 import type { MessageProtocol } from '@/lib/dmConstants';
 import { MESSAGE_PROTOCOL } from '@/lib/dmConstants';
 import { DMContext, DMContextType, FileAttachment } from '@/contexts/DMContext';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // DM Types and Constants
@@ -109,7 +110,7 @@ const createErrorLogger = (name: string) => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => {
       if (count > 0) {
-        console.error(`[DM] ${name} processing complete with ${count} errors`);
+        logger.error(`[DM] ${name} processing complete with ${count} errors`);
         count = 0;
       }
     }, DM_CONSTANTS.ERROR_LOG_DEBOUNCE_DELAY);
@@ -244,7 +245,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
       });
     },
     onError: (error) => {
-      console.error('[DM] Failed to send NIP-04 message:', error);
+      logger.error('[DM] Failed to send NIP-04 message:', error);
       toast({
         title: 'Failed to send message',
         description: error.message,
@@ -363,28 +364,28 @@ export function DMProvider({ children, config }: DMProviderProps) {
         const senderResult = results[1];
 
         if (recipientResult.status === 'rejected') {
-          console.error('[DM] Failed to publish recipient gift wrap');
-          console.error('[DM] Recipient gift wrap event:', recipientGiftWrap);
+          logger.error('[DM] Failed to publish recipient gift wrap');
+          logger.error('[DM] Recipient gift wrap event:', recipientGiftWrap);
 
           // Try to extract detailed errors from AggregateError
           const error = recipientResult.reason;
           if (error && typeof error === 'object' && 'errors' in error) {
-            console.error('[DM] Recipient individual relay errors:', error.errors);
+            logger.error('[DM] Recipient individual relay errors:', error.errors);
           } else {
-            console.error('[DM] Recipient error:', error);
+            logger.error('[DM] Recipient error:', error);
           }
         }
 
         if (senderResult.status === 'rejected') {
-          console.error('[DM] Failed to publish sender gift wrap');
-          console.error('[DM] Sender gift wrap event:', senderGiftWrap);
+          logger.error('[DM] Failed to publish sender gift wrap');
+          logger.error('[DM] Sender gift wrap event:', senderGiftWrap);
 
           // Try to extract detailed errors from AggregateError
           const error = senderResult.reason;
           if (error && typeof error === 'object' && 'errors' in error) {
-            console.error('[DM] Sender individual relay errors:', error.errors);
+            logger.error('[DM] Sender individual relay errors:', error.errors);
           } else {
-            console.error('[DM] Sender error:', error);
+            logger.error('[DM] Sender error:', error);
           }
         }
 
@@ -393,14 +394,14 @@ export function DMProvider({ children, config }: DMProviderProps) {
           throw new Error(`Both gift wraps rejected. Recipient: ${recipientResult.reason}, Sender: ${senderResult.reason}`);
         }
       } catch (publishError) {
-        console.error('[DM] Publish error:', publishError);
+        logger.error('[DM] Publish error:', publishError);
         throw publishError;
       }
 
       return recipientGiftWrap;
     },
     onError: (error) => {
-      console.error('[DM] Failed to send NIP-17 message:', error);
+      logger.error('[DM] Failed to send NIP-17 message:', error);
       toast({
         title: 'Failed to send message',
         description: error.message,
@@ -463,7 +464,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
 
         if (validBatchDMs.length < batchLimit * 2) break;
       } catch (error) {
-        console.error('[DM] NIP-4 Error in batch query:', error);
+        logger.error('[DM] NIP-4 Error in batch query:', error);
         break;
       }
     }
@@ -518,7 +519,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
 
         if (batchEvents.length < batchLimit) break;
       } catch (error) {
-        console.error('[DM] NIP-17 Error in batch query:', error);
+        logger.error('[DM] NIP-17 Error in batch query:', error);
         break;
       }
     }
@@ -632,7 +633,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
           newState.get(conversationPartner)!.messages.push(messageWithAnimation);
           newState.get(conversationPartner)!.hasNIP17 = true;
           } catch (error) {
-            console.error('[DM] Error processing gift wrap from relay:', error);
+            logger.error('[DM] Error processing gift wrap from relay:', error);
           }
         }
 
@@ -674,7 +675,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
         };
       }
     } catch (error) {
-      console.error(`[DM] Failed to decrypt NIP-4 message ${event.id}:`, error);
+      logger.error(`[DM] Failed to decrypt NIP-4 message ${event.id}:`, error);
       return {
         decryptedContent: '',
         error: 'Decryption failed'
@@ -853,7 +854,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
       const sealEvent = JSON.parse(sealContent) as NostrEvent;
 
       if (sealEvent.kind !== 13) {
-        console.log(`[DM] ⚠️ NIP-17 INVALID SEAL - expected kind 13, got ${sealEvent.kind}`, {
+        logger.log(`[DM] ⚠️ NIP-17 INVALID SEAL - expected kind 13, got ${sealEvent.kind}`, {
           giftWrapId: event.id,
           sealKind: sealEvent.kind,
         });
@@ -874,7 +875,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
 
       // Accept both kind 14 (text) and kind 15 (files/attachments)
       if (messageEvent.kind !== 14 && messageEvent.kind !== 15) {
-        console.log(`[DM] ⚠️ NIP-17 MESSAGE WITH UNSUPPORTED INNER EVENT KIND:`, {
+        logger.log(`[DM] ⚠️ NIP-17 MESSAGE WITH UNSUPPORTED INNER EVENT KIND:`, {
           giftWrapId: event.id,
           innerKind: messageEvent.kind,
           expectedKinds: [14, 15],
@@ -924,7 +925,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
         sealEvent, // Return the seal (kind 13) for storage
       };
     } catch (error) {
-      console.error('[DM] Failed to process NIP-17 gift wrap:', {
+      logger.error('[DM] Failed to process NIP-17 gift wrap:', {
         giftWrapId: event.id,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -953,7 +954,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
 
       // Check if decryption failed
       if (processedMessage.error) {
-        console.error('[DM] NIP-17 message decryption failed:', {
+        logger.error('[DM] NIP-17 message decryption failed:', {
           giftWrapId: event.id,
           error: processedMessage.error,
         });
@@ -981,7 +982,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
 
       addMessageToState(messageWithAnimation, conversationPartner, MESSAGE_PROTOCOL.NIP17);
     } catch (error) {
-      console.error('[DM] Exception in processIncomingNIP17Message:', {
+      logger.error('[DM] Exception in processIncomingNIP17Message:', {
         giftWrapId: event.id,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -1021,7 +1022,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
           }
         } catch (error) {
           if (isActive) {
-            console.error('[DM] NIP-4 subscription error:', error);
+            logger.error('[DM] NIP-4 subscription error:', error);
           }
         }
       })();
@@ -1034,7 +1035,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
 
       setSubscriptions(prev => ({ ...prev, isNIP4Connected: true }));
     } catch (error) {
-      console.error('[DM] Failed to start NIP-4 subscription:', error);
+      logger.error('[DM] Failed to start NIP-4 subscription:', error);
       setSubscriptions(prev => ({ ...prev, isNIP4Connected: false }));
     }
   }, [user, nostr, lastSync.nip4, processIncomingNIP4Message]);
@@ -1077,7 +1078,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
           }
         } catch (error) {
           if (isActive) {
-            console.error('[DM] NIP-17 subscription error:', error);
+            logger.error('[DM] NIP-17 subscription error:', error);
           }
         }
       })();
@@ -1090,7 +1091,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
 
       setSubscriptions(prev => ({ ...prev, isNIP17Connected: true }));
     } catch (error) {
-      console.error('[DM] Failed to start NIP-17 subscription:', error);
+      logger.error('[DM] Failed to start NIP-17 subscription:', error);
       setSubscriptions(prev => ({ ...prev, isNIP17Connected: false }));
     }
   }, [user, nostr, lastSync.nip17, enableNIP17, processIncomingNIP17Message]);
@@ -1182,7 +1183,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
         nip17Since: cachedStore.lastSync?.nip17 || undefined,
       };
     } catch (error) {
-      console.error('[DM] Error loading cached messages:', error);
+      logger.error('[DM] Error loading cached messages:', error);
       return {};
     }
   }, [userPubkey, enableNIP17, user]);
@@ -1229,7 +1230,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
 
       setLoadingPhase(LOADING_PHASES.READY);
     } catch (error) {
-      console.error('[DM] Error in message loading:', error);
+      logger.error('[DM] Error in message loading:', error);
       setHasInitialLoadCompleted(true);
       setLoadingPhase(LOADING_PHASES.READY);
       setIsLoading(false);
@@ -1265,7 +1266,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
       // Trigger reload by setting hasInitialLoadCompleted to false
       setHasInitialLoadCompleted(false);
     } catch (error) {
-      console.error('[DM] Error clearing cache:', error);
+      logger.error('[DM] Error clearing cache:', error);
       throw error;
     }
   }, [enabled, userPubkey]);
@@ -1330,7 +1331,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
         try {
           sessionStorage.setItem('dm-clear-cache-on-load', 'true');
         } catch (error) {
-          console.warn('[DM] SessionStorage unavailable, cache won\'t clear on hard refresh:', error);
+          logger.warn('[DM] SessionStorage unavailable, cache won\'t clear on hard refresh:', error);
         }
       }
     };
@@ -1350,7 +1351,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
         clearCacheAndRefetch();
       }
     } catch (error) {
-      console.warn('[DM] Could not check sessionStorage for cache clear flag:', error);
+      logger.warn('[DM] Could not check sessionStorage for cache clear flag:', error);
     }
   }, [enabled, userPubkey, clearCacheAndRefetch]);
 
@@ -1433,7 +1434,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
         nip17: prev.nip17 || currentTime
       }));
     } catch (error) {
-      console.error('[DM] Error writing messages to IndexedDB:', error);
+      logger.error('[DM] Error writing messages to IndexedDB:', error);
     }
   }, [messages, userPubkey, lastSync]);
 
@@ -1495,7 +1496,7 @@ export function DMProvider({ children, config }: DMProviderProps) {
         await sendNIP17Message.mutateAsync({ recipientPubkey, content, attachments });
       }
     } catch (error) {
-      console.error(`[DM] Failed to send ${protocol} message:`, error);
+      logger.error(`[DM] Failed to send ${protocol} message:`, error);
     }
   }, [enabled, userPubkey, addMessageToState, sendNIP4Message, sendNIP17Message]);
 

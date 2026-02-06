@@ -18,6 +18,7 @@ import { useAllBlossomUrls } from '@/hooks/useAllBlossomUrls';
 import { useBlossomSync } from '@/hooks/useBlossomSync';
 import { NoPrivateServerError } from '@/hooks/useUploadFile';
 import { BlossomUploader, NostrBuildUploader } from '@nostrify/nostrify/uploaders';
+import { logger } from '@/lib/logger';
 
 type ServerStatus = 'checking' | 'connected' | 'error' | 'unknown';
 
@@ -373,26 +374,26 @@ export function BlossomServerManager() {
       return;
     }
 
-    console.log(`[BlossomTest] Starting test upload to ${serverUrl}`);
+    logger.log('[BlossomTest] Starting test upload');
     setIsTesting(prev => ({ ...prev, [serverUrl]: true }));
     
     try {
       // Generate a branded test image
-      console.log('[BlossomTest] Generating test image...');
+      logger.log('[BlossomTest] Generating test image...');
       const testFile = await generateTestImage();
-      console.log(`[BlossomTest] Created test image (${testFile.size} bytes), uploading to ${serverUrl}...`);
+      logger.log('[BlossomTest] Created test image, uploading...');
       
       let tags: string[][];
       
       // Use the appropriate uploader based on the server
       if (isNostrBuildNativeUrl(serverUrl)) {
-        console.log('[BlossomTest] Using NostrBuildUploader for nostr.build');
+        logger.log('[BlossomTest] Using NostrBuildUploader for nostr.build');
         const uploader = new NostrBuildUploader({
           signer: user.signer,
         });
         tags = await uploader.upload(testFile);
       } else {
-        console.log('[BlossomTest] Using BlossomUploader');
+        logger.log('[BlossomTest] Using BlossomUploader');
         const uploader = new BlossomUploader({
           servers: [serverUrl],
           signer: user.signer,
@@ -402,7 +403,7 @@ export function BlossomServerManager() {
 
       const uploadedUrl = tags[0]?.[1];
       
-      console.log(`[BlossomTest] ✓ Success! File uploaded to: ${uploadedUrl}`);
+      logger.log('[BlossomTest] ✓ Success! File uploaded');
       
       setTestResults(prev => ({
         ...prev,
@@ -419,7 +420,7 @@ export function BlossomServerManager() {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[BlossomTest] ✗ Failed to upload to ${serverUrl}:`, errorMessage, error);
+      logger.error('[BlossomTest] ✗ Failed to upload:', errorMessage, error);
       
       // Provide more helpful error messages
       let userFriendlyMessage = errorMessage;

@@ -43,6 +43,7 @@ import { useSubscriptionsByCompanyId } from '@/hooks/useSubscriptions';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { toast } from '@/hooks/useToast';
 import type { Company } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 // Get icon based on service type
 function getServiceIcon(type: string) {
@@ -199,7 +200,7 @@ export function CompaniesTab({ scrollTarget }: CompaniesTabProps) {
         description: `Imported "${data.name || 'contact'}". Please select a service type and review the details.`,
       });
     } catch (error) {
-      console.error('VCF import error:', error);
+      logger.error('VCF import error:', error);
       toast({
         title: 'Import failed',
         description: 'Could not read the VCF file. Please check the file format.',

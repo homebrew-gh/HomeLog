@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { WifiOff, RefreshCw, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 /**
  * PWAManager - Handles PWA-specific features
@@ -94,7 +95,7 @@ export function PWAManager() {
     const { outcome } = await deferredPrompt.userChoice;
     
     if (outcome === 'accepted') {
-      console.log('[PWA] App installed');
+      logger.log('[PWA] App installed');
     }
     
     setDeferredPrompt(null);

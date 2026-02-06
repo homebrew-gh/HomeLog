@@ -21,6 +21,7 @@ import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles }
 import { toast } from '@/hooks/useToast';
 import { CompanyDialog } from '@/components/CompanyDialog';
 import type { Pet } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 interface PetDialogProps {
   isOpen: boolean;
@@ -162,7 +163,7 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
         });
       }
     } catch (error) {
-      console.error('File upload error:', error);
+      logger.error('File upload error:', error);
       
       if (error instanceof NoPrivateServerError) {
         toast({
@@ -210,7 +211,7 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
           });
         })
         .catch((error) => {
-          console.error('Failed to delete file from server:', error);
+          logger.error('Failed to delete file from server:', error);
           toast({
             title: 'Could not delete from server',
             description: error instanceof Error ? error.message : 'The file reference was removed but the file may still exist on the server.',
@@ -236,7 +237,7 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
           description: 'Photo has been removed from your media server.',
         });
       } catch (error) {
-        console.error('Failed to delete file from server:', error);
+        logger.error('Failed to delete file from server:', error);
         toast({
           title: 'Could not delete from server',
           description: error instanceof Error ? error.message : 'The file reference was removed but the file may still exist on the server.',

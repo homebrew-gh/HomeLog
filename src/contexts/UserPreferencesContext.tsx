@@ -7,6 +7,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useAppContext } from '@/hooks/useAppContext';
 import { isRelayUrlSecure } from '@/lib/relay';
+import { logger } from '@/lib/logger';
 
 // NIP-78: Application-specific data
 const APP_DATA_KIND = 30078;
@@ -316,7 +317,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         );
 
         if (events.length === 0) {
-          console.log('[UserPreferences] No remote preferences found');
+          logger.log('[UserPreferences] No remote preferences found');
           return null;
         }
 
@@ -334,18 +335,18 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
                   const encryptedData = storedPrefs.blossomServers.slice(ENCRYPTED_BLOSSOM_MARKER.length);
                   const decrypted = await user.signer.nip44.decrypt(user.pubkey, encryptedData);
                   blossomServers = JSON.parse(decrypted) as BlossomServer[];
-                  console.log('[UserPreferences] Decrypted blossomServers from relay');
+                  logger.log('[UserPreferences] Decrypted blossomServers from relay');
                 } catch (decryptError) {
-                  console.warn('[UserPreferences] Failed to decrypt blossomServers:', decryptError);
+                  logger.warn('[UserPreferences] Failed to decrypt blossomServers:', decryptError);
                   // Fall back to defaults
                 }
               } else {
-                console.warn('[UserPreferences] Cannot decrypt blossomServers - no NIP-44 support');
+                logger.warn('[UserPreferences] Cannot decrypt blossomServers - no NIP-44 support');
               }
             } else if (Array.isArray(storedPrefs.blossomServers)) {
               // Legacy unencrypted format
               blossomServers = storedPrefs.blossomServers;
-              console.log('[UserPreferences] Loaded unencrypted blossomServers (legacy)');
+              logger.log('[UserPreferences] Loaded unencrypted blossomServers (legacy)');
             }
           }
 
@@ -358,9 +359,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
                   const encryptedData = storedPrefs.privateRelays.slice(ENCRYPTED_BLOSSOM_MARKER.length);
                   const decrypted = await user.signer.nip44.decrypt(user.pubkey, encryptedData);
                   privateRelays = JSON.parse(decrypted) as string[];
-                  console.log('[UserPreferences] Decrypted privateRelays from relay');
+                  logger.log('[UserPreferences] Decrypted privateRelays from relay');
                 } catch (decryptError) {
-                  console.warn('[UserPreferences] Failed to decrypt privateRelays:', decryptError);
+                  logger.warn('[UserPreferences] Failed to decrypt privateRelays:', decryptError);
                 }
               }
             } else if (Array.isArray(storedPrefs.privateRelays)) {
@@ -377,14 +378,14 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
             privateRelays,
           } as UserPreferences;
           
-          console.log('[UserPreferences] Loaded preferences from relay');
+          logger.log('[UserPreferences] Loaded preferences from relay');
           return preferences;
         } catch (error) {
-          console.warn('Failed to parse user preferences from Nostr:', error);
+          logger.warn('Failed to parse user preferences from Nostr:', error);
           return null;
         }
       } catch (error) {
-        console.warn('[UserPreferences] Relay fetch failed, using local storage:', error);
+        logger.warn('[UserPreferences] Relay fetch failed, using local storage:', error);
         return null;
       }
     },
@@ -446,8 +447,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
         if (!hasLocalTabs && hasRemoteTabs) {
           // No local tabs but remote has tabs - this is a new browser/device, sync from remote
-          console.log('[UserPreferences] Syncing preferences from Nostr relay (new browser/device)');
-          console.log('[UserPreferences] Active tabs from relay:', remotePreferences.activeTabs);
+          logger.log('[UserPreferences] Syncing preferences from Nostr relay (new browser/device)');
+          logger.log('[UserPreferences] Active tabs from relay:', remotePreferences.activeTabs);
           setLocalPreferences(remotePreferences);
         } else if (hasLocalTabs) {
           // Local has tabs (e.g. PWA with its own storage). Don't overwrite tabs or other prefs,
@@ -469,7 +470,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
             customPetTypes: mergeStringArrays(prev.customPetTypes, remotePreferences.customPetTypes),
             hiddenDefaultPetTypes: mergeStringArrays(prev.hiddenDefaultPetTypes, remotePreferences.hiddenDefaultPetTypes),
           }));
-          console.log('[UserPreferences] Merged type/room lists from Nostr into local preferences');
+          logger.log('[UserPreferences] Merged type/room lists from Nostr into local preferences');
         }
       }
       setHasSyncedFromRemote(true);
@@ -514,14 +515,14 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
                   JSON.stringify(blossomServers)
                 );
                 prefsToSync.blossomServers = ENCRYPTED_BLOSSOM_MARKER + encryptedServers;
-                console.log('[UserPreferences] Encrypted blossomServers for relay storage');
+                logger.log('[UserPreferences] Encrypted blossomServers for relay storage');
               } catch (encryptError) {
-                console.warn('[UserPreferences] Failed to encrypt blossomServers, storing unencrypted:', encryptError);
+                logger.warn('[UserPreferences] Failed to encrypt blossomServers, storing unencrypted:', encryptError);
                 prefsToSync.blossomServers = blossomServers;
               }
             } else {
               // No NIP-44 support, store unencrypted (legacy)
-              console.log('[UserPreferences] No NIP-44 support, storing blossomServers unencrypted');
+              logger.log('[UserPreferences] No NIP-44 support, storing blossomServers unencrypted');
               prefsToSync.blossomServers = blossomServers;
             }
           }
@@ -536,9 +537,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
                   JSON.stringify(privateRelays)
                 );
                 prefsToSync.privateRelays = ENCRYPTED_BLOSSOM_MARKER + encryptedPrivateRelays;
-                console.log('[UserPreferences] Encrypted privateRelays for relay storage');
+                logger.log('[UserPreferences] Encrypted privateRelays for relay storage');
               } catch (encryptError) {
-                console.warn('[UserPreferences] Failed to encrypt privateRelays, omitting from sync:', encryptError);
+                logger.warn('[UserPreferences] Failed to encrypt privateRelays, omitting from sync:', encryptError);
               }
             }
             // If no NIP-44: do not sync private relay list (keep local only); never store plaintext on relays.
@@ -552,9 +553,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
               ['alt', 'Cypher Log user preferences'],
             ],
           });
-          console.log('Preferences saved to Nostr relay');
+          logger.log('Preferences saved to Nostr relay');
         } catch (error) {
-          console.error('Failed to save preferences to Nostr:', error);
+          logger.error('Failed to save preferences to Nostr:', error);
         } finally {
           isPublishingRef.current = false;
         }

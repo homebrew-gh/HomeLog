@@ -19,6 +19,7 @@ import { useSubscriptionActions } from '@/hooks/useSubscriptions';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import { FUEL_TYPES, BILLING_FREQUENCIES, type Vehicle, type VehicleDocument, type BillingFrequency } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 interface VehicleDialogProps {
   isOpen: boolean;
@@ -222,7 +223,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
         });
       }
     } catch (error) {
-      console.error('File upload error:', error);
+      logger.error('File upload error:', error);
       
       if (error instanceof NoPrivateServerError) {
         toast({
@@ -276,7 +277,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           });
         })
         .catch((error) => {
-          console.error('Failed to delete file from server:', error);
+          logger.error('Failed to delete file from server:', error);
           toast({
             title: 'Could not delete from server',
             description: error instanceof Error ? error.message : 'The file reference was removed but the file may still exist on the server.',
@@ -304,7 +305,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
           description: 'File has been removed from your media server.',
         });
       } catch (error) {
-        console.error('Failed to delete file from server:', error);
+        logger.error('Failed to delete file from server:', error);
         toast({
           title: 'Could not delete from server',
           description: error instanceof Error ? error.message : 'The file reference was removed but the file may still exist on the server.',
@@ -426,7 +427,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
             description: 'A warranty record has been created in the Warranties tab.',
           });
         } catch (error) {
-          console.error('Failed to create warranty:', error);
+          logger.error('Failed to create warranty:', error);
           toast({
             title: 'Warning',
             description: 'Vehicle saved but failed to create warranty record.',
@@ -453,7 +454,7 @@ export function VehicleDialog({ isOpen, onClose, vehicle }: VehicleDialogProps) 
               });
               createdCount.success++;
             } catch (error) {
-              console.error('Failed to create subscription:', error);
+              logger.error('Failed to create subscription:', error);
               createdCount.failed++;
             }
           }

@@ -24,6 +24,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useToast } from '@/hooks/useToast';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
 import { isRelayUrlSecure } from '@/lib/relay';
+import { logger } from '@/lib/logger';
 
 interface Relay {
   url: string;
@@ -262,7 +263,7 @@ export function RelayListManager() {
           });
         },
         onError: (error) => {
-          console.error('Failed to publish relay list:', error);
+          logger.error('Failed to publish relay list:', error);
           toast({
             title: 'Failed to publish relay list',
             description: 'There was an error publishing your relay list to Nostr.',

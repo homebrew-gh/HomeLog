@@ -42,6 +42,7 @@ import { useUploadFile, useCanUploadFiles, NoPrivateServerError } from '@/hooks/
 import { toast } from '@/hooks/useToast';
 import NotFound from './NotFound';
 import type { Project, ProjectEntry } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 // Get icon based on project status
 function getStatusIcon(status?: Project['status']) {
@@ -253,7 +254,7 @@ function NewEntryDialog({
           }));
         }
       } catch (error) {
-        console.error('File upload error:', error);
+        logger.error('File upload error:', error);
         if (error instanceof NoPrivateServerError) {
           toast({
             title: 'No media server configured',
@@ -309,7 +310,7 @@ function NewEntryDialog({
       resetForm();
       onClose();
     } catch (error) {
-      console.error('Error creating entry:', error);
+      logger.error('Error creating entry:', error);
       toast({
         title: 'Error',
         description: 'Failed to save entry',
@@ -522,7 +523,7 @@ function EditProjectDialog({
 
       onClose();
     } catch (error) {
-      console.error('Error updating project:', error);
+      logger.error('Error updating project:', error);
       toast({
         title: 'Error',
         description: 'Failed to update project',

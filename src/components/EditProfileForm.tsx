@@ -22,6 +22,7 @@ import { Loader2, Upload, Copy, Check } from 'lucide-react';
 import { NSchema as n, type NostrMetadata } from '@nostrify/nostrify';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUploadFile } from '@/hooks/useUploadFile';
+import { logger } from '@/lib/logger';
 
 export const EditProfileForm: React.FC = () => {
   const queryClient = useQueryClient();
@@ -119,7 +120,7 @@ export const EditProfileForm: React.FC = () => {
         description: `${field === 'picture' ? 'Profile picture' : 'Banner'} uploaded successfully`,
       });
     } catch (error) {
-      console.error(`Failed to upload ${field}:`, error);
+      logger.error(`Failed to upload ${field}:`, error);
       toast({
         title: 'Error',
         description: `Failed to upload ${field === 'picture' ? 'profile picture' : 'banner'}. Please try again.`,
@@ -164,7 +165,7 @@ export const EditProfileForm: React.FC = () => {
         description: 'Your profile has been updated',
       });
     } catch (error) {
-      console.error('Failed to update profile:', error);
+      logger.error('Failed to update profile:', error);
       toast({
         title: 'Error',
         description: 'Failed to update your profile. Please try again.',
