@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, useMemo, useRef, useState } from 'react';
 import { NostrEvent, NostrFilter, NPool, NRelay1 } from '@nostrify/nostrify';
 import { NostrContext } from '@nostrify/react';
+import type { NUser } from '@nostrify/react/login';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -12,6 +13,24 @@ export const SetPrivateRelayUrlsContext = createContext<((urls: string[]) => voi
 /** NIP-42 auth kind for relay authentication */
 const NIP42_AUTH_KIND = 22242;
 
+/** Ref type for the current user's signer (used by NIP-42 auth callback). */
+type SignerRef = React.MutableRefObject<NUser['signer'] | null | undefined>;
+
+/**
+ * Updates signerRef from useCurrentUser. Must be a child of NostrContext.Provider
+ * so useCurrentUser (which uses useNostr) has access to the pool.
+ */
+function SignerRefUpdater({ signerRef }: { signerRef: SignerRef }) {
+  const { user } = useCurrentUser();
+  useEffect(() => {
+    signerRef.current = user?.signer ?? null;
+    return () => {
+      signerRef.current = null;
+    };
+  }, [user?.signer, signerRef]);
+  return null;
+}
+
 interface NostrProviderProps {
   children: React.ReactNode;
 }
@@ -20,16 +39,12 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   const { children } = props;
   const { config } = useAppContext();
   const { cachingRelay } = useEncryptionSettings();
-  const { user } = useCurrentUser();
 
   const queryClient = useQueryClient();
   const [privateRelayUrls, setPrivateRelayUrls] = useState<string[]>([]);
 
-  // Ref so relay open() and NIP-42 auth callback always see current user
-  const userRef = useRef(user);
-  useEffect(() => {
-    userRef.current = user;
-  }, [user]);
+  // Ref for NIP-42 auth: updated by SignerRefUpdater (child of provider), read by auth callback
+  const signerRef = useRef<NUser['signer'] | null>(null);
 
   // Full relay list with private relays first (preferred for reads)
   const mergedRelays = useMemo(() => {
@@ -73,11 +88,11 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
         console.log('[NostrProvider] Opening relay connection:', url);
         return new NRelay1(url, {
           auth: async (challenge: string) => {
-            const currentUser = userRef.current;
-            if (!currentUser?.signer) {
+            const signer = signerRef.current;
+            if (!signer) {
               throw new Error('NIP-42 auth requires login');
             }
-            return currentUser.signer.signEvent({
+            return signer.signEvent({
               kind: NIP42_AUTH_KIND,
               content: '',
               tags: [
@@ -115,6 +130,7 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   return (
     <SetPrivateRelayUrlsContext.Provider value={setPrivateRelayUrls}>
       <NostrContext.Provider value={{ nostr: pool.current } as unknown as React.ComponentProps<typeof NostrContext.Provider>['value']}>
+        <SignerRefUpdater signerRef={signerRef} />
         {children}
       </NostrContext.Provider>
     </SetPrivateRelayUrlsContext.Provider>
