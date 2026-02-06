@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, X, RefreshCw, Lock, Globe, Settings, Upload, Check, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Plus, X, RefreshCw, Lock, Globe, Settings, Upload, Check, AlertCircle, ShieldCheck, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -9,9 +9,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import { useUserPreferences, DEFAULT_BLOSSOM_SERVERS } from '@/contexts/UserPreferencesContext';
 import { useToast } from '@/hooks/useToast';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useAllBlossomUrls } from '@/hooks/useAllBlossomUrls';
+import { useBlossomSync } from '@/hooks/useBlossomSync';
+import { NoPrivateServerError } from '@/hooks/useUploadFile';
 import { BlossomUploader, NostrBuildUploader } from '@nostrify/nostrify/uploaders';
 
 type ServerStatus = 'checking' | 'connected' | 'error' | 'unknown';
@@ -62,6 +67,10 @@ export function BlossomServerManager() {
 
   const servers = preferences.blossomServers || DEFAULT_BLOSSOM_SERVERS;
   const hasPrivateServer = hasPrivateBlossomServer();
+  const allBlossomUrls = useAllBlossomUrls();
+  const { sync: runSync, progress: syncProgress, resetProgress: resetSyncProgress } = useBlossomSync(allBlossomUrls);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Use a ref to track servers for the interval callback to avoid recreating it
   const serversRef = useRef(servers);
@@ -166,7 +175,7 @@ export function BlossomServerManager() {
     
     toast({
       title: 'Server added',
-      description: 'Blossom server has been added to your list. Mark it as "Private" if you want to use it for sensitive uploads.',
+      description: 'Blossom server has been added to your list. Mark it as "Private" if you want to use it for sensitive uploads. Use "Sync files to all private servers" below to copy existing documents to this server.',
     });
   };
 
@@ -685,6 +694,31 @@ export function BlossomServerManager() {
         })}
       </div>
 
+      {/* Sync files to all private servers */}
+      {hasPrivateServer && (
+        <div className="space-y-2 pt-2 border-t">
+          <p className="text-sm text-muted-foreground">
+            Copy all documents and images referenced in your app (vehicles, warranties, pets, etc.) to every private server so each has the same files. If one server is down, the app will load from another.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              resetSyncProgress();
+              setSyncDialogOpen(true);
+            }}
+            disabled={allBlossomUrls.length === 0}
+            className="w-full sm:w-auto"
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            Sync files to all private servers
+            {allBlossomUrls.length > 0 && (
+              <span className="ml-2 text-muted-foreground">({allBlossomUrls.length} file{allBlossomUrls.length !== 1 ? 's' : ''})</span>
+            )}
+          </Button>
+        </div>
+      )}
+
       {/* Add Server Form */}
       <div className="flex gap-2">
         <div className="flex-1">
@@ -714,6 +748,85 @@ export function BlossomServerManager() {
           Add Server
         </Button>
       </div>
+
+      {/* Sync progress dialog */}
+      <Dialog open={syncDialogOpen} onOpenChange={(open) => {
+        setSyncDialogOpen(open);
+        if (!open && syncProgress.status !== 'syncing') resetSyncProgress();
+      }}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => syncProgress.status === 'syncing' && e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Sync files to all servers</DialogTitle>
+            <DialogDescription>
+              {syncProgress.status === 'idle' && (
+                <>Copy {allBlossomUrls.length} unique file{allBlossomUrls.length !== 1 ? 's' : ''} to all your private Blossom servers so each has the same data. If one server is down, the app will load from another.</>
+              )}
+              {syncProgress.status === 'syncing' && (
+                <>Syncing file {syncProgress.current} of {syncProgress.total}…</>
+              )}
+              {(syncProgress.status === 'done' || syncProgress.status === 'error') && (
+                <>
+                  Synced {syncProgress.synced} file{syncProgress.synced !== 1 ? 's' : ''}.
+                  {syncProgress.failed > 0 && ` ${syncProgress.failed} failed.`}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {syncProgress.status === 'syncing' && (
+            <div className="space-y-2">
+              <Progress value={syncProgress.total ? (syncProgress.current / syncProgress.total) * 100 : 0} className="h-2" />
+              {syncProgress.currentUrl && (
+                <p className="text-xs text-muted-foreground truncate" title={syncProgress.currentUrl}>
+                  {syncProgress.currentUrl}
+                </p>
+              )}
+            </div>
+          )}
+          {syncProgress.errors.length > 0 && (
+            <div className="max-h-32 overflow-y-auto rounded border bg-muted/30 p-2 text-xs">
+              {syncProgress.errors.map((err, i) => (
+                <div key={i} className="text-destructive truncate" title={err}>{err}</div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            {syncProgress.status === 'idle' && (
+              <>
+                <Button variant="outline" onClick={() => setSyncDialogOpen(false)}>Cancel</Button>
+                <Button
+                  onClick={async () => {
+                    setIsSyncing(true);
+                    try {
+                      const result = await runSync();
+                      toast({
+                        title: 'Sync complete',
+                        description: result.failed > 0
+                          ? `Synced ${result.synced} file(s); ${result.failed} failed.`
+                          : `Synced ${result.synced} file(s) to all private servers.`,
+                      });
+                    } catch (err) {
+                      if (err instanceof NoPrivateServerError) {
+                        toast({ title: 'Sync failed', description: err.message, variant: 'destructive' });
+                      } else {
+                        toast({ title: 'Sync failed', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+                      }
+                    } finally {
+                      setIsSyncing(false);
+                    }
+                  }}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                  Start sync
+                </Button>
+              </>
+            )}
+            {(syncProgress.status === 'done' || syncProgress.status === 'error') && (
+              <Button onClick={() => setSyncDialogOpen(false)}>Close</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

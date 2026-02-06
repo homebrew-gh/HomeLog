@@ -163,6 +163,26 @@ export function useProjectResearch(projectId?: string) {
   });
 }
 
+/** All project research notes (for sync/collectors that need full set) */
+export function useAllProjectResearch() {
+  const { user } = useCurrentUser();
+  const { decryptForCategory } = useEncryption();
+
+  return useQuery({
+    queryKey: ['project-research', user?.pubkey],
+    queryFn: async () => {
+      if (!user?.pubkey) return [];
+      const cached = await getCachedEvents([PROJECT_RESEARCH_KIND, 5], user.pubkey);
+      return parseEventsToNotes(cached, decryptForCategory);
+    },
+    enabled: !!user?.pubkey,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+}
+
 export function useProjectResearchActions() {
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
