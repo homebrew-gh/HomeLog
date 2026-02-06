@@ -342,20 +342,22 @@ export function MaterialsList({ projectId }: MaterialsListProps) {
               </Button>
             </div>
           ) : (
-            <div className="space-y-1">
-              {/* Unpurchased Items */}
-              {unpurchasedMaterials.map((material) => renderMaterialItem(material, false))}
+            <div className="max-h-[min(400px,50vh)] overflow-y-auto rounded-md border bg-muted/20 -mx-1 px-1">
+              <div className="space-y-1 py-1">
+                {/* Unpurchased Items */}
+                {unpurchasedMaterials.map((material) => renderMaterialItem(material, false))}
 
-              {/* Purchased Items */}
-              {purchasedMaterials.length > 0 && (
-                <div className="pt-4 mt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
-                    <Check className="h-4 w-4" />
-                    Purchased
-                  </p>
-                  {purchasedMaterials.map((material) => renderMaterialItem(material, true))}
-                </div>
-              )}
+                {/* Purchased Items */}
+                {purchasedMaterials.length > 0 && (
+                  <div className="pt-4 mt-4 border-t">
+                    <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                      <Check className="h-4 w-4" />
+                      Purchased
+                    </p>
+                    {purchasedMaterials.map((material) => renderMaterialItem(material, true))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
