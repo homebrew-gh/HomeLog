@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { useVetVisitActions } from '@/hooks/useVetVisits';
 import { usePetById, usePetActions } from '@/hooks/usePets';
+import { useCompanies } from '@/hooks/useCompanies';
 import { useWeight } from '@/hooks/useWeight';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
@@ -44,6 +45,7 @@ function getTodayFormatted(): string {
 
 export function VetVisitDialog({ isOpen, onClose, petId, vetVisit }: VetVisitDialogProps) {
   const pet = usePetById(petId);
+  const { data: companies = [] } = useCompanies();
   const { createVetVisit, updateVetVisit } = useVetVisitActions();
   const { updatePet } = usePetActions();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
@@ -57,6 +59,7 @@ export function VetVisitDialog({ isOpen, onClose, petId, vetVisit }: VetVisitDia
     reason: '',
     vetClinic: '',
     veterinarian: '',
+    companyId: '',
     diagnosis: '',
     treatment: '',
     prescriptions: '',
@@ -86,6 +89,7 @@ export function VetVisitDialog({ isOpen, onClose, petId, vetVisit }: VetVisitDia
           reason: vetVisit.reason,
           vetClinic: vetVisit.vetClinic || '',
           veterinarian: vetVisit.veterinarian || '',
+          companyId: vetVisit.companyId || '',
           diagnosis: vetVisit.diagnosis || '',
           treatment: vetVisit.treatment || '',
           prescriptions: vetVisit.prescriptions || '',
@@ -105,6 +109,7 @@ export function VetVisitDialog({ isOpen, onClose, petId, vetVisit }: VetVisitDia
           reason: '',
           vetClinic: pet?.vetClinic || '',
           veterinarian: '',
+          companyId: pet?.vetCompanyId || '',
           diagnosis: '',
           treatment: '',
           prescriptions: '',
@@ -189,6 +194,7 @@ export function VetVisitDialog({ isOpen, onClose, petId, vetVisit }: VetVisitDia
         reason: formData.reason.trim(),
         vetClinic: formData.vetClinic.trim() || undefined,
         veterinarian: formData.veterinarian.trim() || undefined,
+        companyId: formData.companyId.trim() || undefined,
         diagnosis: formData.diagnosis.trim() || undefined,
         treatment: formData.treatment.trim() || undefined,
         prescriptions: formData.prescriptions.trim() || undefined,
@@ -347,6 +353,31 @@ export function VetVisitDialog({ isOpen, onClose, petId, vetVisit }: VetVisitDia
                 placeholder="Dr. name"
               />
             </div>
+          </div>
+
+          {/* Tag vet (company) - shows visit in company's Log Work */}
+          <div className="space-y-2">
+            <Label>Tag vet (company)</Label>
+            <p className="text-xs text-muted-foreground">
+              Optional. Link this visit to a company so it appears in that company&apos;s Log Work on the Companies tab.
+            </p>
+            <Select
+              value={formData.companyId || '_none'}
+              onValueChange={(v) => setFormData(prev => ({ ...prev, companyId: v === '_none' ? '' : v }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">None</SelectItem>
+                {companies.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                    {c.serviceType ? ` (${c.serviceType})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Weight */}

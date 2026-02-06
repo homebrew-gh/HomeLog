@@ -55,6 +55,7 @@ function parseVetVisitPlaintext(event: NostrEvent): VetVisit | null {
     reason,
     vetClinic: getTagValue(event, 'vet_clinic'),
     veterinarian: getTagValue(event, 'veterinarian'),
+    companyId: getTagValue(event, 'company_id'),
     diagnosis: getTagValue(event, 'diagnosis'),
     treatment: getTagValue(event, 'treatment'),
     prescriptions: getTagValue(event, 'prescriptions'),
@@ -182,6 +183,12 @@ export function useVetVisitsByPetId(petId: string | undefined) {
   return vetVisits?.filter(v => v.petId === petId) || [];
 }
 
+export function useVetVisitsByCompanyId(companyId: string | undefined) {
+  const { data: vetVisits } = useVetVisits();
+  if (!companyId) return [];
+  return vetVisits?.filter(v => v.companyId === companyId) ?? [];
+}
+
 export function useVetVisitActions() {
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
@@ -219,6 +226,7 @@ export function useVetVisitActions() {
 
       if (data.vetClinic) tags.push(['vet_clinic', data.vetClinic]);
       if (data.veterinarian) tags.push(['veterinarian', data.veterinarian]);
+      if (data.companyId) tags.push(['company_id', data.companyId]);
       if (data.diagnosis) tags.push(['diagnosis', data.diagnosis]);
       if (data.treatment) tags.push(['treatment', data.treatment]);
       if (data.prescriptions) tags.push(['prescriptions', data.prescriptions]);

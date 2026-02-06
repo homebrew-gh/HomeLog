@@ -590,6 +590,8 @@ export interface VetVisit {
   // Vet information
   vetClinic?: string;
   veterinarian?: string; // Name of the veterinarian
+  /** Linked company (from Companies/Services) - when set, visit appears in that company's Log Work */
+  companyId?: string;
   // Visit details
   reason: string; // Reason for visit
   diagnosis?: string; // Diagnosis/findings

@@ -52,9 +52,11 @@ import { useMaintenanceCompletions } from '@/hooks/useMaintenanceCompletions';
 import { useWarranties, useWarrantiesByApplianceId, useWarrantiesByVehicleId, useWarrantiesByCompanyId, formatWarrantyTimeRemaining, isWarrantyExpired, isWarrantyExpiringSoon } from '@/hooks/useWarranties';
 import { useCompanyById, useCompanies } from '@/hooks/useCompanies';
 import { useCompanyWorkLogsByCompanyId, useCompanyWorkLogActions } from '@/hooks/useCompanyWorkLogs';
+import { useVetVisitsByCompanyId } from '@/hooks/useVetVisits';
+import { usePets } from '@/hooks/usePets';
 import { useSubscriptionsByCompanyId, useSubscriptions } from '@/hooks/useSubscriptions';
 import { useCurrency } from '@/hooks/useCurrency';
-import { FUEL_TYPES, type MaintenanceSchedule, type Warranty, type Company, type Subscription, type CompanyWorkLog } from '@/lib/types';
+import { FUEL_TYPES, type MaintenanceSchedule, type Warranty, type Company, type Subscription, type CompanyWorkLog, type VetVisit } from '@/lib/types';
 import { CompanyWorkLogDialog } from '@/components/CompanyWorkLogDialog';
 import { ApplianceDialog } from '@/components/ApplianceDialog';
 import { VehicleDialog } from '@/components/VehicleDialog';
@@ -1198,6 +1200,49 @@ function formatWorkLogDate(log: CompanyWorkLog): string {
   return '';
 }
 
+// Parse MM/DD/YYYY to timestamp for sorting
+function parseDateSortKey(dateStr: string | undefined): number {
+  if (!dateStr) return 0;
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return 0;
+  return new Date(parseInt(parts[2], 10), parseInt(parts[0], 10) - 1, parseInt(parts[1], 10)).getTime();
+}
+
+type WorkHistoryItem =
+  | { type: 'work_log'; log: CompanyWorkLog }
+  | { type: 'vet_visit'; visit: VetVisit; petName: string };
+
+function getWorkHistoryItems(
+  workLogs: CompanyWorkLog[],
+  vetVisits: VetVisit[],
+  petIdToName: Map<string, string>
+): WorkHistoryItem[] {
+  const items: WorkHistoryItem[] = [
+    ...workLogs.map((log) => ({ type: 'work_log' as const, log })),
+    ...vetVisits.map((visit) => ({
+      type: 'vet_visit' as const,
+      visit,
+      petName: petIdToName.get(visit.petId) ?? 'Pet',
+    })),
+  ];
+  items.sort((a, b) => {
+    const aTime =
+      a.type === 'work_log'
+        ? a.log.completedDate
+          ? parseDateSortKey(a.log.completedDate)
+          : parseDateSortKey(a.log.completedDateEnd) || a.log.createdAt * 1000
+        : parseDateSortKey(a.visit.visitDate);
+    const bTime =
+      b.type === 'work_log'
+        ? b.log.completedDate
+          ? parseDateSortKey(b.log.completedDate)
+          : parseDateSortKey(b.log.completedDateEnd) || b.log.createdAt * 1000
+        : parseDateSortKey(b.visit.visitDate);
+    return bTime - aTime;
+  });
+  return items;
+}
+
 // Company Detail Content
 function CompanyDetailContent({ id }: { id: string }) {
   const navigate = useNavigate();
@@ -1207,10 +1252,15 @@ function CompanyDetailContent({ id }: { id: string }) {
   const warranties = useWarrantiesByCompanyId(id);
   const subscriptions = useSubscriptionsByCompanyId(id);
   const workLogs = useCompanyWorkLogsByCompanyId(id);
+  const vetVisitsForCompany = useVetVisitsByCompanyId(id);
+  const { data: allPets = [] } = usePets();
   const { deleteWorkLog } = useCompanyWorkLogActions();
   const { data: allAppliances = [] } = useAppliances();
   const { data: allVehicles = [] } = useVehicles();
   const { formatForDisplay } = useCurrency();
+
+  const petIdToName = new Map(allPets.map((p) => [p.id, p.name]));
+  const workHistoryItems = getWorkHistoryItems(workLogs, vetVisitsForCompany, petIdToName);
 
   const [workLogDialogOpen, setWorkLogDialogOpen] = useState(false);
   const [editingWorkLog, setEditingWorkLog] = useState<CompanyWorkLog | null>(null);
@@ -1427,76 +1477,99 @@ function CompanyDetailContent({ id }: { id: string }) {
               </Button>
             </CardHeader>
             <CardContent>
-              {workLogs.length === 0 ? (
+              {workHistoryItems.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground">
                   <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-50" />
                   <p>No work logged yet.</p>
-                  <p className="text-sm mt-1">Click &quot;Log Work&quot; to record a job or service.</p>
+                  <p className="text-sm mt-1">Click &quot;Log Work&quot; to record a job or service. Vet visits tagged with this company also appear here.</p>
                 </div>
               ) : (
                 <ul className="space-y-4">
-                  {workLogs.map((log) => (
-                    <li
-                      key={log.id}
-                      className="p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <p className="font-medium">{log.description}</p>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
-                            {log.totalPrice && (
-                              <span className="flex items-center gap-1">
-                                <DollarSign className="h-3.5 w-3.5" />
-                                {formatForDisplay(log.totalPrice)}
-                              </span>
+                  {workHistoryItems.map((item) =>
+                    item.type === 'work_log' ? (
+                      <li
+                        key={item.log.id}
+                        className="p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <p className="font-medium">{item.log.description}</p>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
+                              {item.log.totalPrice && (
+                                <span className="flex items-center gap-1">
+                                  <DollarSign className="h-3.5 w-3.5" />
+                                  {formatForDisplay(item.log.totalPrice)}
+                                </span>
+                              )}
+                              {formatWorkLogDate(item.log) && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3.5 w-3.5" />
+                                  {formatWorkLogDate(item.log)}
+                                </span>
+                              )}
+                            </div>
+                            {item.log.notes && (
+                              <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{item.log.notes}</p>
                             )}
-                            {formatWorkLogDate(log) && (
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {formatWorkLogDate(log)}
-                              </span>
+                            {item.log.invoiceUrl && (
+                              <div className="mt-2">
+                                <BlossomDocumentLink
+                                  href={item.log.invoiceUrl}
+                                  className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                  View invoice
+                                </BlossomDocumentLink>
+                              </div>
                             )}
                           </div>
-                          {log.notes && (
-                            <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{log.notes}</p>
-                          )}
-                          {log.invoiceUrl && (
-                            <div className="mt-2">
-                              <BlossomDocumentLink
-                                href={log.invoiceUrl}
-                                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-                              >
-                                <FileText className="h-4 w-4" />
-                                View invoice
-                              </BlossomDocumentLink>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setEditingWorkLog(item.log);
+                                setWorkLogDialogOpen(true);
+                              }}
+                              aria-label="Edit work log"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeletingWorkLogId(item.log.id)}
+                              aria-label="Delete work log"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setEditingWorkLog(log);
-                              setWorkLogDialogOpen(true);
-                            }}
-                            aria-label="Edit work log"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeletingWorkLogId(log.id)}
-                            aria-label="Delete work log"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                      </li>
+                    ) : (
+                      <li
+                        key={item.visit.id}
+                        className="p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1 flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground shrink-0">
+                              <Calendar className="h-3.5 w-3.5 inline mr-1" />
+                              {item.visit.visitDate}
+                            </span>
+                            <Link
+                              to={`/pet/${item.visit.petId}`}
+                              className="font-medium text-primary hover:underline truncate"
+                            >
+                              {item.petName}
+                            </Link>
+                            <span className="text-sm text-muted-foreground">— vet visit</span>
+                          </div>
                         </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    )
+                  )}
                 </ul>
               )}
             </CardContent>
