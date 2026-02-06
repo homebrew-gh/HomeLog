@@ -172,8 +172,10 @@ export function usePropertyActions() {
     ];
 
     let content = '';
+    let dualPublish: { plainContent: string } | undefined;
     if (useEncryption && shouldEncrypt('projects')) {
       content = await encryptForCategory('projects', data);
+      dualPublish = { plainContent: JSON.stringify(data) };
     } else {
       tags.push(['name', data.name]);
       if (data.yearBuilt != null) tags.push(['year_built', String(data.yearBuilt)]);
@@ -194,6 +196,7 @@ export function usePropertyActions() {
       kind: PROPERTY_KIND,
       content,
       tags,
+      ...(dualPublish && { dualPublish }),
     });
 
     if (event) await cacheEvents([event]);

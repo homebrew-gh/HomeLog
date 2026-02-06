@@ -235,10 +235,12 @@ export function useVehicleActions() {
     ];
 
     let content = '';
+    let dualPublish: { plainContent: string } | undefined;
 
     if (useEncryption && shouldEncrypt('vehicles')) {
-      // Store data in encrypted content
+      // Store data in encrypted content; plain copy to private relays
       content = await encryptForCategory('vehicles', data);
+      dualPublish = { plainContent: JSON.stringify(data) };
     } else {
       // Store data in plaintext tags (legacy format)
       tags.push(['name', data.name]);
@@ -284,6 +286,7 @@ export function useVehicleActions() {
       kind: VEHICLE_KIND,
       content,
       tags,
+      ...(dualPublish && { dualPublish }),
     });
 
     if (event) {
@@ -308,10 +311,11 @@ export function useVehicleActions() {
     ];
 
     let content = '';
+    let dualPublish: { plainContent: string } | undefined;
 
     if (useEncryption && shouldEncrypt('vehicles')) {
-      // Store data in encrypted content
       content = await encryptForCategory('vehicles', data);
+      dualPublish = { plainContent: JSON.stringify(data) };
     } else {
       // Store data in plaintext tags (legacy format)
       tags.push(['name', data.name]);
@@ -357,6 +361,7 @@ export function useVehicleActions() {
       kind: VEHICLE_KIND,
       content,
       tags,
+      ...(dualPublish && { dualPublish }),
     });
 
     if (event) {

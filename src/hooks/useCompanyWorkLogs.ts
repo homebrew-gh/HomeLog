@@ -179,8 +179,11 @@ export function useCompanyWorkLogActions() {
 
     let content = '';
 
+    let dualPublish: { plainContent: string } | undefined;
     if (useEncryption && shouldEncrypt('companies')) {
-      content = await encryptForCategory('companies', { companyId, ...data });
+      const payload = { companyId, ...data };
+      content = await encryptForCategory('companies', payload);
+      dualPublish = { plainContent: JSON.stringify(payload) };
     } else {
       tags.push(['description', data.description]);
       if (data.totalPrice) tags.push(['total_price', data.totalPrice]);
@@ -195,6 +198,7 @@ export function useCompanyWorkLogActions() {
       kind: COMPANY_WORK_LOG_KIND,
       content,
       tags,
+      ...(dualPublish && { dualPublish }),
     });
 
     if (event) {

@@ -204,10 +204,11 @@ export function usePetActions() {
     ];
 
     let content = '';
+    let dualPublish: { plainContent: string } | undefined;
 
     if (useEncryption && shouldEncrypt('pets')) {
-      // Store data in encrypted content
       content = await encryptForCategory('pets', data);
+      dualPublish = { plainContent: JSON.stringify(data) };
     } else {
       // Store data in plaintext tags
       tags.push(['name', data.name]);
@@ -245,6 +246,7 @@ export function usePetActions() {
       kind: PET_KIND,
       content,
       tags,
+      ...(dualPublish && { dualPublish }),
     });
 
     if (event) {
@@ -269,10 +271,11 @@ export function usePetActions() {
     ];
 
     let content = '';
+    let dualPublish: { plainContent: string } | undefined;
 
     if (useEncryption && shouldEncrypt('pets')) {
-      // Store data in encrypted content
       content = await encryptForCategory('pets', data);
+      dualPublish = { plainContent: JSON.stringify(data) };
     } else {
       // Store data in plaintext tags
       tags.push(['name', data.name]);
@@ -310,6 +313,7 @@ export function usePetActions() {
       kind: PET_KIND,
       content,
       tags,
+      ...(dualPublish && { dualPublish }),
     });
 
     if (event) {

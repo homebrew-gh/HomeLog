@@ -206,9 +206,10 @@ export function useProjectActions() {
       }
     }
 
+    let dualPublish: { plainContent: string } | undefined;
     if (useEncryption && shouldEncrypt('projects')) {
-      // Store data in encrypted content
       content = await encryptForCategory('projects', data);
+      dualPublish = { plainContent: JSON.stringify(data) };
     } else {
       // Store data in plaintext tags
       tags.push(['name', data.name]);
@@ -227,6 +228,7 @@ export function useProjectActions() {
       kind: PROJECT_KIND,
       content,
       tags,
+      ...(dualPublish && { dualPublish }),
     });
 
     if (event) {
@@ -258,10 +260,11 @@ export function useProjectActions() {
     }
 
     let content = '';
+    let dualPublish: { plainContent: string } | undefined;
 
     if (useEncryption && shouldEncrypt('projects')) {
-      // Store data in encrypted content
       content = await encryptForCategory('projects', data);
+      dualPublish = { plainContent: JSON.stringify(data) };
     } else {
       // Store data in plaintext tags
       tags.push(['name', data.name]);
@@ -280,6 +283,7 @@ export function useProjectActions() {
       kind: PROJECT_KIND,
       content,
       tags,
+      ...(dualPublish && { dualPublish }),
     });
 
     if (event) {
