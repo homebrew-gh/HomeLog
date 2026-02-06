@@ -373,6 +373,8 @@ export const PROJECT_TASK_KIND = 4209;
 export const PROJECT_MATERIAL_KIND = 8347;
 export const PROJECT_RESEARCH_KIND = 8348;
 export const VET_VISIT_KIND = 7443;
+/** Property profile (addressable): one per property; single-property mode uses d-tag "default" */
+export const PROPERTY_KIND = 30100;
 
 export interface Pet {
   id: string;
@@ -420,6 +422,26 @@ export interface WarrantyDocument {
   url: string;
   name?: string;
   uploadedAt?: string;
+}
+
+/** Single property profile (e.g. primary home). For multi-property, see docs/MULTI_PROPERTY_PLAN.md */
+export interface Property {
+  id: string; // d-tag; use "default" for single-property mode
+  name: string; // Display name, e.g. "123 Main St" or "Primary Home"
+  yearBuilt?: number;
+  squareFootage?: string;
+  roofType?: string;
+  roofAge?: string; // Years or description
+  hvacType?: string;
+  heatingCooling?: string; // e.g. "Gas furnace, central AC"
+  lotSize?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  waterSource?: 'well' | 'municipal' | 'other';
+  sewerType?: 'septic' | 'municipal' | 'other';
+  notes?: string;
+  pubkey: string;
+  createdAt: number;
 }
 
 export interface Project {

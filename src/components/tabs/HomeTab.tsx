@@ -48,6 +48,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { parseCurrencyAmount, formatCurrency, convertCurrency } from '@/lib/currency';
 import { usePets } from '@/hooks/usePets';
 import { useProjects } from '@/hooks/useProjects';
+import { PropertyProfileCard } from '@/components/PropertyProfileCard';
 import type { MaintenanceSchedule, Warranty } from '@/lib/types';
 
 const _TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string }>> = {
@@ -977,6 +978,9 @@ export function HomeTab({ onNavigateToTab, onAddTab }: HomeTabProps) {
           </p>
         </div>
       </div>
+
+      {/* Property Profile - single property for now; see docs/MULTI_PROPERTY_PLAN.md */}
+      <PropertyProfileCard />
 
       {/* No tabs added yet */}
       {!hasActiveTabs && (

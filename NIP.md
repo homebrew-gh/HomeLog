@@ -991,6 +991,66 @@ When encryption is enabled for projects, the payload (description, content_text,
 
 ---
 
+## Kind 30100: Property Profile
+
+An addressable event representing a single property (e.g. primary home). One event per property; replaceable by `kind:pubkey:d-tag`. Single-property mode uses `d` tag `"default"`. For multi-property design see `docs/MULTI_PROPERTY_PLAN.md`.
+
+### Format
+
+```json
+{
+  "kind": 30100,
+  "content": "",
+  "tags": [
+    ["d", "<property-id>"],
+    ["alt", "Property: <name>"],
+    ["name", "<display name or address>"],
+    ["year_built", "<year>"],
+    ["square_footage", "<value>"],
+    ["roof_type", "<type>"],
+    ["roof_age", "<age>"],
+    ["hvac_type", "<type>"],
+    ["heating_cooling", "<description>"],
+    ["lot_size", "<value>"],
+    ["bedrooms", "<number>"],
+    ["bathrooms", "<number>"],
+    ["water_source", "well|municipal|other"],
+    ["sewer_type", "septic|municipal|other"],
+    ["notes", "<text>"]
+  ]
+}
+```
+
+When encryption is enabled for projects, the payload is stored in encrypted `content` and only `d` and `alt` are in plaintext.
+
+### Tags
+
+| Tag | Required | Description |
+|-----|----------|-------------|
+| `d` | Yes | Unique identifier; use `default` for single-property mode |
+| `alt` | Yes | Human-readable description (NIP-31) |
+| `name` | Yes | Display name or address (e.g. "123 Main St" or "Primary Home") |
+| `year_built` | No | Year built (integer) |
+| `square_footage` | No | Square footage (string) |
+| `roof_type` | No | Roof type (e.g. asphalt shingle) |
+| `roof_age` | No | Roof age (e.g. "5 years") |
+| `hvac_type` | No | HVAC type |
+| `heating_cooling` | No | Heating/cooling description |
+| `lot_size` | No | Lot size (e.g. "0.25 acres") |
+| `bedrooms` | No | Number of bedrooms |
+| `bathrooms` | No | Number of bathrooms |
+| `water_source` | No | `well`, `municipal`, or `other` |
+| `sewer_type` | No | `septic`, `municipal`, or `other` |
+| `notes` | No | Additional notes |
+
+### Behavior
+
+- Shown as a **Property Profile** card at the top of the Home tab dashboard.
+- Single-property mode: the app uses the property with `d` = `"default"` or the first property if none is default.
+- Stored and synced like other addressable kinds; encrypted when project encryption is enabled.
+
+---
+
 ## Kind 7443: Vet Visit
 
 A regular event representing a veterinary visit for a pet/animal.

@@ -19,6 +19,7 @@ import {
   PROJECT_TASK_KIND,
   PROJECT_MATERIAL_KIND,
   PROJECT_RESEARCH_KIND,
+  PROPERTY_KIND,
   VET_VISIT_KIND,
 } from '@/lib/types';
 import { cacheEvents, dedupeEventsByLogicalKey, getCachedEvents } from '@/lib/eventCache';
@@ -48,6 +49,7 @@ interface CacheCheckResult {
   projectTasks: number;
   projectMaterials: number;
   projectResearch: number;
+  properties: number;
   vetVisits: number;
   hasAny: boolean;
 }
@@ -109,7 +111,7 @@ export function useDataSyncStatus() {
     const checkCache = async () => {
       logger.log('[DataSync] Checking IndexedDB cache');
       
-      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedCompanyWorkLogs, cachedSubscriptions, cachedWarranties, cachedCompletions, cachedPets, cachedProjects, cachedProjectEntries, cachedProjectTasks, cachedProjectMaterials, cachedProjectResearch, cachedVetVisits] = await Promise.all([
+      const [cachedAppliances, cachedVehicles, cachedMaintenance, cachedCompanies, cachedCompanyWorkLogs, cachedSubscriptions, cachedWarranties, cachedCompletions, cachedPets, cachedProjects, cachedProjectEntries, cachedProjectTasks, cachedProjectMaterials, cachedProjectResearch, cachedProperties, cachedVetVisits] = await Promise.all([
         getCachedEvents([APPLIANCE_KIND], user.pubkey),
         getCachedEvents([VEHICLE_KIND], user.pubkey),
         getCachedEvents([MAINTENANCE_KIND], user.pubkey),
@@ -124,6 +126,7 @@ export function useDataSyncStatus() {
         getCachedEvents([PROJECT_TASK_KIND], user.pubkey),
         getCachedEvents([PROJECT_MATERIAL_KIND], user.pubkey),
         getCachedEvents([PROJECT_RESEARCH_KIND], user.pubkey),
+        getCachedEvents([PROPERTY_KIND], user.pubkey),
         getCachedEvents([VET_VISIT_KIND], user.pubkey),
       ]);
       
@@ -142,6 +145,7 @@ export function useDataSyncStatus() {
         projectTasks: cachedProjectTasks.length,
         projectMaterials: cachedProjectMaterials.length,
         projectResearch: cachedProjectResearch.length,
+        properties: cachedProperties.length,
         vetVisits: cachedVetVisits.length,
         hasAny: cachedAppliances.length > 0 ||
           cachedVehicles.length > 0 ||
@@ -157,6 +161,7 @@ export function useDataSyncStatus() {
           cachedProjectTasks.length > 0 ||
           cachedProjectMaterials.length > 0 ||
           cachedProjectResearch.length > 0 ||
+          cachedProperties.length > 0 ||
           cachedVetVisits.length > 0,
       };
       
@@ -191,6 +196,7 @@ export function useDataSyncStatus() {
             projects: { synced: false, count: 0 },
             projectEntries: { synced: false, count: 0 },
             projectResearch: { synced: false, count: 0 },
+            properties: { synced: false, count: 0 },
             vetVisits: { synced: false, count: 0 },
           }
         };
@@ -227,6 +233,7 @@ export function useDataSyncStatus() {
             { kinds: [PROJECT_TASK_KIND], authors: [user.pubkey] },
             { kinds: [PROJECT_MATERIAL_KIND], authors: [user.pubkey] },
             { kinds: [PROJECT_RESEARCH_KIND], authors: [user.pubkey] },
+            { kinds: [PROPERTY_KIND], authors: [user.pubkey] },
             { kinds: [VET_VISIT_KIND], authors: [user.pubkey] },
             { kinds: [5], authors: [user.pubkey] }, // Deletion events
           ],
@@ -260,6 +267,7 @@ export function useDataSyncStatus() {
             queryClient.invalidateQueries({ queryKey: ['project-tasks'] });
             queryClient.invalidateQueries({ queryKey: ['project-materials'] });
             queryClient.invalidateQueries({ queryKey: ['project-research'] });
+            queryClient.invalidateQueries({ queryKey: ['properties'] });
             queryClient.invalidateQueries({ queryKey: ['vet-visits'] });
           }
         }
@@ -279,6 +287,7 @@ export function useDataSyncStatus() {
         const projectTaskCount = events.filter(e => e.kind === PROJECT_TASK_KIND).length;
         const projectMaterialCount = events.filter(e => e.kind === PROJECT_MATERIAL_KIND).length;
         const projectResearchCount = events.filter(e => e.kind === PROJECT_RESEARCH_KIND).length;
+        const propertyCount = events.filter(e => e.kind === PROPERTY_KIND).length;
         const vetVisitCount = events.filter(e => e.kind === VET_VISIT_KIND).length;
 
         return {
@@ -299,6 +308,7 @@ export function useDataSyncStatus() {
             projectTasks: { synced: true, count: projectTaskCount },
             projectMaterials: { synced: true, count: projectMaterialCount },
             projectResearch: { synced: true, count: projectResearchCount },
+            properties: { synced: true, count: propertyCount },
             vetVisits: { synced: true, count: vetVisitCount },
           }
         };
@@ -324,6 +334,7 @@ export function useDataSyncStatus() {
               projectTasks: { synced: true, count: cacheResult.projectTasks },
               projectMaterials: { synced: true, count: cacheResult.projectMaterials },
               projectResearch: { synced: true, count: cacheResult.projectResearch },
+              properties: { synced: true, count: cacheResult.properties },
               vetVisits: { synced: true, count: cacheResult.vetVisits },
             }
           };
@@ -348,6 +359,7 @@ export function useDataSyncStatus() {
             projectTasks: { synced: true, count: 0 },
             projectMaterials: { synced: true, count: 0 },
             projectResearch: { synced: true, count: 0 },
+            properties: { synced: true, count: 0 },
             vetVisits: { synced: true, count: 0 },
           }
         };
@@ -383,6 +395,7 @@ export function useDataSyncStatus() {
       projectTasks: { synced: false, count: 0 },
       projectMaterials: { synced: false, count: 0 },
       projectResearch: { synced: false, count: 0 },
+      properties: { synced: false, count: 0 },
       vetVisits: { synced: false, count: 0 },
     },
   };
