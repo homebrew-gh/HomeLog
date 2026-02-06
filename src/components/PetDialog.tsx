@@ -16,6 +16,7 @@ import { BlossomImage } from '@/components/BlossomMedia';
 import { usePetActions } from '@/hooks/usePets';
 import { usePetTypes } from '@/hooks/usePetTypes';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useWeight } from '@/hooks/useWeight';
 import { useUploadFile, useDeleteFile, NoPrivateServerError, useCanUploadFiles } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import { CompanyDialog } from '@/components/CompanyDialog';
@@ -30,6 +31,7 @@ interface PetDialogProps {
 export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
   const { createPet, updatePet } = usePetActions();
   const { allPetTypes, addCustomPetType } = usePetTypes();
+  const { entryPlaceholder } = useWeight();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
   const { mutateAsync: deleteFile, isPending: _isDeleting } = useDeleteFile();
   const canUploadFiles = useCanUploadFiles();
@@ -508,7 +510,7 @@ export function PetDialog({ isOpen, onClose, pet }: PetDialogProps) {
                 id="weight"
                 value={formData.weight}
                 onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
-                placeholder="e.g., 45 lbs"
+                placeholder={entryPlaceholder}
               />
             </div>
             <div className="space-y-2">

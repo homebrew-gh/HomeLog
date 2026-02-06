@@ -44,6 +44,7 @@ import { usePetById, usePets } from '@/hooks/usePets';
 import { useCompanyById } from '@/hooks/useCompanies';
 import { useVetVisitsByPetId, useVetVisitActions } from '@/hooks/useVetVisits';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useWeight } from '@/hooks/useWeight';
 import { toast } from '@/hooks/useToast';
 import { VET_VISIT_TYPES, type VetVisit } from '@/lib/types';
 import NotFound from './NotFound';
@@ -122,6 +123,7 @@ export function PetDetailPage() {
   const vetVisits = useVetVisitsByPetId(petId);
   const { deleteVetVisit } = useVetVisitActions();
   const { formatForDisplay } = useCurrency();
+  const { formatForDisplay: formatWeightForDisplay } = useWeight();
 
   // Dialog states
   const [vetVisitDialogOpen, setVetVisitDialogOpen] = useState(false);
@@ -325,7 +327,7 @@ export function PetDetailPage() {
                           <Scale className="h-3 w-3" />
                           Weight
                         </p>
-                        <p className="text-sm">{pet.weight}</p>
+                        <p className="text-sm">{formatWeightForDisplay(pet.weight)}</p>
                       </div>
                     )}
                     {pet.sex && (
@@ -692,7 +694,7 @@ export function PetDetailPage() {
                             {visit.weight && (
                               <div className="flex items-center gap-1 text-muted-foreground">
                                 <Scale className="h-3.5 w-3.5" />
-                                <span>{visit.weight}</span>
+                                <span>{formatWeightForDisplay(visit.weight)}</span>
                               </div>
                             )}
                             {visit.cost && (

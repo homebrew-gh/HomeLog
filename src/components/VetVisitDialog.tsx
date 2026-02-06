@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { useVetVisitActions } from '@/hooks/useVetVisits';
 import { usePetById, usePetActions } from '@/hooks/usePets';
+import { useWeight } from '@/hooks/useWeight';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { toast } from '@/hooks/useToast';
 import { VET_VISIT_TYPES, type VetVisit, type VetVisitType } from '@/lib/types';
@@ -46,6 +47,7 @@ export function VetVisitDialog({ isOpen, onClose, petId, vetVisit }: VetVisitDia
   const { createVetVisit, updateVetVisit } = useVetVisitActions();
   const { updatePet } = usePetActions();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+  const { entryPlaceholder } = useWeight();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -356,7 +358,7 @@ export function VetVisitDialog({ isOpen, onClose, petId, vetVisit }: VetVisitDia
             <Input
               value={formData.weight}
               onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
-              placeholder="e.g., 45 lbs"
+              placeholder={entryPlaceholder}
             />
           </div>
 

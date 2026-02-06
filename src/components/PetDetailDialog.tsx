@@ -28,6 +28,7 @@ import { ArchiveConfirmDialog } from '@/components/ArchiveConfirmDialog';
 import { BlossomImage, BlossomDocumentLink } from '@/components/BlossomMedia';
 import { usePetActions } from '@/hooks/usePets';
 import { useCompanyById } from '@/hooks/useCompanies';
+import { useWeight } from '@/hooks/useWeight';
 import { toast } from '@/hooks/useToast';
 import type { Pet } from '@/lib/types';
 
@@ -53,6 +54,7 @@ function getSexLabel(sex: string | undefined): string {
 export function PetDetailDialog({ isOpen, onClose, pet, onEdit, onDelete }: PetDetailDialogProps) {
   const { deletePet, archivePet } = usePetActions();
   const linkedVet = useCompanyById(pet?.vetCompanyId ?? '');
+  const { formatForDisplay: formatWeightForDisplay } = useWeight();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -179,7 +181,7 @@ export function PetDetailDialog({ isOpen, onClose, pet, onEdit, onDelete }: PetD
                     <Scale className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-medium text-muted-foreground">Weight</p>
-                      <p className="text-sm">{pet.weight}</p>
+                      <p className="text-sm">{formatWeightForDisplay(pet.weight)}</p>
                     </div>
                   </div>
                 )}

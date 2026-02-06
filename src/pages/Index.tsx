@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users, ChevronDown, Building2 } from 'lucide-react';
+import { Package, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users, ChevronDown, Building2, Scale } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -19,6 +19,7 @@ import { CompanyTypeManagementDialog } from '@/components/CompanyTypeManagementD
 import { StorageSettingsDialog } from '@/components/StorageSettingsDialog';
 import { DisplaySettingsDialog } from '@/components/DisplaySettingsDialog';
 import { CurrencySettingsDialog } from '@/components/CurrencySettingsDialog';
+import { WeightSettingsDialog } from '@/components/WeightSettingsDialog';
 import { DonateSection } from '@/components/DonateSection';
 import { TabNavigation } from '@/components/TabNavigation';
 import { AddTabDialog } from '@/components/AddTabDialog';
@@ -133,6 +134,7 @@ const Index = () => {
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const [currencySettingsOpen, setCurrencySettingsOpen] = useState(false);
+  const [weightSettingsOpen, setWeightSettingsOpen] = useState(false);
   const [addTabDialogOpen, setAddTabDialogOpen] = useState(false);
   
   // Global search state
@@ -257,6 +259,10 @@ const Index = () => {
                     <DropdownMenuItem onClick={() => setCurrencySettingsOpen(true)}>
                       <Coins className="h-4 w-4 mr-2" />
                       Currency
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setWeightSettingsOpen(true)}>
+                      <Scale className="h-4 w-4 mr-2" />
+                      Weight
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Nostr Relays</DropdownMenuLabel>
@@ -508,6 +514,10 @@ const Index = () => {
       <CurrencySettingsDialog
         isOpen={currencySettingsOpen}
         onClose={() => setCurrencySettingsOpen(false)}
+      />
+      <WeightSettingsDialog
+        isOpen={weightSettingsOpen}
+        onClose={() => setWeightSettingsOpen(false)}
       />
 
       {/* Global Search */}

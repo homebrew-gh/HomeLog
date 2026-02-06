@@ -92,6 +92,9 @@ export interface UserPreferences {
   entryCurrency: string; // Currency used for data entry
   displayCurrency: string; // Currency used for display/viewing
   exchangeRates?: StoredExchangeRates; // Cached exchange rates
+  // Weight unit preferences
+  entryWeightUnit: 'kg' | 'lb'; // Default unit for weight entry in forms
+  displayWeightUnit: 'kg' | 'lb'; // Unit for displaying weights
   // Custom rooms
   customRooms: string[];
   // Hidden default rooms (allows users to "delete" default rooms)
@@ -152,6 +155,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   entryCurrency: 'USD',
   displayCurrency: 'USD',
   exchangeRates: undefined,
+  entryWeightUnit: 'lb',
+  displayWeightUnit: 'lb',
   customRooms: [],
   hiddenDefaultRooms: [],
   customVehicleTypes: [],
@@ -249,6 +254,9 @@ interface UserPreferencesContextType {
   setEntryCurrency: (currency: string) => void;
   setDisplayCurrency: (currency: string) => void;
   setExchangeRates: (rates: StoredExchangeRates) => void;
+  // Weight unit actions
+  setEntryWeightUnit: (unit: 'kg' | 'lb') => void;
+  setDisplayWeightUnit: (unit: 'kg' | 'lb') => void;
 }
 
 export const UserPreferencesContext = createContext<UserPreferencesContextType | null>(null);
@@ -1116,6 +1124,20 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }));
   }, [updatePreferences]);
 
+  const setEntryWeightUnit = useCallback((unit: 'kg' | 'lb') => {
+    updatePreferences((prev) => ({
+      ...prev,
+      entryWeightUnit: unit,
+    }));
+  }, [updatePreferences]);
+
+  const setDisplayWeightUnit = useCallback((unit: 'kg' | 'lb') => {
+    updatePreferences((prev) => ({
+      ...prev,
+      displayWeightUnit: unit,
+    }));
+  }, [updatePreferences]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -1144,6 +1166,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     entryCurrency: localPreferences.entryCurrency || 'USD',
     displayCurrency: localPreferences.displayCurrency || 'USD',
     exchangeRates: localPreferences.exchangeRates,
+    entryWeightUnit: localPreferences.entryWeightUnit || 'lb',
+    displayWeightUnit: localPreferences.displayWeightUnit || 'lb',
     customRooms: Array.isArray(localPreferences.customRooms) ? localPreferences.customRooms : [],
     hiddenDefaultRooms: Array.isArray(localPreferences.hiddenDefaultRooms) ? localPreferences.hiddenDefaultRooms : [],
     customVehicleTypes: Array.isArray(localPreferences.customVehicleTypes) ? localPreferences.customVehicleTypes : [],
@@ -1246,6 +1270,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         setEntryCurrency,
         setDisplayCurrency,
         setExchangeRates,
+        setEntryWeightUnit,
+        setDisplayWeightUnit,
       }}
     >
       {children}
