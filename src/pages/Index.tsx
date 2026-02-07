@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
-import { Package, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users, ChevronDown, Building2, Scale } from 'lucide-react';
+import { Package, Calendar, Menu, Settings, Car, Shield, HelpCircle, Cloud, CreditCard, TreePine, Palette, RefreshCw, Coins, HardDrive, PawPrint, PlayCircle, KeyRound, Users, ChevronDown, Building2, Scale, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -269,6 +269,14 @@ const Index = () => {
                     <DropdownMenuItem onClick={() => openRelayManagement('relays')}>
                       <Cloud className="h-4 w-4 mr-2" />
                       Configure
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Agent & Keys</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link to="/delegation">
+                        <Bot className="h-4 w-4 mr-2" />
+                        NIP-26 Delegation
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Help</DropdownMenuLabel>
