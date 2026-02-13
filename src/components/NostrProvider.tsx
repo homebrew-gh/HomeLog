@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NostrEvent, NostrFilter, NPool, NRelay1 } from '@nostrify/nostrify';
 import { NostrContext } from '@nostrify/react';
 import type { NUser } from '@nostrify/react/login';
@@ -60,31 +60,15 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
     });
   }, [config.relayMetadata.relays, privateRelayUrls]);
 
-  // Create NPool instance only once
-  const pool = useRef<NPool | undefined>(undefined);
-
   // Refs so the pool always has the latest data
   const relayMetadataRef = useRef({ relays: mergedRelays });
   const cachingRelayRef = useRef(cachingRelay);
 
   relayMetadataRef.current = { relays: mergedRelays };
 
-  // Invalidate Nostr queries when merged relay list changes
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['nostr'] });
-  }, [mergedRelays, queryClient]);
-
-  // Update caching relay ref when it changes
-  useEffect(() => {
-    cachingRelayRef.current = cachingRelay;
-    // Invalidate queries so they can benefit from the new caching relay
-    queryClient.invalidateQueries({ queryKey: ['nostr'] });
-  }, [cachingRelay, queryClient]);
-
-  // Initialize NPool only once (uses ref so it always sees latest mergedRelays)
-  if (!pool.current) {
+  const createPool = useCallback(() => {
     logger.log('[NostrProvider] Initializing NPool');
-    pool.current = new NPool({
+    return new NPool({
       open(url: string) {
         logger.log('[NostrProvider] Opening relay connection');
         return new NRelay1(url, {
@@ -126,11 +110,73 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
         return [...new Set(writeRelays)];
       },
     });
+  }, []);
+
+  // Pool instance: null when page is hidden (connections closed), NPool when visible.
+  // Start with null; first effect will create pool when visible (avoids calling createPool before refs are set).
+  const [poolInstance, setPoolInstance] = useState<NPool | null>(null);
+
+  // Invalidate Nostr queries when merged relay list changes
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['nostr'] });
+  }, [mergedRelays, queryClient]);
+
+  // Update caching relay ref when it changes
+  useEffect(() => {
+    cachingRelayRef.current = cachingRelay;
+    queryClient.invalidateQueries({ queryKey: ['nostr'] });
+  }, [cachingRelay, queryClient]);
+
+  // Create pool on mount when visible; when tab is hidden, close and set null; when visible again, create new pool.
+  // Reduces relay churn and rate limit pressure when CypherLog PWA is backgrounded on mobile.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        setPoolInstance((prev) => {
+          if (prev) {
+            logger.log('[NostrProvider] Page hidden, closing relay connections');
+            void prev.close();
+            return null;
+          }
+          return prev;
+        });
+      } else {
+        setPoolInstance((prev) => {
+          if (!prev) {
+            logger.log('[NostrProvider] Page visible, reconnecting relays');
+            queryClient.invalidateQueries({ queryKey: ['nostr'] });
+            return createPool();
+          }
+          return prev;
+        });
+      }
+    };
+
+    if (document.visibilityState === 'visible') {
+      setPoolInstance((prev) => {
+        if (prev) return prev;
+        queryClient.invalidateQueries({ queryKey: ['nostr'] });
+        return createPool();
+      });
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [createPool, queryClient]);
+
+  if (poolInstance === null) {
+    return (
+      <SetPrivateRelayUrlsContext.Provider value={setPrivateRelayUrls}>
+        <div className="flex min-h-screen items-center justify-center bg-theme-gradient tool-pattern-bg" role="status" aria-live="polite">
+          <p className="text-muted-foreground text-sm">Reconnecting to relays…</p>
+        </div>
+      </SetPrivateRelayUrlsContext.Provider>
+    );
   }
 
   return (
     <SetPrivateRelayUrlsContext.Provider value={setPrivateRelayUrls}>
-      <NostrContext.Provider value={{ nostr: pool.current } as unknown as React.ComponentProps<typeof NostrContext.Provider>['value']}>
+      <NostrContext.Provider value={{ nostr: poolInstance } as unknown as React.ComponentProps<typeof NostrContext.Provider>['value']}>
         <SignerRefUpdater signerRef={signerRef} />
         {children}
       </NostrContext.Provider>
