@@ -14,39 +14,37 @@ Previously, the router sent **every** read to **every** relay with read enabled,
 
 That duplicated all read traffic to the private relay and could hit its rate limit even when you use it mainly for CypherLog.
 
-## Fix: private relay gets writes only for normal pool traffic
+## Fix: private relay for your data only (login / refresh)
 
-In **NostrProvider**, the pool’s **reqRouter** now **excludes private relays** from read routes. So:
+In **NostrProvider**, the pool’s **reqRouter** sends reads to the private relay **only when the query is for the current user’s own data** (same kinds stored in plaintext on the private relay: appliances, vehicles, maintenance, projects, etc.). All other reads go to **public** relays only.
 
-- **Reads (REQ):** Only go to **public** relays (relays not in your “private relay” list).
+- **Owned-data reads (login / refresh):** When you log in or refresh, queries for *your* data (e.g. `authors: [your-pubkey]`, kinds like appliances, vehicles, maintenance) are sent to **both** the private relay (first) and public relays. You get fast plaintext from the private relay and avoid heavy decryption when possible.
+- **Other reads:** useAuthor (other users), comments, zaps, DMs, sync, preferences, etc. go to **public** relays only, so the private relay is not spammed.
 - **Writes (EVENT):** Still go to **all** write relays (including private) via **eventRouter**.
 
-The private relay therefore only receives:
+The private relay therefore receives:
 
-1. **Writes** – events published by the app (dual publish: plaintext to private, encrypted to public).
-2. **Explicit private reads** – only where the code uses `nostr.group(privateRelayUrls).query(...)` on purpose (e.g. backfill, pending-sync count, deletion sibling lookup). Those do not go through the pool’s reqRouter.
-
-So normal browsing, DMs, sync, and all useQuery-based reads no longer hit the private relay; only publishes and a few targeted reads do.
+1. **Writes** – events you publish (dual publish: plaintext to private, encrypted to public).
+2. **Owned-data reads** – only when the filter is `authors: [you]` and kinds are your app data kinds (see `lib/privateRelayKinds.ts`). This is what runs on first load after login and on manual page refresh.
+3. **Explicit private reads** – e.g. “Check” in Relay Configuration (pending-sync count), backfill, deletion sibling lookup.
 
 ## Visibility-based disconnect
 
 The app also closes pool connections when the tab is **hidden** and reconnects when it becomes **visible** again. That reduces reconnect churn and request volume when the CypherLog PWA is in the background on mobile.
 
-## Triggering a read from the private relay (on demand)
+## When the private relay is read
 
-The app does **not** read from your private relay in the background. So your relay is only hit when:
+1. **Login and page refresh** – Queries for your own data (appliances, vehicles, maintenance, projects, etc.) are routed to the private relay first so the UI can load plaintext quickly without decryption.
+2. **You publish** – Writes go to the private relay.
+3. **You run backfill** – Syncs from public to private (writes to private).
+4. **You click “Check”** in Relay Configuration – One query to the private relay for the pending-sync count (manual only).
 
-1. **You publish** – writes go to the private relay.
-2. **You run backfill** – syncs from public to private (writes to private).
-3. **You click “Check”** in Relay Configuration – that runs one query to the private relay to see how many events are not yet synced (pending-sync count). Use **Check** / **Check again** only when you want that number; it is never fetched automatically.
+Other traffic (other users’ profiles, comments, zaps, DMs, etc.) never goes to the private relay through the pool.
 
-To trigger a read from the private relay in code (e.g. a custom “Refresh from private” action), use a **relay group** and call `.query()` only when the user acts (button click, etc.):
+To read from the private relay in custom code (e.g. a “Refresh from private” button), use a relay group:
 
 ```ts
 const privateRelayUrls = (preferences.privateRelays ?? []).filter(isRelayUrlSecure);
 const privateGroup = nostr.group(privateRelayUrls);
 const events = await privateGroup.query([{ kinds: [...], authors: [user.pubkey], ... }], { signal });
-// Then merge into your cache or UI as needed
 ```
-
-Do **not** use the default `nostr` (pool) for reading from the private relay; the pool intentionally skips private relays for reads. Run private reads only on demand so the relay is not hit constantly when there is nothing new to pull.

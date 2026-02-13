@@ -527,8 +527,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
             }
           }
 
-          // Encrypt privateRelays so public relays cannot see private relay URLs.
-          // Never sync private relay list in plaintext (data on those relays is plaintext; URLs must stay secret).
+          // Encrypt privateRelays for public relays; keep plain for private relay.
           if (privateRelays && privateRelays.length > 0) {
             if (user.signer.nip44) {
               try {
@@ -537,23 +536,40 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
                   JSON.stringify(privateRelays)
                 );
                 prefsToSync.privateRelays = ENCRYPTED_BLOSSOM_MARKER + encryptedPrivateRelays;
-                logger.log('[UserPreferences] Encrypted privateRelays for relay storage');
+                logger.log('[UserPreferences] Encrypted privateRelays for public relay storage');
               } catch (encryptError) {
                 logger.warn('[UserPreferences] Failed to encrypt privateRelays, omitting from sync:', encryptError);
               }
             }
-            // If no NIP-44: do not sync private relay list (keep local only); never store plaintext on relays.
           }
-          
-          await publishEvent({
-            kind: APP_DATA_KIND,
-            content: JSON.stringify(prefsToSync),
-            tags: [
-              ['d', APP_IDENTIFIER],
-              ['alt', 'Cypher Log user preferences'],
-            ],
-          });
-          logger.log('Preferences saved to Nostr relay');
+
+          const tags = [
+            ['d', APP_IDENTIFIER],
+            ['alt', 'Cypher Log user preferences'],
+          ];
+          const privateRelayUrls = (preferences.privateRelays ?? []).filter(isRelayUrlSecure);
+
+          if (privateRelayUrls.length > 0) {
+            // Plain version for private relay (plaintext privateRelays and blossomServers)
+            const plainPrefs: StoredPreferences & { privateRelays?: string[] } = {
+              ...prefsToSync,
+              blossomServers: blossomServers && blossomServers.length > 0 ? blossomServers : prefsToSync.blossomServers,
+              privateRelays: privateRelays ?? [],
+            };
+            await publishEvent({
+              kind: APP_DATA_KIND,
+              content: JSON.stringify(prefsToSync),
+              tags,
+              dualPublish: { plainContent: JSON.stringify(plainPrefs) },
+            });
+          } else {
+            await publishEvent({
+              kind: APP_DATA_KIND,
+              content: JSON.stringify(prefsToSync),
+              tags,
+            });
+          }
+          logger.log('Preferences saved to Nostr relay(s)');
         } catch (error) {
           logger.error('Failed to save preferences to Nostr:', error);
         } finally {

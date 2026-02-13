@@ -13,24 +13,7 @@ import { useCurrentUser } from './useCurrentUser';
 import { useAppContext } from './useAppContext';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useEncryption } from './useEncryption';
-import {
-  APPLIANCE_KIND,
-  VEHICLE_KIND,
-  MAINTENANCE_KIND,
-  COMPANY_KIND,
-  COMPANY_WORK_LOG_KIND,
-  SUBSCRIPTION_KIND,
-  WARRANTY_KIND,
-  MAINTENANCE_COMPLETION_KIND,
-  PET_KIND,
-  PROJECT_KIND,
-  PROJECT_ENTRY_KIND,
-  PROJECT_TASK_KIND,
-  PROJECT_MATERIAL_KIND,
-  PROJECT_RESEARCH_KIND,
-  PROPERTY_KIND,
-  VET_VISIT_KIND,
-} from '@/lib/types';
+import { PRIVATE_DATA_KINDS } from '@/lib/privateRelayKinds';
 import { dedupeEventsByLogicalKey, getLogicalKey } from '@/lib/eventCache';
 import { isRelayUrlSecure } from '@/lib/relay';
 import { runWithConcurrencyLimit } from '@/lib/utils';
@@ -43,26 +26,8 @@ const BACKFILL_SINCE_CAP_DAYS = 90;
 const PENDING_SYNC_STALE_MS = 3 * 60 * 1000; // 3 min
 const PERIODIC_INTERVAL_MS = 30 * 60 * 1000; // 30 min
 
-// Data kinds only. Do NOT include kind 5 (deletions): re-publishing deletion events
-// to the private relay would remove events we just backfilled (same 'a' tag targets).
-const BACKFILL_KINDS = [
-  APPLIANCE_KIND,
-  VEHICLE_KIND,
-  MAINTENANCE_KIND,
-  COMPANY_KIND,
-  COMPANY_WORK_LOG_KIND,
-  SUBSCRIPTION_KIND,
-  WARRANTY_KIND,
-  MAINTENANCE_COMPLETION_KIND,
-  PET_KIND,
-  PROJECT_KIND,
-  PROJECT_ENTRY_KIND,
-  PROJECT_TASK_KIND,
-  PROJECT_MATERIAL_KIND,
-  PROJECT_RESEARCH_KIND,
-  PROPERTY_KIND,
-  VET_VISIT_KIND,
-];
+// Data kinds to sync to private relay (plaintext). Do NOT include kind 5 (deletions).
+const BACKFILL_KINDS = [...PRIVATE_DATA_KINDS];
 
 const ENCRYPTED_MARKER = 'nip44:';
 

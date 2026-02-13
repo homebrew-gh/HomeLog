@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useEncryptionSettings } from '@/contexts/EncryptionContext';
+import { isPrivateDataKind } from '@/lib/privateRelayKinds';
 import { logger } from '@/lib/logger';
 
 /** Setter for private relay URLs; synced from UserPreferencesProvider when preferences load */
@@ -18,17 +19,25 @@ const NIP42_AUTH_KIND = 22242;
 type SignerRef = React.MutableRefObject<NUser['signer'] | null | undefined>;
 
 /**
- * Updates signerRef from useCurrentUser. Must be a child of NostrContext.Provider
+ * Updates signerRef and currentUserPubkeyRef from useCurrentUser. Must be a child of NostrContext.Provider
  * so useCurrentUser (which uses useNostr) has access to the pool.
  */
-function SignerRefUpdater({ signerRef }: { signerRef: SignerRef }) {
+function SignerRefUpdater({
+  signerRef,
+  currentUserPubkeyRef,
+}: {
+  signerRef: SignerRef;
+  currentUserPubkeyRef: React.MutableRefObject<string | null>;
+}) {
   const { user } = useCurrentUser();
   useEffect(() => {
     signerRef.current = user?.signer ?? null;
+    currentUserPubkeyRef.current = user?.pubkey ?? null;
     return () => {
       signerRef.current = null;
+      currentUserPubkeyRef.current = null;
     };
-  }, [user?.signer, signerRef]);
+  }, [user?.signer, user?.pubkey, signerRef, currentUserPubkeyRef]);
   return null;
 }
 
@@ -46,6 +55,8 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
 
   // Ref for NIP-42 auth: updated by SignerRefUpdater (child of provider), read by auth callback
   const signerRef = useRef<NUser['signer'] | null>(null);
+  // Current user pubkey: used by reqRouter to route "owned data" reads to private relay (fast plaintext load)
+  const currentUserPubkeyRef = useRef<string | null>(null);
 
   // Full relay list with private relays first (preferred for reads)
   const mergedRelays = useMemo(() => {
@@ -95,17 +106,30 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
         const routes = new Map<string, NostrFilter[]>();
         const { relays } = relayMetadataRef.current;
         const privateSet = new Set(privateRelayUrlsRef.current);
-        // Only send reads to public relays; private relay gets writes only (reduces rate-limit pressure).
-        const readRelays = relays
+        const currentUser = currentUserPubkeyRef.current;
+        const publicReadRelays = relays
           .filter((r) => r.read && !privateSet.has(r.url))
           .map((r) => r.url);
+        const privateReadRelays = relays
+          .filter((r) => r.read && privateSet.has(r.url))
+          .map((r) => r.url);
 
-        const currentCachingRelay = cachingRelayRef.current;
-        let orderedRelays = [...readRelays];
-        if (currentCachingRelay && readRelays.includes(currentCachingRelay)) {
-          orderedRelays = [currentCachingRelay, ...readRelays.filter((url) => url !== currentCachingRelay)];
+        const isOwnedDataFilter = (f: NostrFilter) =>
+          currentUser &&
+          f.authors?.length === 1 &&
+          f.authors[0] === currentUser &&
+          (!f.kinds?.length || f.kinds.every((k) => isPrivateDataKind(k)));
+        const includePrivateForReads = privateReadRelays.length > 0 && filters.some(isOwnedDataFilter);
+
+        if (includePrivateForReads) {
+          for (const url of privateReadRelays) routes.set(url, filters);
         }
-        for (const url of orderedRelays) {
+        let orderedPublic = [...publicReadRelays];
+        const currentCachingRelay = cachingRelayRef.current;
+        if (currentCachingRelay && publicReadRelays.includes(currentCachingRelay)) {
+          orderedPublic = [currentCachingRelay, ...publicReadRelays.filter((url) => url !== currentCachingRelay)];
+        }
+        for (const url of orderedPublic) {
           routes.set(url, filters);
         }
         return routes;
@@ -183,7 +207,7 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   return (
     <SetPrivateRelayUrlsContext.Provider value={setPrivateRelayUrls}>
       <NostrContext.Provider value={{ nostr: poolInstance } as unknown as React.ComponentProps<typeof NostrContext.Provider>['value']}>
-        <SignerRefUpdater signerRef={signerRef} />
+        <SignerRefUpdater signerRef={signerRef} currentUserPubkeyRef={currentUserPubkeyRef} />
         {children}
       </NostrContext.Provider>
     </SetPrivateRelayUrlsContext.Provider>
