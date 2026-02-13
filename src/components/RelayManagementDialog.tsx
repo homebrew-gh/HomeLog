@@ -24,6 +24,8 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
     eligible,
     pendingSyncCount,
     pendingSyncLoading,
+    pendingSyncFetched,
+    refetchPendingSync,
     runBackfill,
     isRunning,
     error,
@@ -157,6 +159,10 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                       <p className="text-sm text-emerald-800 dark:text-emerald-200">
                         Checking how many events are not yet on your private relay…
                       </p>
+                    ) : !pendingSyncFetched ? (
+                      <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                        Check how many events on your other relays are not yet on your private relay (one read from your private relay).
+                      </p>
                     ) : pendingSyncCount > 0 ? (
                       <p className="text-sm text-emerald-800 dark:text-emerald-200">
                         You have <strong>{pendingSyncCount}</strong> event{pendingSyncCount !== 1 ? 's' : ''} on your other relays that are not yet on your private relay. Sync now for a full backup.
@@ -166,20 +172,29 @@ export function RelayManagementDialog({ isOpen, onClose, defaultTab = 'relays' }
                         Your private relay is up to date with recent data.
                       </p>
                     )}
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="mt-1"
-                      onClick={handleSyncToPrivate}
-                      disabled={isRunning}
-                    >
-                      {isRunning ? 'Syncing…' : 'Sync to private relay'}
-                      {pendingSyncCount > 0 && !isRunning && (
-                        <span className="ml-1.5 rounded-full bg-emerald-200 dark:bg-emerald-800 px-1.5 text-xs">
-                          {pendingSyncCount}
-                        </span>
-                      )}
-                    </Button>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={handleSyncToPrivate}
+                        disabled={isRunning}
+                      >
+                        {isRunning ? 'Syncing…' : 'Sync to private relay'}
+                        {pendingSyncCount > 0 && !isRunning && (
+                          <span className="ml-1.5 rounded-full bg-emerald-200 dark:bg-emerald-800 px-1.5 text-xs">
+                            {pendingSyncCount}
+                          </span>
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void refetchPendingSync()}
+                        disabled={pendingSyncLoading}
+                      >
+                        {pendingSyncLoading ? 'Checking…' : pendingSyncFetched ? 'Check again' : 'Check'}
+                      </Button>
+                    </div>
                   </div>
                 </AlertDescription>
               </Alert>

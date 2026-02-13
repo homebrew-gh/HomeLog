@@ -208,6 +208,8 @@ export function usePrivateRelayBackfill() {
 
   const sinceForPending = lastBackfillAt ?? Math.floor(Date.now() / 1000) - 7 * 86400;
 
+  // Pending-sync count is only fetched when the user triggers it (e.g. "Check" in Relay Management).
+  // This avoids hitting the private relay on every load; read from private only on demand.
   const pendingSyncQuery = useQuery({
     queryKey: ['private-relay-pending-sync', user?.pubkey, lastBackfillAt],
     queryFn: async (): Promise<number> => {
@@ -249,11 +251,12 @@ export function usePrivateRelayBackfill() {
       }
       return count;
     },
-    enabled: eligible && !!user?.pubkey,
+    enabled: false, // Only run when refetchPendingSync() is called; avoids constant reads from private relay
     staleTime: PENDING_SYNC_STALE_MS,
   });
 
   const pendingSyncCount = pendingSyncQuery.data ?? 0;
+  const refetchPendingSync = pendingSyncQuery.refetch;
 
   useEffect(() => {
     if (!eligible) return;
@@ -271,6 +274,8 @@ export function usePrivateRelayBackfill() {
     pendingSyncCount,
     pendingSyncLoading: pendingSyncQuery.isLoading,
     pendingSyncError: pendingSyncQuery.error,
+    pendingSyncFetched: pendingSyncQuery.data !== undefined,
+    refetchPendingSync,
     eligible,
   };
 }

@@ -63,8 +63,10 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   // Refs so the pool always has the latest data
   const relayMetadataRef = useRef({ relays: mergedRelays });
   const cachingRelayRef = useRef(cachingRelay);
+  const privateRelayUrlsRef = useRef<string[]>([]);
 
   relayMetadataRef.current = { relays: mergedRelays };
+  privateRelayUrlsRef.current = privateRelayUrls;
 
   const createPool = useCallback(() => {
     logger.log('[NostrProvider] Initializing NPool');
@@ -92,7 +94,11 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
       reqRouter(filters: NostrFilter[]) {
         const routes = new Map<string, NostrFilter[]>();
         const { relays } = relayMetadataRef.current;
-        const readRelays = relays.filter((r) => r.read).map((r) => r.url);
+        const privateSet = new Set(privateRelayUrlsRef.current);
+        // Only send reads to public relays; private relay gets writes only (reduces rate-limit pressure).
+        const readRelays = relays
+          .filter((r) => r.read && !privateSet.has(r.url))
+          .map((r) => r.url);
 
         const currentCachingRelay = cachingRelayRef.current;
         let orderedRelays = [...readRelays];
